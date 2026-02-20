@@ -3,9 +3,67 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>portfolio</title>
+    <title>Portfolio</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: Arial, sans-serif;
+      }
+      header {
+        position: relative;
+        height: 100vh; /* 화면 전체 높이 사용 */
+        width: 100%;
+        overflow: hidden;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+      }
+      /* 배경 영상 스타일 */
+      #bg-video {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        min-width: 100%;
+        min-height: 100%;
+        width: auto;
+        height: auto;
+        z-index: -1;
+        transform: translate(-50%, -50%);
+        object-fit: cover;
+        background-color: #333; /* 영상 로드 전 배경색 */
+      }
+      /* 네비게이션 스타일 */
+      nav {
+        width: 100%;
+        padding: 20px 0;
+        text-align: center;
+        background: rgba(0, 0, 0, 0.3); /* 메뉴 가독성을 위한 반투명 배경 */
+      }
+      nav a {
+        color: white;
+        text-decoration: none;
+        margin: 0 15px;
+        font-size: 1.2rem;
+        font-weight: bold;
+        text-transform: uppercase; /* 대문자 변환 */
+      }
+    </style>
   </head>
   <body>
-    ttt TEST!!
+    <header>
+      <!-- 배경 영상: src에 실제 영상 파일 경로를 입력하세요 -->
+      <video autoplay muted loop id="bg-video">
+        <source src="background.mp4" type="video/mp4" />
+      </video>
+
+      <nav>
+        <a href="#home">Home</a>
+        <a href="#about">About</a>
+        <a href="#portfolio">Portfolio</a>
+        <a href="#skills">Skills</a>
+        <a href="#educations">Educations</a>
+      </nav>
+    </header>
   </body>
 </html>
