@@ -4,66 +4,197 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Portfolio</title>
-    <style>
-      body {
-        margin: 0;
-        padding: 0;
-        font-family: Arial, sans-serif;
-      }
-      header {
-        position: relative;
-        height: 100vh; /* 화면 전체 높이 사용 */
-        width: 100%;
-        overflow: hidden;
-        display: flex;
-        justify-content: center;
-        align-items: flex-start;
-      }
-      /* 배경 영상 스타일 */
-      #bg-video {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        min-width: 100%;
-        min-height: 100%;
-        width: auto;
-        height: auto;
-        z-index: -1;
-        transform: translate(-50%, -50%);
-        object-fit: cover;
-        background-color: #333; /* 영상 로드 전 배경색 */
-      }
-      /* 네비게이션 스타일 */
-      nav {
-        width: 100%;
-        padding: 20px 0;
-        text-align: center;
-        background: rgba(0, 0, 0, 0.3); /* 메뉴 가독성을 위한 반투명 배경 */
-      }
-      nav a {
-        color: white;
-        text-decoration: none;
-        margin: 0 15px;
-        font-size: 1.2rem;
-        font-weight: bold;
-        text-transform: uppercase; /* 대문자 변환 */
-      }
-    </style>
+    <link rel="stylesheet" href="style.css" />
+    <script defer src="script.js"></script>
+    <!-- 아이콘 사용을 위한 Font Awesome (선택사항) -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
   </head>
   <body>
-    <header>
+    <!-- Navigation -->
+    <nav id="navbar">
+      <div class="nav-container">
+        <a href="#home" class="logo">PORTFOLIO</a>
+        <ul class="nav-links">
+          <li><a href="#home">Home</a></li>
+          <li><a href="#about">About</a></li>
+          <li><a href="#portfolio">Portfolio</a></li>
+          <li><a href="#skills">Skills</a></li>
+          <li><a href="#educations">Educations</a></li>
+        </ul>
+        <div class="menu-toggle">
+          <i class="fas fa-bars"></i>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Home Section -->
+    <header id="home">
       <!-- 배경 영상: src에 실제 영상 파일 경로를 입력하세요 -->
       <video autoplay muted loop id="bg-video">
         <source src="background.mp4" type="video/mp4" />
       </video>
+      <div class="overlay"></div>
 
-      <nav>
-        <a href="#home">Home</a>
-        <a href="#about">About</a>
-        <a href="#portfolio">Portfolio</a>
-        <a href="#skills">Skills</a>
-        <a href="#educations">Educations</a>
-      </nav>
+      <div class="hero-content">
+        <!-- 타이핑 효과가 들어갈 부분 -->
+        <h1>
+          I am a
+          <span
+            class="txt-type"
+            data-wait="3000"
+            data-words='["Developer", "Designer", "Creator"]'
+          ></span>
+        </h1>
+        <p class="sub-text">Welcome to my personal portfolio website.</p>
+        <a href="#about" class="btn-main">View More</a>
+      </div>
     </header>
+
+    <!-- About Section -->
+    <section id="about" class="section-padding">
+      <div class="container">
+        <h2 class="section-title">About Me</h2>
+        <div class="about-content">
+          <div class="about-text">
+            <p>
+              안녕하세요! 끊임없이 성장하는 개발자입니다. 새로운 기술을 배우고
+              적용하는 것을 즐깁니다. 이곳에 본인의 소개글을 작성해주세요.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Portfolio Section -->
+    <section id="portfolio" class="section-padding bg-light">
+      <div class="container">
+        <h2 class="section-title">Portfolio</h2>
+        <div class="portfolio-grid">
+          <!-- Project Item 1 -->
+          <div
+            class="portfolio-item"
+            data-title="Game Portfolio"
+            data-desc="웹 기술을 활용하여 제작한 게임 포트폴리오입니다. AI와 웹 개발 기술을 접목하여 만들었습니다."
+            data-url="https://kdy20716-droid.github.io/web-dev-ai-2026/"
+          >
+            <div class="portfolio-img">
+              <!-- 실제 이미지 경로로 변경하거나, 예시 이미지를 사용하세요 -->
+              <img
+                src="https://via.placeholder.com/600x400?text=Project+1"
+                alt="Project 1"
+              />
+            </div>
+            <div class="portfolio-info">
+              <h3>Game Portfolio</h3>
+              <p>클릭하여 상세 내용을 확인하세요.</p>
+            </div>
+          </div>
+          <!-- Project Item 2 -->
+          <div
+            class="portfolio-item"
+            data-title="Project Title 2"
+            data-desc="이것은 프로젝트 2에 대한 상세 설명입니다. 모달창을 통해 더 많은 정보를 보여줄 수 있습니다."
+          >
+            <div class="portfolio-img">
+              <img
+                src="https://via.placeholder.com/600x400?text=Project+2"
+                alt="Project 2"
+              />
+            </div>
+            <div class="portfolio-info">
+              <h3>Project Title 2</h3>
+              <p>프로젝트에 대한 간단한 설명을 적어주세요.</p>
+            </div>
+          </div>
+          <!-- Project Item 3 -->
+          <div
+            class="portfolio-item"
+            data-title="Project Title 3"
+            data-desc="이것은 프로젝트 3에 대한 상세 설명입니다. 포트폴리오 이미지를 클릭하면 이 창이 뜹니다."
+          >
+            <div class="portfolio-img">
+              <img
+                src="https://via.placeholder.com/600x400?text=Project+3"
+                alt="Project 3"
+              />
+            </div>
+            <div class="portfolio-info">
+              <h3>Project Title 3</h3>
+              <p>프로젝트에 대한 간단한 설명을 적어주세요.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Skills Section -->
+    <section id="skills" class="section-padding">
+      <div class="container">
+        <h2 class="section-title">Skills</h2>
+        <div class="skills-container">
+          <div class="skill-box">
+            <div class="skill-title">HTML5</div>
+            <div class="skill-bar">
+              <div class="skill-per" style="width: 90%"></div>
+            </div>
+          </div>
+          <div class="skill-box">
+            <div class="skill-title">CSS3</div>
+            <div class="skill-bar">
+              <div class="skill-per" style="width: 80%"></div>
+            </div>
+          </div>
+          <div class="skill-box">
+            <div class="skill-title">JavaScript</div>
+            <div class="skill-bar">
+              <div class="skill-per" style="width: 70%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Educations Section -->
+    <section id="educations" class="section-padding bg-light">
+      <div class="container">
+        <h2 class="section-title">Educations</h2>
+        <div class="timeline">
+          <div class="timeline-item">
+            <span class="date">2020 - 2024</span>
+            <h3>University Name</h3>
+            <p>Computer Science Degree</p>
+          </div>
+          <div class="timeline-item">
+            <span class="date">2017 - 2020</span>
+            <h3>High School Name</h3>
+            <p>Science Department</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <p>&copy; 2024 My Portfolio. All Rights Reserved.</p>
+    </footer>
+
+    <!-- Modal Structure -->
+    <div id="portfolio-modal" class="modal">
+      <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <img src="" alt="" class="modal-img" />
+        <h3 class="modal-title"></h3>
+        <p class="modal-text"></p>
+        <a
+          href="#"
+          class="modal-link btn-main"
+          target="_blank"
+          style="display: none; margin-top: 15px"
+          >View Project</a
+        >
+      </div>
+    </div>
   </body>
 </html>
