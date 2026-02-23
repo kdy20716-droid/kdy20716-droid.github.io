@@ -1,0 +1,511 @@
+body {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  background-color: #ffeaa7; /* 배경색을 따뜻한 노란색으로 변경 */
+  background-image: radial-gradient(
+    circle,
+    #fab1a0 2px,
+    transparent 2.5px
+  ); /* 땡땡이 패턴 추가 */
+  background-size: 30px 30px;
+  font-family: "Noto Sans KR", sans-serif;
+  overflow-y: auto;
+  padding-top: 50px;
+  padding-bottom: 50px;
+  box-sizing: border-box;
+  transition:
+    background-color 0.5s,
+    background-image 0.5s;
+  color-scheme: light;
+}
+
+.game-container {
+  position: relative;
+  background-color: white;
+  padding: 20px;
+  border-radius: 20px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: background-color 0.5s;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 15px;
+  padding: 0 10px;
+  box-sizing: border-box;
+}
+
+.score-box,
+.next-box,
+.high-score-box,
+.recent-scores-box,
+.evolution-box,
+.latest-scores-box,
+.control-box {
+  background-color: #fab1a0;
+  padding: 10px 20px;
+  border-radius: 15px;
+  color: white;
+  font-weight: bold;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 80px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.label {
+  font-size: 14px;
+  margin-bottom: 5px;
+  opacity: 0.9;
+}
+
+#score {
+  font-size: 28px;
+}
+
+#next-fruit {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: transparent;
+  margin-top: 5px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+#game-area {
+  border: 4px solid #fab1a0;
+  background-color: #fff8dc;
+  border-radius: 10px;
+  overflow: hidden; /* 캔버스 둥근 모서리 적용 */
+  position: relative;
+  transition:
+    background-color 0.5s,
+    border-color 0.5s;
+}
+
+canvas {
+  display: block;
+}
+
+.record-box {
+  position: absolute;
+  top: 20px;
+  left: -180px; /* 게임 화면 왼쪽으로 배치 */
+  width: 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.recent-scores-box ul,
+.latest-scores-box ul {
+  list-style: none;
+  padding: 0;
+  margin: 5px 0 0 0;
+  width: 100%;
+  text-align: center;
+}
+
+.recent-scores-box li,
+.latest-scores-box li {
+  font-size: 14px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.evolution-box {
+  position: absolute;
+  top: 20px;
+  right: -180px; /* 게임 화면 오른쪽으로 배치 */
+  width: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.evolution-box ul {
+  list-style: none;
+  padding: 0;
+  margin: 5px 0 0 0;
+  width: 100%;
+}
+
+.evolution-box li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  margin-bottom: 4px;
+  background-color: rgba(255, 255, 255, 0.2);
+  padding: 4px 8px;
+  border-radius: 10px;
+  text-transform: capitalize; /* 첫 글자 대문자 */
+}
+
+.evolution-box li.evolution-arrow {
+  background-color: transparent;
+  padding: 0;
+  margin: 2px 0;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 8px;
+}
+
+.control-box {
+  position: absolute;
+  bottom: 20px;
+  right: -180px; /* 게임 화면 오른쪽 아래로 배치 */
+  width: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* 모달 스타일 */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-content {
+  background-color: white;
+  padding: 40px;
+  border-radius: 20px;
+  text-align: center;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  width: 320px;
+  border: 5px solid #fab1a0;
+  animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transition:
+    background-color 0.5s,
+    border-color 0.5s;
+}
+
+@keyframes popIn {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.modal-content h2 {
+  color: #ff6b6b;
+  font-size: 2rem;
+  margin: 0 0 20px 0;
+  text-shadow: 2px 2px 0 #ffeaa7;
+}
+
+.modal-content p {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #555;
+  margin-bottom: 20px;
+}
+
+.modal-content .game-desc {
+  font-size: 1rem;
+  font-weight: normal;
+  line-height: 1.6;
+  margin-bottom: 30px;
+}
+
+#final-score {
+  color: #fab1a0;
+  font-size: 1.5rem;
+}
+
+#player-name {
+  padding: 12px;
+  border: 2px solid #eee;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  width: 80%;
+  font-size: 1rem;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+#player-name:focus {
+  border-color: #fab1a0;
+}
+
+#restart-btn,
+#start-btn {
+  padding: 12px 30px;
+  font-size: 1.1rem;
+  background-color: #fab1a0;
+  color: white;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  font-weight: bold;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition:
+    transform 0.2s,
+    background-color 0.2s;
+}
+
+#restart-btn:hover,
+#start-btn:hover {
+  background-color: #ff9f89;
+  transform: translateY(-2px);
+}
+
+#bgm-btn,
+#shake-btn,
+#theme-btn,
+#share-btn {
+  background-color: #fab1a0;
+  padding: 10px 20px;
+  border-radius: 15px;
+  color: white;
+  font-weight: bold;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  font-family: "Noto Sans KR", sans-serif;
+}
+
+#bgm-btn {
+  width: 180px;
+  height: 60px;
+  margin-bottom: 5px;
+}
+
+.bgm-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+#bgm-volume {
+  width: 160px;
+  accent-color: #fab1a0; /* 슬라이더 색상 */
+  cursor: pointer;
+}
+
+#theme-btn {
+  width: 100%;
+}
+
+#share-btn {
+  width: 100%;
+  font-size: 13px;
+}
+
+#shake-btn {
+  width: 100%;
+  font-size: 12px;
+  padding: 8px 0;
+}
+
+#shake-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.fruit-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  flex-shrink: 0;
+}
+
+/* 흔들기 애니메이션 */
+@keyframes shake-screen {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate(-5px, 5px) rotate(-1deg);
+  }
+  50% {
+    transform: translate(5px, -5px) rotate(1deg);
+  }
+  75% {
+    transform: translate(-5px, 5px) rotate(-1deg);
+  }
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+}
+
+.shaking {
+  animation: shake-screen 0.5s ease-in-out;
+}
+
+/* 점수 애니메이션 */
+.floating-score {
+  position: absolute;
+  font-size: 24px;
+  font-weight: bold;
+  color: #ff6b6b;
+  pointer-events: none;
+  animation: floatUp 1s ease-out forwards;
+  z-index: 10;
+  text-shadow: 2px 2px 0 #fff;
+}
+
+@keyframes floatUp {
+  0% {
+    transform: translate(-50%, -50%) translateY(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) translateY(-40px) scale(1.2);
+    opacity: 0;
+  }
+}
+
+/* 다크 모드 (Night Theme) */
+body.night-mode {
+  background-color: #2c3e50;
+  background-image: radial-gradient(
+    circle,
+    #ffffff 1px,
+    transparent 1.5px
+  ); /* 별 모양 패턴 */
+}
+
+body.night-mode .game-container {
+  background-color: #34495e;
+  color: #ecf0f1;
+}
+
+body.night-mode #game-area {
+  background-color: #2c3e50;
+  border-color: #7f8c8d;
+}
+
+body.night-mode .modal-content {
+  background-color: #34495e;
+  border-color: #7f8c8d;
+}
+
+body.night-mode .modal-content h2 {
+  text-shadow: none;
+  color: #e74c3c;
+}
+
+body.night-mode .modal-content p {
+  color: #bdc3c7;
+}
+
+body.night-mode #player-name {
+  background-color: #2c3e50;
+  color: white;
+  border: 1px solid #7f8c8d;
+}
+
+/* 📱 반응형 미디어 쿼리 (화면이 좁을 때 레이아웃 변경) */
+@media (max-width: 1200px) {
+  .game-container {
+    width: 100%;
+    max-width: 520px; /* 캔버스(480) + 패딩(40) 고려하여 520px로 수정 */
+  }
+
+  /* 사이드 박스들을 게임 화면 흐름 안으로 가져오기 */
+  .record-box,
+  .evolution-box,
+  .control-box {
+    position: static; /* absolute 제거 (원래 흐름대로 배치) */
+    width: 100%; /* 가로 꽉 차게 */
+    margin: 10px 0;
+    box-sizing: border-box;
+  }
+
+  /* 컨트롤 박스: 가로 배치 */
+  .control-box {
+    flex-direction: row;
+    justify-content: center;
+    gap: 10px;
+    order: 3; /* 게임 화면 바로 아래 */
+  }
+
+  /* 진화 단계 박스: 내부 요소 가로 정렬 및 중앙 정렬 */
+  .evolution-box ul {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 5px;
+  }
+
+  .evolution-box li {
+    justify-content: center;
+    width: auto;
+    padding: 5px 10px;
+  }
+
+  /* 진화 단계 화살표 회전 (오른쪽 방향) */
+  .evolution-box li.evolution-arrow {
+    transform: rotate(-90deg);
+  }
+
+  /* 랭킹 박스: 내부 요소 가로 배치 및 여백 조정 */
+  .record-box {
+    flex-direction: row;
+    justify-content: center;
+    flex-wrap: nowrap; /* 줄바꿈 방지 (좌우 배치 강제) */
+    gap: 10px;
+    order: 5; /* 가장 아래 */
+    padding: 0 10px;
+  }
+
+  .recent-scores-box,
+  .latest-scores-box {
+    flex: 1; /* 균등 분할 */
+    min-width: 0;
+  }
+
+  /* 순서 재배치 */
+  .header {
+    order: 1;
+  }
+  #game-area {
+    order: 2;
+  }
+  .evolution-box {
+    order: 4; /* 컨트롤 박스 아래 */
+  }
+}

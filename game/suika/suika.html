@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>수박 게임</title>
+    <meta name="color-scheme" content="light only">
+    <!-- 파비콘 (브라우저 탭 아이콘) -->
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍉</text></svg>"
+    />
+    <!-- SNS 공유 미리보기 (Open Graph) -->
+    <meta property="og:title" content="수박 게임 🍉" />
+    <meta
+      property="og:description"
+      content="과일을 합쳐서 수박을 만들어보세요!"
+    />
+    <meta property="og:image" content="thumbnail.png" />
+    <link rel="stylesheet" href="suika.css" />
+    <!-- Matter.js 물리 엔진 라이브러리 CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+  </head>
+  <body>
+    <div class="game-container">
+      <div class="record-box">
+        <div class="recent-scores-box">
+          <div class="label">🏆 랭킹 TOP 5</div>
+          <ul id="recent-scores"></ul>
+        </div>
+        <div class="latest-scores-box">
+          <div class="label">🕒 최근 기록</div>
+          <ul id="latest-scores"></ul>
+        </div>
+      </div>
+      <div class="evolution-box">
+        <div class="label">과일 진화 단계</div>
+        <ul id="evolution-list"></ul>
+      </div>
+      <div class="control-box">
+        <button id="shake-btn">🫨 흔들기 (3)</button>
+        <button id="theme-btn">🌙 Night</button>
+        <button id="share-btn">🔗 공유하기</button>
+      </div>
+      <div class="header">
+        <div class="score-box">
+          <div class="label">SCORE</div>
+          <div id="score">0</div>
+        </div>
+        <div class="next-box">
+          <div class="label">NEXT</div>
+          <canvas id="next-fruit" width="60" height="60"></canvas>
+        </div>
+        <div class="bgm-controls">
+          <button id="bgm-btn">🎵 BGM OFF</button>
+          <input
+            type="range"
+            id="bgm-volume"
+            min="0"
+            max="2"
+            step="0.1"
+            value="1"
+            title="볼륨 조절"
+          />
+        </div>
+      </div>
+      <div id="game-area"></div>
+    </div>
+    <!-- 게임 시작 화면 -->
+    <div id="start-screen" class="modal">
+      <div class="modal-content">
+        <h2>🍉 수박 게임 🍉</h2>
+        <p class="game-desc">
+          같은 과일을 합쳐 더 큰 과일을 만드세요!<br />
+          마우스나 터치로 위치를 조절하고<br />
+          클릭하여 떨어뜨립니다.
+        </p>
+        <button id="start-btn">게임 시작</button>
+      </div>
+    </div>
+    <!-- 게임 오버 모달 -->
+    <div id="game-over-modal" class="modal hidden">
+      <div class="modal-content">
+        <h2>GAME OVER</h2>
+        <p>최종 점수: <span id="final-score">0</span></p>
+        <input
+          type="text"
+          id="player-name"
+          placeholder="이름을 입력하세요"
+          maxlength="4"
+        />
+        <br />
+        <button id="restart-btn">기록 저장 및 재시작</button>
+      </div>
+    </div>
+    <script type="module" src="suika.js"></script>
+  </body>
+</html>

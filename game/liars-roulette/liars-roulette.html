@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Liars Roulette Table</title>
+    <link rel="stylesheet" href="liars-roulette.css" />
+    <meta name="color-scheme" content="light only" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+  </head>
+  <body>
+    <div id="game-container">
+      <canvas id="gameCanvas"></canvas>
+
+      <!-- UI 레이어 -->
+      <div id="ui-layer">
+        <!-- 시작 화면 -->
+        <div id="start-screen" class="screen">
+          <h1 class="title">Liars-Roulette</h1>
+          <button id="btn-start" class="btn primary">게임 시작</button>
+          <button id="btn-howto" class="btn secondary" style="margin-top: 20px">
+            게임 방법
+          </button>
+        </div>
+
+        <!-- 전체 화면 버튼 -->
+        <button id="btn-fullscreen" class="btn">전체 화면</button>
+
+        <!-- 사운드 컨트롤 (음소거 및 볼륨) -->
+        <div id="sound-controls">
+          <button id="btn-mute" class="btn-icon">🔊</button>
+          <input
+            type="range"
+            id="volume-slider"
+            min="0"
+            max="1"
+            step="0.01"
+            value="0.5"
+          />
+        </div>
+
+        <!-- 게임 HUD (헤드업 디스플레이) -->
+        <div id="game-hud" class="hidden">
+          <div id="target-rank">Table: K</div>
+          <div id="game-status" class="status-text">게임 대기 중...</div>
+          <div id="action-buttons">
+            <button id="btn-play" class="btn success" disabled>완료</button>
+            <button id="btn-liar" class="btn danger hidden">거짓말!</button>
+          </div>
+        </div>
+
+        <!-- 목표 카드 팝업 (일시적 표시) -->
+        <div
+          id="target-popup"
+          class="hidden"
+          style="
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 300;
+            pointer-events: none;
+          "
+        >
+          <img
+            id="target-popup-img"
+            src=""
+            alt="Target Card"
+            style="
+              width: 120px;
+              height: auto;
+              border-radius: 10px;
+              box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+              margin-bottom: 10px;
+            "
+          />
+          <div
+            id="target-popup-text"
+            style="
+              font-size: 32px;
+              font-weight: bold;
+              color: #d4af37;
+              text-shadow: 2px 2px 4px black;
+            "
+          >
+            Target: ?
+          </div>
+        </div>
+
+        <!-- 게임 오버 화면 -->
+        <div id="game-over-screen" class="screen hidden">
+          <h1 id="game-over-title">YOU DIED</h1>
+          <button id="btn-restart" class="btn primary">다시 시작</button>
+        </div>
+
+        <!-- 게임 방법 모달 -->
+        <div id="howto-modal" class="screen hidden">
+          <div class="modal-content">
+            <h2>게임 방법</h2>
+            <div class="rules-text">
+              <div class="rule-block">
+                <h3>🎯 목표</h3>
+                <p>
+                  러시안 룰렛에서 끝까지 살아남는 <strong>최후의 1인</strong>이
+                  되세요.
+                </p>
+              </div>
+              <div class="rule-block">
+                <h3>🃏 진행</h3>
+                <p>
+                  자신의 턴에 <strong>테이블에 지정된 카드(Target)</strong>를
+                  냅니다.<br />없는 카드를 있는 척 낼 수도 있습니다. (거짓말)
+                </p>
+              </div>
+              <div class="rule-block">
+                <h3>🔫 의심과 심판</h3>
+                <p>
+                  누군가 거짓말을 한 것 같다면 <strong>"거짓말!"</strong>을
+                  외치세요.
+                </p>
+                <ul>
+                  <li>
+                    <strong>검거 성공:</strong> 거짓말쟁이가 방아쇠를 당깁니다.
+                  </li>
+                  <li>
+                    <strong>검거 실패(진실):</strong> 의심한 당신이 방아쇠를
+                    당깁니다.
+                  </li>
+                </ul>
+              </div>
+              <div class="rule-block">
+                <h3>😈 데빌 카드</h3>
+                <p>
+                  <strong>단독으로만 낼 수 있습니다.</strong> (다른 카드와 섞기
+                  불가)<br />누군가 <strong>"거짓말!"</strong>을 외쳐 카드가
+                  공개되면 발동하며, <strong>제출자를 제외한 전원</strong>이
+                  룰렛을 돌립니다.
+                </p>
+              </div>
+            </div>
+            <button id="btn-close-howto" class="btn primary">닫기</button>
+          </div>
+        </div>
+
+        <!-- 메시지 오버레이 -->
+        <div id="message-overlay" class="hidden"></div>
+      </div>
+
+      <!-- 말풍선 UI -->
+      <div id="bubble-0" class="speech-bubble"></div>
+      <!-- East -->
+      <div id="bubble-1" class="speech-bubble"></div>
+      <!-- North -->
+      <div id="bubble-2" class="speech-bubble"></div>
+      <!-- West -->
+      <div id="bubble-3" class="speech-bubble"></div>
+      <!-- South -->
+
+      <!-- 히든 리워드 (Shift + H) - 게임 화면 바로 아래 -->
+      <div
+        id="hidden-reward"
+        style="
+          position: absolute;
+          top: 100%; /* 게임 화면 바닥(100%) 기준 */
+          left: 50%;
+          transform: translateX(-50%);
+          margin-top: -10px; /* 게임 화면과의 간격 (여기서 조절하세요) */
+          width: 50%; /* 게임 화면 너비의 40% (화면 크기에 비례하여 조절됨) */
+          opacity: 0;
+          transition: opacity 1s ease-in-out;
+          z-index: 9999;
+          pointer-events: none;
+        "
+      >
+        <!-- 크기 조절: 부모 div의 width(%)를 따라갑니다 -->
+        <img
+          src="./pokercard/breast.png"
+          alt="Hidden Reward"
+          style="width: 100%; height: auto; display: block"
+        />
+      </div>
+    </div>
+
+    <!-- 오디오 리소스 (sound 폴더에 파일을 넣어주세요) -->
+    <div style="display: none">
+      <audio id="bgm-main" src="./sound/Clockwork Clues.mp3" loop></audio>
+      <audio id="bgm-roulette" src="./sound/Pulse In The Dark.mp3" loop></audio>
+      <audio id="sfx-cock" src="./sound/cock.mp3"></audio>
+      <audio id="sfx-click" src="./sound/click.mp3"></audio>
+      <audio id="sfx-gun" src="./sound/bang.mp3"></audio>
+      <audio id="sfx-devil" src="./sound/deveil.mp3"></audio>
+    </div>
+
+    <!-- 카드 이미지 리소스 (화면에 보이지 않음) -->
+    <!-- src 경로를 실제 파일 위치에 맞게 수정해주세요 -->
+    <div style="display: none">
+      <img id="img-K" src="./pokercard/킹카드 스페이드.jpg" alt="King" />
+      <img id="img-Q" src="./pokercard/퀸카드 스페이드.jpg" alt="Queen" />
+      <img id="img-J" src="./pokercard/조커카드.jpg" alt="Joker" />
+      <img id="img-A" src="./pokercard/스페이드 카드.png" alt="Spade" />
+      <img id="img-back" src="./pokercard/포커카드 뒷면.jpg" alt="Back" />
+      <img id="img-D" src="./pokercard/데빌카드.jpg" alt="Devil" />
+    </div>
+
+    <script src="liars-roulette.js"></script>
+  </body>
+</html>
