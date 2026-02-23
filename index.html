@@ -54,6 +54,9 @@
         <p class="sub-text">Welcome to my personal portfolio website.</p>
         <a href="#about" class="btn-main">View More</a>
       </div>
+      <div class="scroll-down">
+        <i class="fas fa-chevron-down"></i>
+      </div>
     </header>
 
     <!-- About Section -->
@@ -61,11 +64,24 @@
       <div class="container">
         <h2 class="section-title">About Me</h2>
         <div class="about-content">
+          <div class="about-img">
+            <!-- 프로필 이미지가 있다면 asset/profile.jpg 등으로 변경하세요 -->
+            <img src="https://via.placeholder.com/200" alt="Profile Image" />
+          </div>
           <div class="about-text">
             <p>
               안녕하세요! 끊임없이 성장하는 개발자입니다. 새로운 기술을 배우고
               적용하는 것을 즐깁니다. 이곳에 본인의 소개글을 작성해주세요.
             </p>
+            <div class="about-links">
+              <a href="https://github.com/" target="_blank" title="GitHub"
+                ><i class="fab fa-github"></i
+              ></a>
+              <a href="mailto:email@example.com" title="Email"
+                ><i class="fas fa-envelope"></i
+              ></a>
+              <a href="#" title="Blog"><i class="fas fa-pen-square"></i></a>
+            </div>
           </div>
         </div>
       </div>
@@ -85,7 +101,7 @@
           >
             <div class="portfolio-img">
               <!-- [이미지 넣는 곳 1] 아래 src="파일경로" 부분을 수정하세요 -->
-              <img src="assest/portfolio.png" alt="Game Portfolio" />
+              <img src="asset/portfolio.png" alt="Game Portfolio" />
             </div>
             <div class="portfolio-info">
               <h3>Game Portfolio</h3>
@@ -97,11 +113,11 @@
             class="portfolio-item"
             data-title="Suika Game"
             data-desc="2월 11일부터 12일까지 작업한 수박게임 프로젝트입니다. 과일을 합쳐 더 큰 과일을 만드는 미니 게임입니다."
-            data-url="https://kdy20716-droid.github.io/web-dev-ai-2026/suika/suika.html"
+            data-url="game/suika/suika.html"
           >
             <div class="portfolio-img">
               <!-- [이미지 넣는 곳 2] 아래 src="파일경로" 부분을 수정하세요 -->
-              <img src="assest/suika.png" alt="Suika Game" />
+              <img src="asset/suika.png" alt="Suika Game" />
             </div>
             <div class="portfolio-info">
               <h3>Suika Game</h3>
@@ -113,11 +129,11 @@
             class="portfolio-item"
             data-title="Liar's Roulette"
             data-desc="2월 19일부터 2월 23일까지 작업한 라이어스 룰렛 게임입니다. 전략과 운이 필요한 심리 게임 프로젝트입니다."
-            data-url="https://kdy20716-droid.github.io/web-dev-ai-2026/liars-roulette/liars-roulette.html"
+            data-url="game/liars-roulette/liars-roulette.html"
           >
             <div class="portfolio-img">
               <!-- [이미지 넣는 곳 3] 아래 src="파일경로" 부분을 수정하세요 -->
-              <img src="assest/liars_roulette.png" alt="Liar's Roulette" />
+              <img src="asset/liars_roulette.png" alt="Liar's Roulette" />
             </div>
             <div class="portfolio-info">
               <h3>Liar's Roulette</h3>
@@ -132,23 +148,343 @@
     <section id="skills" class="section-padding">
       <div class="container">
         <h2 class="section-title">Skills</h2>
-        <div class="skills-container">
-          <div class="skill-box">
-            <div class="skill-title">HTML5</div>
-            <div class="skill-bar">
-              <div class="skill-per" style="width: 90%"></div>
+        <div class="skills-grid">
+          <!-- Web Development -->
+          <div class="skills-category">
+            <h3>Web Development</h3>
+            <div class="skill-tags">
+              <span
+                class="skill-tag html"
+                data-desc="웹 페이지의 뼈대를 만드는 표준 마크업 언어입니다."
+                data-url="https://developer.mozilla.org/ko/docs/Web/HTML"
+                data-image="https://images.unsplash.com/photo-1621839673705-6617adf9e890?auto=format&fit=crop&w=800&q=80"
+                ><img
+                  src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/html5/html5-original.svg"
+                  class="skill-icon"
+                  alt="HTML"
+                />
+                HTML</span
+              >
+              <span
+                class="skill-tag css"
+                data-desc="웹 페이지의 디자인과 레이아웃을 스타일링하는 언어입니다."
+                data-url="https://developer.mozilla.org/ko/docs/Web/CSS"
+                data-image="https://images.unsplash.com/photo-1523474253046-8cd2748b5fd2?auto=format&fit=crop&w=800&q=80"
+                ><img
+                  src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/css3/css3-original.svg"
+                  class="skill-icon"
+                  alt="CSS"
+                />
+                CSS</span
+              >
+              <span
+                class="skill-tag scss"
+                data-desc="CSS의 기능을 확장하여 재사용성과 유지보수성을 높인 전처리기입니다."
+                data-url="https://sass-lang.com/"
+                data-image="https://images.unsplash.com/photo-1523474253046-8cd2748b5fd2?auto=format&fit=crop&w=800&q=80"
+                ><img
+                  src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/sass/sass-original.svg"
+                  class="skill-icon"
+                  alt="SCSS"
+                />
+                SCSS</span
+              >
+              <span
+                class="skill-tag js"
+                data-desc="웹 페이지에 동적인 기능과 상호작용을 구현하는 프로그래밍 언어입니다."
+                data-url="https://developer.mozilla.org/ko/docs/Web/JavaScript"
+                data-image="https://images.unsplash.com/photo-1627398242454-45a1465c2479?auto=format&fit=crop&w=800&q=80"
+                ><img
+                  src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/javascript/javascript-original.svg"
+                  class="skill-icon"
+                  alt="JS"
+                />
+                JavaScript</span
+              >
+              <span
+                class="skill-tag react"
+                data-desc="사용자 인터페이스(UI)를 구축하기 위한 JavaScript 라이브러리입니다."
+                data-url="https://react.dev/"
+                data-image="https://images.unsplash.com/photo-1555099962-4199c345e5dd?auto=format&fit=crop&w=800&q=80"
+                ><img
+                  src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/react/react-original.svg"
+                  class="skill-icon"
+                  alt="React"
+                />
+                React</span
+              >
+              <span
+                class="skill-tag firebase"
+                data-desc="구글이 제공하는 백엔드 서비스로, 데이터베이스, 인증 등을 쉽게 구현할 수 있습니다."
+                data-url="https://firebase.google.com/"
+                data-image="https://firebase.google.com/images/social.png"
+                ><img
+                  src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/firebase/firebase-plain.svg"
+                  class="skill-icon"
+                  alt="Firebase"
+                />
+                Firebase</span
+              >
             </div>
           </div>
-          <div class="skill-box">
-            <div class="skill-title">CSS3</div>
-            <div class="skill-bar">
-              <div class="skill-per" style="width: 80%"></div>
+          <!-- Design & Video -->
+          <div class="skills-category">
+            <h3>Design & Video</h3>
+            <div class="skill-tags">
+              <span
+                class="skill-tag ps"
+                data-desc="이미지 편집, 합성, 그래픽 디자인을 위한 대표적인 소프트웨어입니다."
+                data-url="https://www.adobe.com/kr/products/photoshop.html"
+                data-image="https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=800&q=80"
+                ><img
+                  src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/photoshop/photoshop-plain.svg"
+                  class="skill-icon"
+                  alt="PS"
+                />
+                Photoshop</span
+              >
+              <span
+                class="skill-tag ai"
+                data-desc="로고, 아이콘 등 벡터 기반의 그래픽을 제작하는 디자인 툴입니다."
+                data-url="https://www.adobe.com/kr/products/illustrator.html"
+                data-image="https://images.unsplash.com/photo-1572044162444-ad60f128bdea?auto=format&fit=crop&w=800&q=80"
+                ><img
+                  src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/illustrator/illustrator-plain.svg"
+                  class="skill-icon"
+                  alt="AI"
+                />
+                Illustrator</span
+              >
+              <span
+                class="skill-tag figma"
+                data-desc="웹 기반의 실시간 협업이 가능한 UI/UX 디자인 및 프로토타이핑 툴입니다."
+                data-url="https://www.figma.com/"
+                data-image="https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=800&q=80"
+                ><img
+                  src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/figma/figma-original.svg"
+                  class="skill-icon"
+                  alt="Figma"
+                />
+                Figma</span
+              >
+              <span
+                class="skill-tag ae"
+                data-desc="모션 그래픽과 시각 효과(VFX)를 제작하는 영상 편집 프로그램입니다."
+                data-url="https://www.adobe.com/kr/products/aftereffects.html"
+                data-image="https://images.unsplash.com/photo-1536240478700-b869070f9279?auto=format&fit=crop&w=800&q=80"
+                ><img
+                  src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/aftereffects/aftereffects-original.svg"
+                  class="skill-icon"
+                  alt="AE"
+                />
+                After Effects</span
+              >
+              <span
+                class="skill-tag pr"
+                data-desc="영상 컷 편집, 색보정 등 전반적인 영상 제작을 위한 편집 툴입니다."
+                data-url="https://www.adobe.com/kr/products/premiere.html"
+                data-image="https://images.unsplash.com/photo-1574717432707-c25c8587a3ea?auto=format&fit=crop&w=800&q=80"
+                ><img
+                  src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/premierepro/premierepro-original.svg"
+                  class="skill-icon"
+                  alt="PR"
+                />
+                Premiere Pro</span
+              >
             </div>
           </div>
-          <div class="skill-box">
-            <div class="skill-title">JavaScript</div>
-            <div class="skill-bar">
-              <div class="skill-per" style="width: 70%"></div>
+          <!-- 3D & Game Engine -->
+          <div class="skills-category">
+            <h3>3D & Game Engine</h3>
+            <div class="skill-tags">
+              <span
+                class="skill-tag unity"
+                data-desc="2D 및 3D 게임 개발에 널리 사용되는 강력한 게임 엔진입니다."
+                data-url="https://unity.com/kr"
+                data-image="https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/Unity_5.0_screenshot.png/800px-Unity_5.0_screenshot.png"
+                ><img
+                  src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/unity/unity-original.svg"
+                  class="skill-icon"
+                  alt="Unity"
+                />
+                Unity</span
+              >
+              <span
+                class="skill-tag unreal"
+                data-desc="고품질의 그래픽과 리얼타임 3D 콘텐츠 제작을 위한 게임 엔진입니다."
+                data-url="https://www.unrealengine.com/ko"
+                data-image="https://cdn2.unrealengine.com/ue5-early-access-share-1920x1080-4530b898766b.jpg"
+                ><img
+                  src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/unrealengine/unrealengine-original.svg"
+                  class="skill-icon"
+                  alt="Unreal"
+                />
+                Unreal Engine</span
+              >
+              <span
+                class="skill-tag maya"
+                data-desc="3D 모델링, 애니메이션, 렌더링을 위한 전문 3D 그래픽 소프트웨어입니다."
+                data-url="https://www.autodesk.co.kr/products/maya/overview"
+                data-image="https://images.unsplash.com/photo-1617791160505-6f00504e3519?auto=format&fit=crop&w=800&q=80"
+                ><img
+                  src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/maya/maya-original.svg"
+                  class="skill-icon"
+                  alt="Maya"
+                />
+                Maya</span
+              >
+              <span
+                class="skill-tag blender"
+                data-desc="모델링, 렌더링, 애니메이션 등을 지원하는 무료 오픈소스 3D 제작 툴입니다."
+                data-url="https://www.blender.org/"
+                data-image="https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Blender_2.90_screenshot.png/800px-Blender_2.90_screenshot.png"
+                ><img
+                  src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/blender/blender-original.svg"
+                  class="skill-icon"
+                  alt="Blender"
+                />
+                Blender</span
+              >
+              <span
+                class="skill-tag zbrush"
+                data-desc="고해상도 3D 모델링과 디지털 조각(Sculpting)에 특화된 소프트웨어입니다."
+                data-url="https://www.maxon.net/ko/zbrush"
+                data-image="https://images.unsplash.com/photo-1617791160505-6f00504e3519?auto=format&fit=crop&w=800&q=80"
+                ><img src="asset/zbrush.png" class="skill-icon" alt="ZBrush" />
+                ZBrush</span
+              >
+              <span
+                class="skill-tag substance"
+                data-desc="3D 모델에 사실적인 텍스처와 재질을 입히는 3D 페인팅 툴입니다."
+                data-url="https://www.adobe.com/kr/products/substance3d-painter.html"
+                data-image="https://images.unsplash.com/photo-1617791160505-6f00504e3519?auto=format&fit=crop&w=800&q=80"
+                ><img
+                  src="asset/substancepainter.png"
+                  class="skill-icon"
+                  alt="Substance"
+                />
+                Substance Painter</span
+              >
+            </div>
+          </div>
+          <!-- AI Tools -->
+          <div class="skills-category">
+            <h3>AI</h3>
+            <div class="skill-tags">
+              <span
+                class="skill-tag chatgpt"
+                data-desc="OpenAI의 대규모 언어 모델을 기반으로 한 대화형 AI 서비스입니다."
+                data-url="https://chat.openai.com/"
+                data-image="https://images.unsplash.com/photo-1676299081847-824916de030a?auto=format&fit=crop&w=800&q=80"
+                ><img
+                  src="https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg"
+                  class="skill-icon"
+                  alt="ChatGPT"
+                />
+                ChatGPT</span
+              >
+              <span
+                class="skill-tag gemini"
+                data-desc="구글의 멀티모달 AI 모델로, 텍스트, 이미지 등 다양한 정보를 처리합니다."
+                data-url="https://gemini.google.com/"
+                data-image="https://storage.googleapis.com/gweb-uniblog-publish-prod/images/Gemini_SS.max-1000x1000.jpg"
+                ><img
+                  src="https://upload.wikimedia.org/wikipedia/commons/8/8a/Google_Gemini_logo.svg"
+                  class="skill-icon"
+                  alt="Gemini"
+                />
+                Gemini</span
+              >
+              <span
+                class="skill-tag grok"
+                data-desc="xAI에서 개발한 AI로, 실시간 정보 접근과 유머러스한 답변이 특징입니다."
+                data-url="https://grok.x.ai/"
+                data-image="https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=800&q=80"
+                ><img
+                  src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRMUOVJh5IOR4QuU9k2Wg3WXpreItqrml-dYg&s"
+                  class="skill-icon"
+                  alt="Grok"
+                />
+                Grok AI</span
+              >
+              <span
+                class="skill-tag midjourney"
+                data-desc="텍스트 프롬프트를 입력하면 고퀄리티의 이미지를 생성해주는 AI입니다."
+                data-url="https://www.midjourney.com/"
+                data-image="https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=800&q=80"
+                ><img
+                  src="asset/midjourney.png"
+                  class="skill-icon"
+                  alt="Midjourney"
+                />
+                Midjourney</span
+              >
+              <span
+                class="skill-tag suno"
+                data-desc="텍스트 입력만으로 보컬이 포함된 노래와 음악을 생성하는 AI입니다."
+                data-url="https://suno.com/"
+                data-image="https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=800&q=80"
+                ><img
+                  src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQzYPQa-cq6w8Eo3Nd0kagXD2Ibx3SemGGePA&s"
+                  class="skill-icon"
+                  alt="Suno"
+                />
+                Suno AI</span
+              >
+            </div>
+          </div>
+          <!-- Tools -->
+          <div class="skills-category">
+            <h3>Tools</h3>
+            <div class="skill-tags">
+              <span
+                class="skill-tag git"
+                data-desc="소스 코드의 버전을 관리하고 협업을 돕는 분산 버전 관리 시스템입니다."
+                data-url="https://git-scm.com/"
+                data-image="https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?auto=format&fit=crop&w=800&q=80"
+                ><img
+                  src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/git/git-original.svg"
+                  class="skill-icon"
+                  alt="Git"
+                />
+                Git</span
+              >
+              <span
+                class="skill-tag slack"
+                data-desc="팀 커뮤니케이션, 파일 공유, 워크플로우 자동화를 위한 협업 메신저입니다."
+                data-url="https://slack.com/intl/ko-kr/"
+                data-image="https://images.unsplash.com/photo-1511192336575-5a79af67a629?auto=format&fit=crop&w=800&q=80"
+                ><img
+                  src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/slack/slack-original.svg"
+                  class="skill-icon"
+                  alt="Slack"
+                />
+                Slack</span
+              >
+              <span
+                class="skill-tag vscode"
+                data-desc="마이크로소프트에서 개발한 가볍고 확장성이 뛰어난 소스 코드 에디터입니다."
+                data-url="https://code.visualstudio.com/"
+                data-image="https://upload.wikimedia.org/wikipedia/commons/b/b9/Visual_Studio_Code_1.86.0_screenshot.png"
+                ><img
+                  src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/vscode/vscode-original.svg"
+                  class="skill-icon"
+                  alt="VS Code"
+                />
+                VS Code</span
+              >
+              <span
+                class="skill-tag notion"
+                data-desc="메모, 문서 작성, 프로젝트 관리 등을 통합한 올인원 워크스페이스입니다."
+                data-url="https://www.notion.so/ko-kr"
+                data-image="https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?auto=format&fit=crop&w=800&q=80"
+                ><img
+                  src="https://upload.wikimedia.org/wikipedia/commons/e/e9/Notion-logo.svg"
+                  class="skill-icon"
+                  alt="Notion"
+                />
+                Notion</span
+              >
             </div>
           </div>
         </div>
@@ -175,7 +511,7 @@
     </section>
 
     <footer>
-      <p>&copy; 2024 My Portfolio. All Rights Reserved.</p>
+      <p>&copy; 2026 My Portfolio. All Rights Reserved.</p>
     </footer>
 
     <!-- Modal Structure -->
@@ -190,7 +526,29 @@
           class="modal-link btn-main"
           target="_blank"
           style="display: none; margin-top: 15px"
-          >View Project</a
+          >보러가기</a
+        >
+      </div>
+    </div>
+
+    <!-- Skill Modal Structure -->
+    <div id="skill-modal" class="modal">
+      <div class="modal-content">
+        <span class="close-skill-modal close-modal">&times;</span>
+        <h3 class="skill-modal-title modal-title"></h3>
+        <p class="skill-modal-desc modal-text"></p>
+        <img
+          class="skill-modal-img modal-img"
+          src=""
+          alt="Homepage Preview"
+          style="display: none"
+        />
+        <a
+          href="#"
+          class="skill-modal-link btn-main"
+          target="_blank"
+          style="display: none; margin-top: 15px"
+          >홈페이지로 이동</a
         >
       </div>
     </div>
