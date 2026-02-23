@@ -28,6 +28,17 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Scroll Progress Bar */
+#scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0%;
+  height: 4px;
+  background: #3498db;
+  z-index: 2000;
+}
+
 /* Navigation */
 #navbar {
   position: fixed;
@@ -81,6 +92,11 @@ html {
 
 .nav-links a:hover {
   color: #3498db;
+}
+
+.nav-links a.active {
+  color: #3498db;
+  border-bottom: 2px solid #3498db;
 }
 
 .theme-switch {

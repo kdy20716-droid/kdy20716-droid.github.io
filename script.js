@@ -12,6 +12,42 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // --- Scroll Progress Bar ---
+  const scrollProgress = document.getElementById("scroll-progress");
+  window.addEventListener("scroll", () => {
+    const scrollTop =
+      document.documentElement.scrollTop || document.body.scrollTop;
+    const scrollHeight =
+      document.documentElement.scrollHeight -
+      document.documentElement.clientHeight;
+    const scrolled = (scrollTop / scrollHeight) * 100;
+    if (scrollProgress) {
+      scrollProgress.style.width = `${scrolled}%`;
+    }
+  });
+
+  // --- Scroll Spy (Active Nav Link) ---
+  const sections = document.querySelectorAll("section, header");
+  const navLinksA = document.querySelectorAll(".nav-links li a");
+
+  window.addEventListener("scroll", () => {
+    let current = "";
+    sections.forEach((section) => {
+      const sectionTop = section.offsetTop;
+      const sectionHeight = section.clientHeight;
+      if (window.scrollY >= sectionTop - sectionHeight / 3) {
+        current = section.getAttribute("id");
+      }
+    });
+
+    navLinksA.forEach((a) => {
+      a.classList.remove("active");
+      if (a.getAttribute("href").includes(current)) {
+        a.classList.add("active");
+      }
+    });
+  });
+
   // --- Mobile Menu Toggle ---
   const menuToggle = document.querySelector(".menu-toggle");
   const navLinks = document.querySelector(".nav-links");
