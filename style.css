@@ -10,6 +10,9 @@ body {
   line-height: 1.6;
   color: #333;
   overflow-x: hidden;
+  transition:
+    background-color 0.5s ease,
+    color 0.5s ease;
 }
 
 a {
@@ -78,6 +81,24 @@ html {
 
 .nav-links a:hover {
   color: #3498db;
+}
+
+.theme-switch {
+  cursor: pointer;
+  color: #fff;
+  display: flex;
+  align-items: center;
+}
+
+.theme-switch i {
+  transition:
+    transform 0.5s ease,
+    opacity 0.3s ease;
+}
+
+.theme-switch i.switching {
+  transform: rotate(180deg) scale(0.5);
+  opacity: 0;
 }
 
 .menu-toggle {
@@ -185,6 +206,55 @@ html {
 
 .bg-light {
   background: #f4f4f4;
+}
+
+/* Smooth Transition for Dark Mode Elements */
+.bg-light,
+.portfolio-item,
+.timeline-item,
+.modal-content,
+.section-title,
+.portfolio-info h3,
+.skill-title,
+.modal-title,
+.portfolio-info p,
+.date,
+.modal-text {
+  transition:
+    background-color 0.5s ease,
+    color 0.5s ease,
+    border-color 0.5s ease,
+    box-shadow 0.5s ease;
+}
+
+/* Dark Mode Styles */
+body.dark-mode {
+  background-color: #121212;
+  color: #f4f4f4;
+}
+
+body.dark-mode .bg-light {
+  background-color: #1f1f1f;
+}
+
+body.dark-mode .portfolio-item,
+body.dark-mode .timeline-item,
+body.dark-mode .modal-content {
+  background-color: #2c2c2c;
+  color: #fff;
+}
+
+.body.dark-mode .section-title,
+body.dark-mode .portfolio-info h3,
+body.dark-mode .skill-title,
+body.dark-mode .modal-title {
+  color: #fff;
+}
+
+body.dark-mode .portfolio-info p,
+body.dark-mode .date,
+body.dark-mode .modal-text {
+  color: #bbb;
 }
 
 /* Portfolio Grid */

@@ -18,6 +18,27 @@ if (menuToggle) {
   });
 }
 
+// Theme Switcher
+const themeSwitch = document.querySelector(".theme-switch");
+const themeIcon = themeSwitch ? themeSwitch.querySelector("i") : null;
+
+if (themeSwitch && themeIcon) {
+  themeSwitch.addEventListener("click", () => {
+    document.body.classList.toggle("dark-mode");
+
+    themeIcon.classList.add("switching");
+
+    setTimeout(() => {
+      if (document.body.classList.contains("dark-mode")) {
+        themeIcon.classList.replace("fa-moon", "fa-sun");
+      } else {
+        themeIcon.classList.replace("fa-sun", "fa-moon");
+      }
+      themeIcon.classList.remove("switching");
+    }, 300);
+  });
+}
+
 // Typing Effect
 class TypeWriter {
   constructor(txtElement, words, wait = 3000) {
