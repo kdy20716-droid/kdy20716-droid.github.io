@@ -228,6 +228,11 @@ html {
   width: 50px;
   height: 3px;
   background: #3498db;
+  transition: width 0.3s ease;
+}
+
+.section-padding:hover .section-title::after {
+  width: 250px;
 }
 
 /* About Section Details */
@@ -479,7 +484,11 @@ body.dark-mode .modal-text {
   border-radius: 20px;
   font-size: 0.9rem;
   color: #555;
-  transition: all 0.3s ease;
+  transition:
+    background-color 0.5s ease,
+    color 0.5s ease,
+    border-color 0.5s ease,
+    transform 0.3s ease;
   font-weight: 500;
   display: inline-flex;
   align-items: center;
@@ -544,10 +553,10 @@ body.dark-mode .modal-text {
 }
 .skill-tag.js:hover {
   background: #f7df1e;
-  color: #333;
+  color: #fff;
 }
 .skill-tag.js:hover i {
-  color: #333;
+  color: #fff;
 }
 
 .skill-tag.react {
@@ -572,10 +581,10 @@ body.dark-mode .modal-text {
 }
 .skill-tag.firebase:hover {
   background: #ffca28;
-  color: #333;
+  color: #fff;
 }
 .skill-tag.firebase:hover i {
-  color: #333;
+  color: #fff;
 }
 
 .skill-tag.ps {
@@ -838,13 +847,22 @@ body.dark-mode .modal-text {
   color: #fff;
 }
 
+.skill-tag.capcut {
+  border-color: #000;
+}
+.skill-tag.capcut:hover {
+  background: #000;
+  color: #fff;
+}
+
 /* Dark mode adjustments for specific tags if needed */
 body.dark-mode .skill-tag.unity,
 body.dark-mode .skill-tag.unreal,
 body.dark-mode .skill-tag.grok,
 body.dark-mode .skill-tag.midjourney,
 body.dark-mode .skill-tag.suno,
-body.dark-mode .skill-tag.notion {
+body.dark-mode .skill-tag.notion,
+body.dark-mode .skill-tag.capcut {
   border-color: #fff;
 }
 body.dark-mode .skill-tag.unity:hover,
@@ -852,7 +870,8 @@ body.dark-mode .skill-tag.unreal:hover,
 body.dark-mode .skill-tag.grok:hover,
 body.dark-mode .skill-tag.midjourney:hover,
 body.dark-mode .skill-tag.suno:hover,
-body.dark-mode .skill-tag.notion:hover {
+body.dark-mode .skill-tag.notion:hover,
+body.dark-mode .skill-tag.capcut:hover {
   background: #fff;
   color: #000;
 }
@@ -959,6 +978,11 @@ footer {
 @keyframes fadeEffect {
   from {
     opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
   }
   to {
     opacity: 1;
