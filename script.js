@@ -161,7 +161,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (skillModalDesc) skillModalDesc.innerText = desc;
 
         if (skillModalImg) {
-          skillModalImg.src = image || ""; // data-image 이미지 사용
+          skillModalImg.src = image || "";
           skillModalImg.style.display = image ? "block" : "none";
         }
 
@@ -172,7 +172,6 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         } else {
           if (skillModalLink) skillModalLink.style.display = "none";
-          if (skillModalImg) skillModalImg.style.display = "none";
         }
 
         skillModal.style.display = "block";
@@ -184,7 +183,6 @@ document.addEventListener("DOMContentLoaded", () => {
       closeSkillBtn.addEventListener("click", () => {
         skillModal.style.display = "none";
         document.body.style.overflow = "auto";
-        if (skillModalImg) skillModalImg.src = "";
       });
     }
 
@@ -192,7 +190,6 @@ document.addEventListener("DOMContentLoaded", () => {
       if (e.target === skillModal) {
         skillModal.style.display = "none";
         document.body.style.overflow = "auto";
-        if (skillModalImg) skillModalImg.src = "";
       }
     });
   }
