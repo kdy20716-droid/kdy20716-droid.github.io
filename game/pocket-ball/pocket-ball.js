@@ -409,6 +409,7 @@ window.addEventListener("mouseup", handleInputEnd);
 window.addEventListener("touchend", handleInputEnd);
 
 function handleInputStart(e) {
+  if (e.type === "touchstart") e.preventDefault(); // 모바일 터치 기본 동작 방지
   if (isGameEnded || !cueBall) return; // 게임 종료 또는 시작 전 클릭 방지
   if (isShooting || isMoving(cueBall)) return; // 샷 진행 중이거나 공이 움직이면 조작 불가
 
