@@ -150,6 +150,31 @@ const SoundGen = {
     osc.start(t);
     osc.stop(t + 0.2);
   },
+
+  // UI 호버 (큐팁으로 살짝 건드리는 소리)
+  uiHover: function () {
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    const t = audioCtx.currentTime;
+
+    const osc = audioCtx.createOscillator();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(800, t);
+    osc.frequency.exponentialRampToValueAtTime(400, t + 0.05);
+
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.05, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(t);
+    osc.stop(t + 0.05);
+  },
+
+  // UI 클릭 (공 부딪히는 소리)
+  uiClick: function () {
+    this.ballHit(0.6);
+  },
 };
 
 // 벽 생성 (당구대 쿠션)
@@ -936,3 +961,17 @@ function resizeGame() {
 }
 window.addEventListener("resize", resizeGame);
 resizeGame(); // 초기 실행
+
+// --- UI 버튼 효과음 연결 ---
+function setupUISounds() {
+  const uiButtons = document.querySelectorAll("button");
+  uiButtons.forEach((btn) => {
+    btn.addEventListener("mouseenter", () => {
+      if (!btn.disabled) SoundGen.uiHover();
+    });
+    btn.addEventListener("click", () => {
+      if (!btn.disabled) SoundGen.uiClick();
+    });
+  });
+}
+setupUISounds();
