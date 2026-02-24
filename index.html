@@ -101,9 +101,27 @@
             data-desc="웹 기술을 활용하여 제작한 게임 포트폴리오입니다. AI와 웹 개발 기술을 접목하여 만들었습니다."
             data-url="game/game-list.html"
           >
-            <div class="portfolio-img">
+            <div class="portfolio-img" style="height: 250px; overflow: hidden">
               <!-- [이미지 넣는 곳 1] 아래 src="파일경로" 부분을 수정하세요 -->
-              <img src="asset/portfolio.png" alt="Game Portfolio" />
+              <iframe
+                src="game/game-list.html"
+                style="
+                  width: 200%;
+                  height: 500px;
+                  border: none;
+                  pointer-events: none;
+                  overflow: hidden;
+                  transform: scale(0.5);
+                  transform-origin: 0 0;
+                "
+                scrolling="no"
+                tabindex="-1"
+              ></iframe>
+              <img
+                src="asset/portfolio.png"
+                alt="Game Portfolio"
+                style="display: none"
+              />
             </div>
             <div class="portfolio-info">
               <h3>Game Portfolio</h3>
@@ -592,8 +610,10 @@
 
     <!-- Modal Structure -->
     <div id="portfolio-modal" class="modal">
+      <span class="close-modal">&times;</span>
+      <div class="modal-nav prev-btn"><i class="fas fa-chevron-left"></i></div>
+      <div class="modal-nav next-btn"><i class="fas fa-chevron-right"></i></div>
       <div class="modal-content">
-        <span class="close-modal">&times;</span>
         <img src="" alt="" class="modal-img" />
         <h3 class="modal-title"></h3>
         <p class="modal-text"></p>

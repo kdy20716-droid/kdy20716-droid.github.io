@@ -22,7 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
       document.documentElement.clientHeight;
     const scrolled = (scrollTop / scrollHeight) * 100;
     if (scrollProgress) {
-      scrollProgress.style.width = `${scrolled}%`;
+      scrollProgress.style.height = `${scrolled}%`;
     }
   });
 
@@ -134,28 +134,38 @@ document.addEventListener("DOMContentLoaded", () => {
     const modalText = modal.querySelector(".modal-text");
     const modalLink = modal.querySelector(".modal-link");
     const closeBtn = modal.querySelector(".close-modal");
-    const portfolioItems = document.querySelectorAll(".portfolio-item");
+    const prevBtn = modal.querySelector(".prev-btn");
+    const nextBtn = modal.querySelector(".next-btn");
+    const portfolioItems = Array.from(
+      document.querySelectorAll(".portfolio-item"),
+    );
+    let currentIndex = 0;
 
-    portfolioItems.forEach((item) => {
-      item.addEventListener("click", () => {
-        const img = item.querySelector("img").src;
-        const title = item.getAttribute("data-title");
-        const desc = item.getAttribute("data-desc");
-        const url = item.getAttribute("data-url");
+    const updateModal = (index) => {
+      const item = portfolioItems[index];
+      const img = item.querySelector("img").src;
+      const title = item.getAttribute("data-title");
+      const desc = item.getAttribute("data-desc");
+      const url = item.getAttribute("data-url");
 
-        if (modalImg) modalImg.src = img;
-        if (modalTitle) modalTitle.innerText = title;
-        if (modalText) modalText.innerText = desc;
+      if (modalImg) modalImg.src = img;
+      if (modalTitle) modalTitle.innerText = title;
+      if (modalText) modalText.innerText = desc;
 
-        if (url) {
-          if (modalLink) {
-            modalLink.href = url;
-            modalLink.style.display = "inline-block";
-          }
-        } else {
-          if (modalLink) modalLink.style.display = "none";
+      if (url) {
+        if (modalLink) {
+          modalLink.href = url;
+          modalLink.style.display = "inline-block";
         }
+      } else {
+        if (modalLink) modalLink.style.display = "none";
+      }
+    };
 
+    portfolioItems.forEach((item, index) => {
+      item.addEventListener("click", () => {
+        currentIndex = index;
+        updateModal(currentIndex);
         modal.style.display = "block";
         document.body.style.overflow = "hidden";
       });
@@ -165,6 +175,23 @@ document.addEventListener("DOMContentLoaded", () => {
       closeBtn.addEventListener("click", () => {
         modal.style.display = "none";
         document.body.style.overflow = "auto";
+      });
+    }
+
+    if (prevBtn) {
+      prevBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        currentIndex =
+          (currentIndex - 1 + portfolioItems.length) % portfolioItems.length;
+        updateModal(currentIndex);
+      });
+    }
+
+    if (nextBtn) {
+      nextBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        currentIndex = (currentIndex + 1) % portfolioItems.length;
+        updateModal(currentIndex);
       });
     }
 
