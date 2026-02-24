@@ -36,6 +36,122 @@ const render = Render.create({
   },
 });
 
+// --- 사운드 시스템 (Web Audio API) ---
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+const SoundGen = {
+  // 큐대 타격음 (탁! - 나무와 가죽 팁 소리)
+  cueHit: function (intensity = 1) {
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    const t = audioCtx.currentTime;
+
+    // 1. 타격 노이즈 (Impact) - 짧고 강하게
+    const noise = audioCtx.createBufferSource();
+    const buffer = audioCtx.createBuffer(
+      1,
+      audioCtx.sampleRate * 0.1,
+      audioCtx.sampleRate,
+    );
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < buffer.length; i++) data[i] = Math.random() * 2 - 1;
+    noise.buffer = buffer;
+
+    const noiseFilter = audioCtx.createBiquadFilter();
+    noiseFilter.type = "lowpass";
+    noiseFilter.frequency.value = 3000;
+
+    const noiseGain = audioCtx.createGain();
+    noiseGain.gain.setValueAtTime(0.8 * intensity, t);
+    noiseGain.gain.exponentialRampToValueAtTime(0.01, t + 0.03); // 더 짧게
+
+    noise.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(audioCtx.destination);
+    noise.start(t);
+
+    // 2. 나무 공명음 (Body)
+    const osc = audioCtx.createOscillator();
+    osc.type = "square"; // Square wave filtered sounds more like wood impact
+    osc.frequency.setValueAtTime(150, t);
+
+    const oscFilter = audioCtx.createBiquadFilter();
+    oscFilter.type = "lowpass";
+    oscFilter.frequency.value = 500;
+
+    const oscGain = audioCtx.createGain();
+    oscGain.gain.setValueAtTime(0.4 * intensity, t);
+    oscGain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+
+    osc.connect(oscFilter);
+    oscFilter.connect(oscGain);
+    oscGain.connect(audioCtx.destination);
+    osc.start(t);
+    osc.stop(t + 0.15);
+  },
+
+  // 공끼리 충돌 (딱! - 단단한 레진 소리)
+
+  ballHit: function (intensity = 1) {
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    const t = audioCtx.currentTime;
+
+    // 메인 톤 (높고 짧음, 피치 변화 없음)
+    const osc = audioCtx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(2400, t); // 고정 주파수
+
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.7 * intensity, t);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.03); // 매우 짧은 디케이
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(t);
+    osc.stop(t + 0.05);
+
+    // 클릭음 (노이즈) 추가
+    const noise = audioCtx.createBufferSource();
+    const buffer = audioCtx.createBuffer(
+      1,
+      audioCtx.sampleRate * 0.01,
+      audioCtx.sampleRate,
+    );
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < buffer.length; i++) data[i] = Math.random() * 2 - 1;
+    noise.buffer = buffer;
+
+    const noiseGain = audioCtx.createGain();
+    noiseGain.gain.setValueAtTime(0.4 * intensity, t);
+    noiseGain.gain.exponentialRampToValueAtTime(0.01, t + 0.01);
+
+    noise.connect(noiseGain);
+    noiseGain.connect(audioCtx.destination);
+    noise.start(t);
+  },
+
+  // 벽(쿠션) 충돌 (퉁... - 고무 반동 소리)
+  wallHit: function (intensity = 1) {
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    const t = audioCtx.currentTime;
+
+    const osc = audioCtx.createOscillator();
+
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(120, t); // 낮은 주파수
+    // 약간의 피치 하강은 고무 느낌을 줌, 하지만 과하지 않게
+    osc.frequency.exponentialRampToValueAtTime(80, t + 0.1);
+
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.6 * intensity, t);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.15);
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(t);
+    osc.stop(t + 0.2);
+  },
+};
+
 // 벽 생성 (당구대 쿠션)
 const wallThickness = 32; // 40 * 0.8
 const walls = [];
@@ -49,6 +165,7 @@ function createWalls() {
     render: { fillStyle: "#3a2b30" }, // 빈티지 퍼플 우드
     friction: 0.5,
     restitution: 0.8,
+    label: "wall", // 벽 라벨 추가
   };
 
   // 상, 하, 좌, 우 (중앙 정렬을 위해 좌표 조정)
@@ -255,6 +372,7 @@ let isPlacingCueBall = false; // 큐볼 배치 중
 let firstHitRecorded = false; // 턴 시작 후 첫 충돌 감지 여부
 let slowMotionTimer = 0; // 슬로우 모션(정지 대기) 타이머
 let messageTimeout = null; // 메시지 타이머
+let isGameEnded = false; // 게임 종료 여부
 const powerGaugeWrap = document.getElementById("power-gauge-wrap");
 const powerGaugeFill = document.getElementById("power-gauge-fill");
 
@@ -267,7 +385,7 @@ window.addEventListener("mouseup", handleInputEnd);
 window.addEventListener("touchend", handleInputEnd);
 
 function handleInputStart(e) {
-  if (!cueBall) return; // 게임 시작 전 클릭 방지
+  if (isGameEnded || !cueBall) return; // 게임 종료 또는 시작 전 클릭 방지
   if (isShooting || isMoving(cueBall)) return; // 샷 진행 중이거나 공이 움직이면 조작 불가
 
   // 프리볼(Ball in Hand) 상태일 때 배치 시작
@@ -290,7 +408,7 @@ function handleInputStart(e) {
 }
 
 function handleInputMove(e) {
-  if (!cueBall) return;
+  if (isGameEnded || !cueBall) return;
   const pos = getMousePos(e);
   currentMousePos = pos;
 
@@ -316,7 +434,7 @@ function handleInputMove(e) {
 }
 
 function handleInputEnd(e) {
-  if (!cueBall) return;
+  if (isGameEnded || !cueBall) return;
   if (isPlacingCueBall) {
     isPlacingCueBall = false;
     isBallInHand = false; // 배치 완료
@@ -335,6 +453,7 @@ function handleInputEnd(e) {
   );
 
   if (forceMag > 0.001) Body.applyForce(cueBall, cueBall.position, force);
+  SoundGen.cueHit(Math.min(forceMag * 50, 1)); // 큐 타격음 재생
 
   isDragging = false;
   isShooting = true; // 샷 시작
@@ -368,6 +487,33 @@ Events.on(engine, "collisionStart", (event) => {
     const bodyA = pair.bodyA;
     const bodyB = pair.bodyB;
     let ball = null;
+
+    // 충돌 사운드 처리
+    const speedA = bodyA.speed || 0;
+    const speedB = bodyB.speed || 0;
+    const maxSpeed = Math.max(speedA, speedB);
+
+    // 일정 속도 이상일 때만 소리 재생 (굴러가는 미세한 충돌 제외)
+    if (maxSpeed > 0.2) {
+      const intensity = Math.min(maxSpeed / 15, 1); // 강도 조절
+
+      // 공 vs 공
+      if (
+        (bodyA.label === "ball" || bodyA.label === "cueball") &&
+        (bodyB.label === "ball" || bodyB.label === "cueball")
+      ) {
+        SoundGen.ballHit(intensity);
+      }
+      // 공 vs 벽
+      else if (
+        ((bodyA.label === "ball" || bodyA.label === "cueball") &&
+          bodyB.label === "wall") ||
+        ((bodyB.label === "ball" || bodyB.label === "cueball") &&
+          bodyA.label === "wall")
+      ) {
+        SoundGen.wallHit(intensity);
+      }
+    }
 
     // 1. 첫 충돌 감지 (파울 체크)
     if (isShooting && !firstHitRecorded) {
@@ -406,6 +552,8 @@ Events.on(engine, "collisionStart", (event) => {
 
 // 턴 관리 및 게임 상태 업데이트 (매 프레임 체크)
 Events.on(engine, "beforeUpdate", () => {
+  if (isGameEnded) return;
+
   if (isShooting) {
     // 모든 공 중 가장 빠른 속도 확인
     let maxSpeed = 0;
@@ -418,8 +566,8 @@ Events.on(engine, "beforeUpdate", () => {
     } else {
       // 공이 아주 천천히 움직이거나 멈춰있으면 타이머 증가
       slowMotionTimer++;
-      // 약 2초(60fps * 2 = 120프레임) 대기 후 턴 넘김
-      if (slowMotionTimer > 120) {
+      // 약 1초(60fps * 1 = 60프레임) 대기 후 턴 넘김
+      if (slowMotionTimer > 60) {
         isShooting = false;
         slowMotionTimer = 0;
         processTurnResult();
@@ -443,6 +591,7 @@ function checkPockets() {
         Body.setPosition(cueBall, { x: width / 2, y: height - 150 });
         Body.setVelocity(cueBall, { x: 0, y: 0 });
         foulThisTurn = true;
+        showFloatingText(pocket.position.x, pocket.position.y, "빠짐!");
         showMessage("파울!", 100);
         updateScoreDisplay();
         break;
@@ -494,6 +643,9 @@ function checkPockets() {
         if (ball.ballNumber < 8) solidCount = Math.max(0, solidCount - 1);
         else if (ball.ballNumber > 8)
           stripeCount = Math.max(0, stripeCount - 1);
+
+        // +1 시각 효과 (소리 대신)
+        showFloatingText(pocket.position.x, pocket.position.y, "+1");
         updateScoreDisplay();
         break;
       }
@@ -598,6 +750,16 @@ function showMessage(text, duration) {
   messageTimeout = setTimeout(() => {
     overlay.classList.add("hidden");
   }, duration * 16); // 프레임 단위(약 16ms)로 변환
+}
+
+function showFloatingText(x, y, text) {
+  const el = document.createElement("div");
+  el.className = "floating-text";
+  el.textContent = text;
+  el.style.left = x + "px";
+  el.style.top = y + "px";
+  document.getElementById("ui-layer").appendChild(el);
+  setTimeout(() => el.remove(), 800);
 }
 
 // 렌더링 후 커스텀 그리기 (당구대 바닥 및 줄무늬)
@@ -711,6 +873,7 @@ function startGame() {
   isBallInHand = false;
   firstHitRecorded = false;
   slowMotionTimer = 0;
+  isGameEnded = false;
   document.getElementById("message-overlay").classList.add("hidden");
   updateTurnIndicator();
   updateScoreDisplay();
@@ -736,10 +899,16 @@ function updateScoreDisplay() {
 }
 
 function endGame(winner) {
+  isGameEnded = true;
   hud.classList.add("hidden");
   gameOver.classList.remove("hidden");
   const msg = document.querySelector("#game-over p");
   msg.textContent = `${winner}P의 승리!`;
+
+  // 메시지 오버레이 숨기기
+  const overlay = document.getElementById("message-overlay");
+  if (overlay) overlay.classList.add("hidden");
+  if (messageTimeout) clearTimeout(messageTimeout);
 }
 
 // 버튼 이벤트

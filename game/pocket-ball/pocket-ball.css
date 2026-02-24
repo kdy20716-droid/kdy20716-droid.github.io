@@ -335,3 +335,26 @@ p {
   margin-bottom: 10px;
   line-height: 1.5;
 }
+
+/* +1 플로팅 텍스트 효과 */
+.floating-text {
+  position: absolute;
+  color: #fff;
+  font-weight: bold;
+  font-size: 1.5rem;
+  pointer-events: none;
+  text-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
+  animation: floatUpFade 0.8s ease-out forwards;
+  z-index: 50;
+}
+
+@keyframes floatUpFade {
+  0% {
+    transform: translate(-50%, -50%) translateY(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) translateY(-30px) scale(0.8);
+    opacity: 0;
+  }
+}
