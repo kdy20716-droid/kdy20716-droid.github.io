@@ -33,7 +33,6 @@ ul {
 html {
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */
-  scroll-behavior: smooth;
 }
 
 /* Hide scrollbar for Chrome, Safari and Opera */

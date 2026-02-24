@@ -256,4 +256,47 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
+
+  // --- Custom Smooth Scroll (Swoosh Effect) ---
+  const smoothScrollLinks = document.querySelectorAll('a[href^="#"]');
+  smoothScrollLinks.forEach((link) => {
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      const targetId = link.getAttribute("href");
+      if (targetId === "#") return;
+      const targetSection = document.querySelector(targetId);
+      if (!targetSection) return;
+
+      const targetPosition =
+        targetSection.getBoundingClientRect().top + window.scrollY;
+      const startPosition = window.scrollY;
+      const distance = targetPosition - startPosition;
+      let startTime = null;
+      const duration = 1500; // 애니메이션 지속 시간 (1.5초)
+
+      // Easing function: easeInOutExpo (처음과 끝은 천천히, 중간은 매우 빠르게)
+      function ease(t, b, c, d) {
+        if (t === 0) return b;
+        if (t === d) return b + c;
+        if ((t /= d / 2) < 1) return (c / 2) * Math.pow(2, 10 * (t - 1)) + b;
+        return (c / 2) * (-Math.pow(2, -10 * --t) + 2) + b;
+      }
+
+      function animation(currentTime) {
+        if (startTime === null) startTime = currentTime;
+        const timeElapsed = currentTime - startTime;
+        const run = ease(timeElapsed, startPosition, distance, duration);
+        window.scrollTo(0, run);
+        if (timeElapsed < duration) requestAnimationFrame(animation);
+      }
+
+      requestAnimationFrame(animation);
+
+      // 모바일 메뉴가 열려있다면 닫기
+      const navLinksContainer = document.querySelector(".nav-links");
+      if (navLinksContainer && navLinksContainer.classList.contains("active")) {
+        navLinksContainer.classList.remove("active");
+      }
+    });
+  });
 });
