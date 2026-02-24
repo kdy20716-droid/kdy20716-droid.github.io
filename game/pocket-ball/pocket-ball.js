@@ -434,9 +434,9 @@ function handleInputStart(e) {
   }
 
   const pos = getMousePos(e);
-  if (Vector.magnitude(Vector.sub(pos, cueBall.position)) < 50) {
+  if (Vector.magnitude(Vector.sub(pos, cueBall.position)) < 80) {
     isDragging = true;
-    dragStart = cueBall.position;
+    dragStart = Vector.clone(cueBall.position);
     currentMousePos = pos;
     powerGaugeWrap.classList.remove("hidden");
     powerGaugeFill.style.width = "0%";
@@ -445,11 +445,11 @@ function handleInputStart(e) {
 
 function handleInputMove(e) {
   if (isGameEnded || !cueBall) return;
-  const pos = getMousePos(e);
-  currentMousePos = pos;
 
   if (!isDragging) return;
   e.preventDefault();
+  const pos = getMousePos(e);
+  currentMousePos = pos;
   const forceVector = Vector.sub(dragStart, pos);
   const maxForce = 0.04;
   const forceMag = Vector.magnitude(forceVector) * 0.0002;
@@ -485,8 +485,16 @@ function handleInputEnd(e) {
 
 function getMousePos(e) {
   const rect = canvas.getBoundingClientRect();
-  const clientX = e.touches ? e.changedTouches[0].clientX : e.clientX;
-  const clientY = e.touches ? e.changedTouches[0].clientY : e.clientY;
+  let clientX, clientY;
+
+  if (e.changedTouches && e.changedTouches.length > 0) {
+    clientX = e.changedTouches[0].clientX;
+    clientY = e.changedTouches[0].clientY;
+  } else {
+    clientX = e.clientX;
+    clientY = e.clientY;
+  }
+
   const scaleX = canvas.width / rect.width;
   const scaleY = canvas.height / rect.height;
   return {
