@@ -2948,4 +2948,22 @@ window.addEventListener("load", () => {
 
 // 게임 루프 시작
 resizeGame();
+
+// --- UI 버튼 효과음 연결 ---
+function setupUISounds() {
+  const uiButtons = document.querySelectorAll("button, .btn, .btn-icon");
+
+  uiButtons.forEach((btn) => {
+    // 마우스 올렸을 때: 기존 'select' 사운드 (뾱)
+    btn.addEventListener("mouseenter", () => {
+      if (!btn.disabled) playSound("select");
+    });
+
+    // 클릭했을 때: 기존 'deal' 사운드 (착! - 카드 내는 소리 느낌)
+    btn.addEventListener("click", () => {
+      if (!btn.disabled) playSound("deal");
+    });
+  });
+}
+setupUISounds();
 draw();

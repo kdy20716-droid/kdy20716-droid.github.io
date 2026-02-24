@@ -1412,3 +1412,47 @@ function setDynamicImages() {
 
 // 설정 실행
 setDynamicImages();
+
+// --- UI 효과음 (귀여운 테마) ---
+function playUIHoverSound() {
+  if (audioCtx.state === "suspended") audioCtx.resume();
+
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+
+  gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.05);
+}
+
+function playUIClickSound() {
+  if (audioCtx.state === "suspended") audioCtx.resume();
+
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+
+  // 물방울 소리 느낌 (주파수 급강하)
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.15);
+
+  gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+  gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.15);
+
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.15);
+}
+
+document.querySelectorAll("button, input[type='range']").forEach((el) => {
+  el.addEventListener("mouseenter", playUIHoverSound);
+  el.addEventListener("click", playUIClickSound); // 슬라이더는 클릭 시에도 소리 발생
+});
