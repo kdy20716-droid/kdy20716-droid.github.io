@@ -15,12 +15,15 @@ body {
   height: 100vh;
   overflow: hidden;
   user-select: none; /* 텍스트 선택 방지 */
+  touch-action: none; /* 모바일 터치 제스처(확대/스크롤) 방지 */
 }
 
 #game-container {
   position: relative;
   width: 1024px;
   height: 900px;
+  transform-origin: center center;
+  flex-shrink: 0; /* 화면이 작아져도 레이아웃이 깨지지 않도록 고정 */
 }
 
 canvas {

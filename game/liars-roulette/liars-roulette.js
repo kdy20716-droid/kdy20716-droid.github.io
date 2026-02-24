@@ -28,11 +28,20 @@ for (let i = 0; i < 50; i++) {
 
 // 폭죽 입자 관리
 const fireworks = [];
+const embers = []; // 불티 입자 관리
+
+// 데빌 카드 등장 애니메이션 상태
+const devilCardAnim = {
+  active: false,
+  phase: "IDLE", // IDLE, ENTER, STAY, EXIT
+  progress: 0,
+  timer: 0,
+};
 
 // 게임 상태 및 플레이어 설정
-const centerX = canvas.width / 2;
-const centerY = canvas.height / 2;
-const tableY = centerY + 30;
+let centerX = canvas.width / 2;
+let centerY = canvas.height / 2;
+let tableY = centerY + 30;
 
 const players = [
   {
@@ -84,11 +93,13 @@ function createDeck() {
     ...Array(6).fill("Q"), // Queen
     ...Array(6).fill("A"), // Ace
   ];
+
   if (Math.random() < 0.2) {
     types.push("D", "D");
     console.log("Devil cards added to deck!");
   } else {
     types.push("J", "J");
+    console.log("Joker cards added to deck.");
   }
   // Fisher-Yates Shuffle
   for (let i = types.length - 1; i > 0; i--) {
@@ -98,7 +109,7 @@ function createDeck() {
   return types;
 }
 
-let cardTypes = createDeck();
+let cardTypes = [];
 
 // 카드 이미지 로드 (HTML에 있는 img 태그 가져오기)
 const cardImages = {};
@@ -130,7 +141,7 @@ let dealingState = {
   totalCards: 20, // 5장 * 4명
   dealtCount: 0,
   movingCard: null, // 현재 이동 중인 카드 {x, y, targetPlayerIndex, progress}
-  speed: 0.15, // 카드 이동 속도
+  speed: 0.15, // 카드 이동 속도 (템포 조절)
 };
 
 // 애니메이션 관리 (카드 제출 등)
@@ -204,7 +215,7 @@ const SoundGen = {
     noiseFilter.frequency.setValueAtTime(1500, t); // 1.5kHz 이상 대역
 
     const noiseGain = audioCtx.createGain();
-    noiseGain.gain.setValueAtTime(1.2, t); // 강한 어택
+    noiseGain.gain.setValueAtTime(1.2, t); // [사운드 조절] 빈 총 금속음 볼륨 (기본: 1.2)
     noiseGain.gain.exponentialRampToValueAtTime(0.01, t + 0.1); // 짧은 여운
 
     noise.connect(noiseFilter);
@@ -220,7 +231,7 @@ const SoundGen = {
     osc.frequency.setValueAtTime(300, t);
 
     const oscGain = audioCtx.createGain();
-    oscGain.gain.setValueAtTime(0.8, t);
+    oscGain.gain.setValueAtTime(0.8, t); // [사운드 조절] 빈 총 기계음 볼륨 (기본: 0.8)
     oscGain.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
 
     osc.connect(oscGain);
@@ -240,7 +251,7 @@ const SoundGen = {
     filter.frequency.setValueAtTime(800, t);
     filter.frequency.linearRampToValueAtTime(1200, t + 0.1);
     const gain = audioCtx.createGain();
-    gain.gain.setValueAtTime(0.2, t);
+    gain.gain.setValueAtTime(0.2, t); // [사운드 조절] 카드 낼 때 소리 볼륨 (기본: 0.2)
     gain.gain.linearRampToValueAtTime(0, t + 0.1);
     noise.connect(filter);
     filter.connect(gain);
@@ -255,7 +266,7 @@ const SoundGen = {
     const noise = audioCtx.createBufferSource();
     noise.buffer = this.createNoiseBuffer();
     const gain = audioCtx.createGain();
-    gain.gain.setValueAtTime(0.3, t);
+    gain.gain.setValueAtTime(0.3, t); // [사운드 조절] 카드 딜링 소리 볼륨 (기본: 0.3)
     gain.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
     noise.connect(gain);
     gain.connect(masterGain);
@@ -270,7 +281,7 @@ const SoundGen = {
     osc.type = "sine";
     osc.frequency.setValueAtTime(600, t);
     const gain = audioCtx.createGain();
-    gain.gain.setValueAtTime(0.1, t);
+    gain.gain.setValueAtTime(0.1, t); // [사운드 조절] 카드 선택 효과음 볼륨 (기본: 0.1)
     gain.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
     osc.connect(gain);
     gain.connect(masterGain);
@@ -293,7 +304,7 @@ const SoundGen = {
     osc.frequency.setValueAtTime(80, t);
     osc.frequency.exponentialRampToValueAtTime(10, t + 0.8);
     const gain = audioCtx.createGain();
-    gain.gain.setValueAtTime(0.8, t);
+    gain.gain.setValueAtTime(0.8, t); // [사운드 조절] 드라마틱 임팩트 볼륨 (기본: 0.8)
     gain.gain.exponentialRampToValueAtTime(0.01, t + 0.8);
     osc.connect(gain);
     gain.connect(masterGain);
@@ -309,7 +320,7 @@ const SoundGen = {
     osc.frequency.setValueAtTime(50, t);
     osc.frequency.exponentialRampToValueAtTime(40, t + 0.1);
     const gain = audioCtx.createGain();
-    gain.gain.setValueAtTime(0.8, t);
+    gain.gain.setValueAtTime(0.8, t); // [사운드 조절] 심장박동 소리 볼륨 (기본: 0.8)
     gain.gain.exponentialRampToValueAtTime(0.01, t + 0.15);
     osc.connect(gain);
     gain.connect(masterGain);
@@ -329,7 +340,7 @@ const SoundGen = {
       osc.frequency.setValueAtTime(freq, t + i * 0.15);
 
       const gain = audioCtx.createGain();
-      gain.gain.setValueAtTime(0.1, t + i * 0.15);
+      gain.gain.setValueAtTime(0.1, t + i * 0.15); // [사운드 조절] 승리 팡파레 볼륨 (기본: 0.1)
       gain.gain.exponentialRampToValueAtTime(0.01, t + i * 0.15 + 1.0);
 
       osc.connect(gain);
@@ -346,7 +357,7 @@ const SoundGen = {
     noiseFilter.frequency.value = 1000;
 
     const noiseGain = audioCtx.createGain();
-    noiseGain.gain.setValueAtTime(0.3, t);
+    noiseGain.gain.setValueAtTime(0.3, t); // [사운드 조절] 승리 박수 소리 볼륨 (기본: 0.3)
     noiseGain.gain.exponentialRampToValueAtTime(0.01, t + 2.5);
 
     noise.connect(noiseFilter);
@@ -405,6 +416,13 @@ function playSound(type) {
   const audioEl = document.getElementById(`sfx-${type}`);
   if (audioEl) {
     audioEl.volume = vol; // 볼륨 적용
+    // [사운드 조절] 파일 기반 효과음 볼륨 설정
+    if (type === "devil") {
+      audioEl.volume = vol * 0.3; // 악마 웃음소리가 너무 커서 30%로 줄임
+    } else {
+      audioEl.volume = vol; // 나머지는 슬라이더 값 그대로 사용
+    }
+
     audioEl.currentTime = 0;
     audioEl.play().catch((e) => console.log("Audio play failed:", e));
     return;
@@ -443,17 +461,14 @@ function playBGM(type) {
       rouletteBgm.currentTime = 0;
     }
     if (mainBgm) {
-      mainBgm.volume = vol;
       mainBgm.volume = bgmVol;
       if (mainBgm.paused) mainBgm.play().catch(() => {});
     }
   } else if (type === "roulette") {
     if (mainBgm) {
       mainBgm.pause();
-      // mainBgm.currentTime = 0; // 메인 BGM 초기화 제거 (이어서 재생하기 위해)
     }
     if (rouletteBgm) {
-      rouletteBgm.volume = vol;
       rouletteBgm.volume = bgmVol;
       if (rouletteBgm.paused) rouletteBgm.play().catch(() => {});
     }
@@ -482,7 +497,24 @@ const gameState = {
   bloodSplatters: [], // 피자국 데이터 {x, y, points, color, scaleX, scaleY, rotation}
   rouletteQueue: [], // 데빌 카드 발동 시 룰렛 대기열
   rouletteStartTime: 0, // 룰렛 애니메이션 시작 시간
+  activeTimeouts: [], // 활성화된 타임아웃 ID 관리
 };
+
+// 타임아웃 관리 헬퍼 함수 (게임 리셋 시 취소 가능하도록)
+function addTimeout(callback, delay) {
+  const id = setTimeout(() => {
+    callback();
+    const index = gameState.activeTimeouts.indexOf(id);
+    if (index > -1) gameState.activeTimeouts.splice(index, 1);
+  }, delay);
+  gameState.activeTimeouts.push(id);
+  return id;
+}
+
+function clearAllTimeouts() {
+  gameState.activeTimeouts.forEach((id) => clearTimeout(id));
+  gameState.activeTimeouts = [];
+}
 
 function draw() {
   // 카드 배분 로직 업데이트
@@ -515,12 +547,62 @@ function draw() {
     // 사망 시 붉은 섬광
     if (gameState.lightingTimer > 0) {
       gameState.lightingTimer--;
-      const intensity = gameState.lightingTimer / 60;
-      floorColor = `rgb(${Math.floor(80 * intensity)}, 0, 0)`;
-      lightColor = `rgba(255, 0, 0, ${0.6 * intensity})`;
+      const intensity = Math.min(1, gameState.lightingTimer / 60);
+      floorColor = `rgb(${Math.floor(120 * intensity)}, 0, 0)`; // 더 진한 붉은색
+      lightColor = `rgba(255, 50, 0, ${0.5 * intensity})`; // 주황빛 조명
+
+      // 1. 타오르는 불길 그라디언트 (화면 하단에서 위로)
+      const wave = Math.sin(Date.now() * 0.01) * 50;
+      const fireHeight = canvas.height * 0.6 + wave; // 화면 60% 높이까지
+
+      const fireGrad = ctx.createLinearGradient(
+        0,
+        canvas.height,
+        0,
+        canvas.height - fireHeight,
+      );
+      fireGrad.addColorStop(0, `rgba(255, 60, 0, ${0.9 * intensity})`); // 하단: 강렬한 주황/빨강
+      fireGrad.addColorStop(0.4, `rgba(180, 0, 0, ${0.6 * intensity})`); // 중단: 어두운 빨강
+      fireGrad.addColorStop(1, "rgba(0, 0, 0, 0)"); // 상단: 투명
+
+      ctx.fillStyle = fireGrad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // 2. 흩날리는 불티 (Embers)
+      // 생성
+      for (let i = 0; i < 5; i++) {
+        embers.push({
+          x: Math.random() * canvas.width,
+          y: canvas.height + 10,
+          vx: (Math.random() - 0.5) * 2,
+          vy: -(Math.random() * 4 + 3), // 위로 빠르게 올라감
+          size: Math.random() * 3 + 1,
+          alpha: 1,
+          decay: Math.random() * 0.02 + 0.01,
+        });
+      }
+
+      // 업데이트 및 그리기
+      for (let i = embers.length - 1; i >= 0; i--) {
+        const e = embers[i];
+        e.x += e.vx + Math.sin(Date.now() * 0.01 + e.y * 0.02); // 일렁임
+        e.y += e.vy;
+        e.alpha -= e.decay;
+
+        if (e.alpha <= 0 || e.y < -50) {
+          embers.splice(i, 1);
+          continue;
+        }
+
+        ctx.fillStyle = `rgba(255, 220, 100, ${e.alpha * intensity})`;
+        ctx.beginPath();
+        ctx.arc(e.x, e.y, e.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
       // 초기 5프레임 동안 강력한 화이트 플래시 (총구 화염 느낌)
-      if (gameState.lightingTimer > 55) {
+      // 데빌 카드 연출(120프레임)일 때는 생략하고, 총격(60프레임)일 때만 표시
+      if (gameState.lightingTimer > 55 && gameState.lightingTimer <= 60) {
         ctx.fillStyle = `rgba(255, 255, 255, ${(gameState.lightingTimer - 55) / 5})`;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
@@ -548,6 +630,7 @@ function draw() {
       }
     } else {
       gameState.lighting = "NORMAL";
+      embers.length = 0; // 불티 초기화
     }
   } else if (gameState.lighting === "FLICKER") {
     // 생존 시 깜빡임
@@ -836,6 +919,9 @@ function draw() {
   // 7. 폭죽 애니메이션
   updateAndDrawFireworks();
 
+  // 8. 데빌 카드 등장 애니메이션
+  updateAndDrawDevilCardAnim();
+
   requestAnimationFrame(draw);
 }
 
@@ -912,9 +998,9 @@ function updateDealing() {
 
       // 모든 카드가 배분되면 남쪽 플레이어(인덱스 3) 카드 뒤집기
       if (dealingState.dealtCount >= dealingState.totalCards) {
-        setTimeout(() => {
+        addTimeout(() => {
           players[3].hand.forEach((card, i) => {
-            setTimeout(() => {
+            addTimeout(() => {
               card.isFlipping = true;
             }, i * 200); // 순차적으로 뒤집기
           });
@@ -997,6 +1083,69 @@ function updateAndDrawFireworks() {
     ctx.fill();
   }
   ctx.globalAlpha = 1.0;
+}
+
+function triggerDevilCardAnimation() {
+  devilCardAnim.active = true;
+  devilCardAnim.phase = "ENTER";
+  devilCardAnim.progress = 0;
+  devilCardAnim.timer = 0;
+}
+
+function updateAndDrawDevilCardAnim() {
+  if (!devilCardAnim.active) return;
+
+  // 화면 오른쪽 아래 좌표 설정
+  const startX = canvas.width + 150;
+  const startY = canvas.height + 200;
+  const endX = canvas.width - 150;
+  const endY = canvas.height - 150;
+
+  if (devilCardAnim.phase === "ENTER") {
+    devilCardAnim.progress += 0.04; // 속도 조절
+    if (devilCardAnim.progress >= 1) {
+      devilCardAnim.progress = 1;
+      devilCardAnim.phase = "STAY";
+      devilCardAnim.timer = 90; // 1.5초 유지
+    }
+  } else if (devilCardAnim.phase === "STAY") {
+    devilCardAnim.timer--;
+    if (devilCardAnim.timer <= 0) {
+      devilCardAnim.phase = "EXIT";
+    }
+  } else if (devilCardAnim.phase === "EXIT") {
+    devilCardAnim.progress -= 0.04;
+    if (devilCardAnim.progress <= 0) {
+      devilCardAnim.progress = 0;
+      devilCardAnim.active = false;
+      devilCardAnim.phase = "IDLE";
+      return;
+    }
+  }
+
+  // Easing 함수 (Cubic Out)
+  const t = devilCardAnim.progress;
+  const ease = 1 - Math.pow(1 - t, 3);
+
+  const curX = startX + (endX - startX) * ease;
+  const curY = startY + (endY - startY) * ease;
+  const rotation = 0.5 - ease * 0.8; // 등장하면서 회전
+
+  ctx.save();
+  ctx.translate(curX, curY);
+  ctx.rotate(rotation);
+
+  // 붉은색 후광 효과
+  ctx.shadowColor = "rgba(255, 0, 0, 0.8)";
+  ctx.shadowBlur = 40;
+
+  // 3배 확대
+  ctx.scale(3, 3);
+
+  // 카드 그리기 (좌표 0,0 기준)
+  drawFrontCard(0, 0, 0, "D");
+
+  ctx.restore();
 }
 
 // 단일 카드 뒷면 그리기 (이동 및 손패용)
@@ -1671,7 +1820,7 @@ function submitCards(playerIndex, cardIndices) {
       startAngle: player.angle,
       targetAngle: targetAngle,
       progress: 0,
-      speed: 0.25, // 카드 이동 속도 증가 (0.1 -> 0.25)
+      speed: 0.15, // 카드 이동 속도 (템포 조절)
       playerIndex: playerIndex, // 뒤집기 효과를 위해 추가
       cardType: card.type, // 앞면 그리기를 위해 추가
       onComplete: () => {
@@ -1704,7 +1853,7 @@ function submitCards(playerIndex, cardIndices) {
     const loser = players[playerIndex];
     console.log(`${loser.name} is the last one playing cards!`);
     showMessage(`${loser.displayName}이(가) 카드를 모두 털지 못했습니다!`, 150);
-    setTimeout(() => triggerRussianRoulette(loser), 2000);
+    addTimeout(() => triggerRussianRoulette(loser), 2000);
     return; // 턴 넘기지 않고 종료
   }
 
@@ -1755,113 +1904,134 @@ function processAiTurn() {
   const aiPlayer = players[aiIndex];
 
   // 고민하는 시간 랜덤 설정 (1초 ~ 3초)
-  const thinkingTime = Math.random() * 2000 + 1000;
+  // 고민하는 시간 랜덤 설정 (2초 ~ 4초) - 템포 조절
+  const thinkingTime = Math.random() * 2000 + 2000;
 
-  setTimeout(() => {
-    // 1. 도전(Liar) 여부 결정 (이전 플레이어가 카드를 냈을 경우)
-    // 20% 확률로 도전 + 턴이 지날수록 5%씩 증가
-    let challengeChance = 0.2 + gameState.turnCount * 0.05;
-
-    // 나 말고 다 털었으면(마지막 생존자) 무조건 도전해야 함 (카드를 내면 패배하므로)
-    const othersWithCards = players.filter(
-      (p) => !p.isDead && p !== aiPlayer && p.hand.length > 0,
-    );
-    if (othersWithCards.length === 0) challengeChance = 1.0;
-
-    if (gameState.lastPlayedBatch && Math.random() < challengeChance) {
-      const phrases = ["거짓말!", "말도 안 돼.", "까봐!", "의심스러운데..."];
-      showBubble(aiIndex, phrases[Math.floor(Math.random() * phrases.length)]);
-      console.log(`${aiPlayer.name} challenges!`);
-      challenge();
-      return;
+  addTimeout(() => {
+    // 상대방이 카드를 냈을 때 반응 (50% 확률)
+    if (gameState.lastPlayedBatch && Math.random() < 0.5) {
+      const reactionPhrases = ["의심스러운데...", "설마?", "자신있어?"];
+      showBubble(
+        aiIndex,
+        reactionPhrases[Math.floor(Math.random() * reactionPhrases.length)],
+      );
     }
 
-    // 2. 카드 제출 로직
-    // 현재 랭크와 일치하거나 조커인 카드 찾기
-    const validIndices = [];
-    const invalidIndices = [];
-    aiPlayer.hand.forEach((card, index) => {
-      if (
-        card.type === gameState.currentRank ||
-        card.type === "J" ||
-        card.type === "D"
-      ) {
-        // 데빌 카드가 있다면 데빌 카드만 따로 분류하거나 우선순위 조정 필요
-        // 여기서는 단순하게 유효 카드로 분류하되, 아래에서 섞을 때 주의
-        validIndices.push(index);
-      } else {
-        invalidIndices.push(index);
-      }
-    });
+    addTimeout(() => {
+      // 1. 도전(Liar) 여부 결정 (이전 플레이어가 카드를 냈을 경우)
+      // 기본 20% + 테이블에 쌓인 카드 1장당 1% 증가
+      let challengeChance = 0.2 + gameState.tableCards.length * 0.01;
 
-    // 랭크 텍스트 변환 (대사용)
-    let rankText = gameState.currentRank;
-    if (rankText === "A") rankText = "에이스";
-    if (rankText === "J") rankText = "조커";
-    if (rankText === "K") rankText = "킹";
-    if (rankText === "Q") rankText = "퀸";
-
-    let indicesToPlay = [];
-
-    // 진실을 말할 확률 (50% 고정 - 진짜 랜덤하게 블러핑)
-    const truthChance = 0.5;
-
-    if (validIndices.length > 0 && Math.random() < truthChance) {
-      const count = Math.min(
-        validIndices.length,
-        Math.floor(Math.random() * 3) + 1,
-      ); // 1~3장
-
-      // 데빌 카드가 포함되어 있다면 데빌 카드만 선택하도록 필터링
-      const devilIndices = validIndices.filter(
-        (idx) => aiPlayer.hand[idx].type === "D",
+      // 나 말고 다 털었으면(마지막 생존자) 무조건 도전해야 함 (카드를 내면 패배하므로)
+      const othersWithCards = players.filter(
+        (p) => !p.isDead && p !== aiPlayer && p.hand.length > 0,
       );
-      if (devilIndices.length > 0) {
-        // 데빌 카드가 있으면 데빌 카드만 냄 (AI 전략)
-        indicesToPlay = devilIndices;
-      } else {
-        indicesToPlay = validIndices.slice(0, count);
+      if (othersWithCards.length === 0) challengeChance = 1.0;
+
+      if (gameState.lastPlayedBatch && Math.random() < challengeChance) {
+        const phrases = ["거짓말!", "까봐!", "너 죽고 나죽자!"];
+        showBubble(
+          aiIndex,
+          phrases[Math.floor(Math.random() * phrases.length)],
+        );
+        console.log(`${aiPlayer.name} challenges!`);
+        challenge();
+        return;
       }
 
-      // 진실 대사
-      const phrases = ["진짜야.", "믿어줘.", `${rankText} 냈어.`, "진실이야."];
-      showBubble(aiIndex, phrases[Math.floor(Math.random() * phrases.length)]);
-    } else {
-      // 거짓말 (랜덤 카드 제출)
-      const count = Math.min(
-        aiPlayer.hand.length,
-        Math.floor(Math.random() * 3) + 1,
-      ); // 1~3장
-      // 섞어서 선택
-      const allIndices = validIndices.concat(invalidIndices);
-      // 셔플 (무작위 선택)
-      for (let i = allIndices.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [allIndices[i], allIndices[j]] = [allIndices[j], allIndices[i]];
-      }
+      // 2. 카드 제출 로직
+      // 현재 랭크와 일치하거나 조커인 카드 찾기
+      const validIndices = [];
+      const invalidIndices = [];
+      aiPlayer.hand.forEach((card, index) => {
+        if (
+          card.type === gameState.currentRank ||
+          card.type === "J" ||
+          card.type === "D"
+        ) {
+          // 데빌 카드가 있다면 데빌 카드만 따로 분류하거나 우선순위 조정 필요
+          // 여기서는 단순하게 유효 카드로 분류하되, 아래에서 섞을 때 주의
+          validIndices.push(index);
+        } else {
+          invalidIndices.push(index);
+        }
+      });
 
-      // 섞은 후 선택된 카드들에 데빌 카드가 섞여 있는지 확인
-      indicesToPlay = allIndices.slice(0, count);
-      const selectedCards = indicesToPlay.map((idx) => aiPlayer.hand[idx]);
-      const hasDevil = selectedCards.some((c) => c.type === "D");
-      if (hasDevil) {
-        // 데빌 카드가 섞였다면 데빌 카드만 남기거나 다시 선택 (여기서는 데빌만 남김)
-        indicesToPlay = indicesToPlay.filter(
+      // 랭크 텍스트 변환 (대사용)
+      let rankText = gameState.currentRank;
+      if (rankText === "A") rankText = "에이스";
+      if (rankText === "J") rankText = "조커";
+      if (rankText === "K") rankText = "킹";
+      if (rankText === "Q") rankText = "퀸";
+
+      let indicesToPlay = [];
+
+      // 진실을 말할 확률 (50% 고정 - 진짜 랜덤하게 블러핑)
+      const truthChance = 0.5;
+
+      if (validIndices.length > 0 && Math.random() < truthChance) {
+        const count = Math.min(
+          validIndices.length,
+          Math.floor(Math.random() * 3) + 1,
+        ); // 1~3장
+
+        // 데빌 카드가 포함되어 있다면 데빌 카드만 선택하도록 필터링
+        const devilIndices = validIndices.filter(
           (idx) => aiPlayer.hand[idx].type === "D",
+        );
+        if (devilIndices.length > 0) {
+          // 데빌 카드가 있으면 데빌 카드만 냄 (AI 전략)
+          indicesToPlay = devilIndices;
+        } else {
+          indicesToPlay = validIndices.slice(0, count);
+        }
+
+        // 진실 대사
+        const phrases = ["들어오시던지!", "쫄려?", "믿어줘"];
+        showBubble(
+          aiIndex,
+          phrases[Math.floor(Math.random() * phrases.length)],
+        );
+      } else {
+        // 거짓말 (랜덤 카드 제출)
+        const count = Math.min(
+          aiPlayer.hand.length,
+          Math.floor(Math.random() * 3) + 1,
+        ); // 1~3장
+        // 섞어서 선택
+        const allIndices = validIndices.concat(invalidIndices);
+        // 셔플 (무작위 선택)
+        for (let i = allIndices.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [allIndices[i], allIndices[j]] = [allIndices[j], allIndices[i]];
+        }
+
+        // 섞은 후 선택된 카드들에 데빌 카드가 섞여 있는지 확인
+        indicesToPlay = allIndices.slice(0, count);
+        const selectedCards = indicesToPlay.map((idx) => aiPlayer.hand[idx]);
+        const hasDevil = selectedCards.some((c) => c.type === "D");
+        if (hasDevil) {
+          // 데빌 카드가 섞였다면 데빌 카드만 남기거나 다시 선택 (여기서는 데빌만 남김)
+          indicesToPlay = indicesToPlay.filter(
+            (idx) => aiPlayer.hand[idx].type === "D",
+          );
+        }
+
+        // 블러핑 대사
+        const phrases = ["들어오시던지!", "쫄려?", "믿어줘"];
+        showBubble(
+          aiIndex,
+          phrases[Math.floor(Math.random() * phrases.length)],
         );
       }
 
-      // 블러핑 대사
-      const phrases = ["쉽네.", "거짓말 아니야.", "믿어봐.", "카드 낸다."];
-      showBubble(aiIndex, phrases[Math.floor(Math.random() * phrases.length)]);
-    }
+      // 카드가 없으면 강제로 아무거나 냄 (규칙상 패스 없음)
+      if (indicesToPlay.length === 0 && aiPlayer.hand.length > 0) {
+        indicesToPlay.push(0);
+      }
 
-    // 카드가 없으면 강제로 아무거나 냄 (규칙상 패스 없음)
-    if (indicesToPlay.length === 0 && aiPlayer.hand.length > 0) {
-      indicesToPlay.push(0);
-    }
-
-    submitCards(aiIndex, indicesToPlay);
+      submitCards(aiIndex, indicesToPlay);
+    }, 1500); // 반응 후 1.5초 대기
   }, thinkingTime);
 }
 
@@ -1881,7 +2051,7 @@ function challenge() {
   );
 
   // 도전 대사 (플레이어가 도전했을 때도 말풍선 표시)
-  const phrases = ["오픈!", "두고 보자.", "거짓말!"];
+  const phrases = ["거짓말!", "까봐!", "너 죽고 나죽자!"];
   showBubble(
     gameState.turnIndex,
     phrases[Math.floor(Math.random() * phrases.length)],
@@ -1914,9 +2084,23 @@ function challenge() {
   if (isLie) {
     console.log("It was a LIE! Submitter loses.");
     loser = submitter;
+    addTimeout(() => {
+      const winPhrases = ["거봐!", "그럴줄 알았다", "잘가"];
+      showBubble(
+        gameState.turnIndex,
+        winPhrases[Math.floor(Math.random() * winPhrases.length)],
+      );
+    }, 1000);
   } else {
     console.log("It was TRUE! Challenger loses.");
     loser = challenger;
+    addTimeout(() => {
+      const losePhrases = ["말도 안돼...", "젠장!", "FUCK!"];
+      showBubble(
+        gameState.turnIndex,
+        losePhrases[Math.floor(Math.random() * losePhrases.length)],
+      );
+    }, 1000);
   }
 
   // 진실/거짓 밝혀질 때 효과음 (두둥!)
@@ -1924,7 +2108,7 @@ function challenge() {
 
   showMessage(isLie ? "거짓말!" : "진실!", 100);
 
-  setTimeout(() => {
+  addTimeout(() => {
     triggerRussianRoulette(loser);
   }, 2000);
 }
@@ -1932,13 +2116,21 @@ function challenge() {
 function handleDevilEffect(submitter) {
   console.log("DEVIL CARD ACTIVATED!");
   playSound("drama");
+  playSound("devil");
   showMessage("데빌 카드 발동!", 200);
+  gameState.shakeTimer = 60; // 화면 흔들림 추가
+
+  // 배경음악 볼륨 줄이기 (긴장감 조성)
+  const mainBgm = document.getElementById("bgm-main");
+  if (mainBgm) {
+    mainBgm.volume = mainBgm.volume * 0.2;
+  }
 
   // 제출자를 제외한 모든 생존자를 대기열에 추가
   const victims = players.filter((p) => !p.isDead && p !== submitter);
 
   // 동시 격발 함수 호출
-  setTimeout(() => {
+  addTimeout(() => {
     triggerSimultaneousRoulette(victims);
   }, 2000);
 }
@@ -1968,23 +2160,30 @@ function triggerRussianRoulette(victim, onComplete = null) {
   // 1. 시작 메시지 (0초)
   showMessage(`${victim.displayName}가 룰렛에 당첨 되었습니다!`, 120);
 
+  // 총을 겨눌 때 대사
+  const startPhrases = ["신이시여...", "오 제발!", "아닐꺼야"];
+  showBubble(
+    players.indexOf(victim),
+    startPhrases[Math.floor(Math.random() * startPhrases.length)],
+  );
+
   // 2. 철컥 (2초)
-  setTimeout(() => {
+  addTimeout(() => {
     playSound("cock"); // 기계음 (철컥)
     showMessage("철컥", 120);
   }, 2000);
 
   // 3. 방아쇠를 당겨주세요 (4초)
-  setTimeout(() => {
+  addTimeout(() => {
     showMessage("방아쇠를 당겨주세요", 180);
   }, 4000);
 
   // 4. ... (7초)
-  setTimeout(() => {
+  addTimeout(() => {
     showMessage("...", 180);
   }, 7000);
 
-  setTimeout(() => {
+  addTimeout(() => {
     // 발사 로직 (1/6 확률, 실제로는 챔버가 돌아감)
     const isBang = revolver.currentChamber === revolver.bulletPosition;
     revolver.currentChamber = (revolver.currentChamber + 1) % revolver.chambers;
@@ -2072,7 +2271,7 @@ function triggerRussianRoulette(victim, onComplete = null) {
       }
 
       // 사망 처리 후 게임 상태 확인
-      setTimeout(() => {
+      addTimeout(() => {
         if (onComplete) {
           onComplete();
         } else {
@@ -2083,8 +2282,13 @@ function triggerRussianRoulette(victim, onComplete = null) {
       playSound("click"); // 빈 총 소리
       showMessage("착! (생존)", 100);
       gameState.lighting = "FLICKER"; // 조명 깜빡임
+      const survivePhrases = ["주님! 감사합니다", "살았다!", "휴~"];
+      showBubble(
+        players.indexOf(victim),
+        survivePhrases[Math.floor(Math.random() * survivePhrases.length)],
+      );
       gameState.lightingTimer = 30;
-      setTimeout(() => {
+      addTimeout(() => {
         if (onComplete) {
           onComplete();
         } else {
@@ -2111,23 +2315,23 @@ function triggerSimultaneousRoulette(victims) {
   showMessage("모두가 룰렛에 당첨되었습니다!", 120);
 
   // 2. 철컥
-  setTimeout(() => {
+  addTimeout(() => {
     playSound("cock");
     showMessage("철컥", 120);
   }, 2000);
 
   // 3. 방아쇠
-  setTimeout(() => {
+  addTimeout(() => {
     showMessage("방아쇠를 당겨주세요", 180);
   }, 4000);
 
   // 4. ...
-  setTimeout(() => {
+  addTimeout(() => {
     showMessage("...", 180);
   }, 7000);
 
   // 5. 결과 확인 (동시)
-  setTimeout(() => {
+  addTimeout(() => {
     let anyDeath = false;
     const deadVictims = [];
 
@@ -2177,7 +2381,7 @@ function triggerSimultaneousRoulette(victims) {
       gameState.lightingTimer = 30;
     }
 
-    setTimeout(() => {
+    addTimeout(() => {
       checkWinCondition();
     }, 2000);
   }, 10000);
@@ -2247,6 +2451,16 @@ function checkWinCondition() {
 }
 
 function startRound() {
+  clearAllTimeouts(); // 게임 시작/재시작 시 예약된 모든 연출 취소
+
+  // 팝업 타이머 초기화 (이전 팝업이 남아있다면 제거)
+  if (popupTimeout) {
+    clearTimeout(popupTimeout);
+    popupTimeout = null;
+    const popup = document.getElementById("target-popup");
+    if (popup) popup.classList.add("hidden");
+  }
+
   // 테이블 초기화
   gameState.tableCards = [];
   gameState.lastPlayedBatch = null;
@@ -2265,9 +2479,24 @@ function startRound() {
   cardTypes = createDeck();
 
   // 데빌 카드 존재 여부 확인 및 알림
+  let hasDevil = false;
   if (cardTypes.includes("D")) {
+    hasDevil = true;
     playSound("devil");
-    showMessage("데빌카드가 존재합니다", 200);
+    const statusEl = document.getElementById("game-status");
+    if (statusEl) {
+      statusEl.textContent = "데빌카드가 존재합니다";
+      statusEl.style.color = "#c62828";
+      statusEl.classList.remove("hidden");
+    }
+    const hudEl = document.getElementById("game-hud");
+    if (hudEl) hudEl.classList.remove("hidden");
+
+    // 데빌 카드 등장 시 붉은 섬광 효과
+    gameState.lighting = "RED_FLASH";
+    gameState.lightingTimer = 120; // 효과 지속 시간 2배로 증가 (2초)
+    showDevilPopup();
+    triggerDevilCardAnimation();
   }
 
   // 생존자들에게 카드 다시 배분 (기존 핸드 초기화)
@@ -2291,9 +2520,17 @@ function startRound() {
   const ranks = ["K", "Q", "A"];
   gameState.currentRank = ranks[Math.floor(Math.random() * ranks.length)];
   updateTargetDisplay();
+
+  if (hasDevil) {
+    const el = document.getElementById("target-rank");
+    if (el) el.textContent = `Target: ${gameState.currentRank}`;
+  } else {
+    updateTargetDisplay();
+  }
 }
 
 let messageTimeout = null;
+let popupTimeout = null;
 function showMessage(text, duration) {
   const overlay = document.getElementById("message-overlay");
   overlay.textContent = text;
@@ -2307,6 +2544,30 @@ function showMessage(text, duration) {
   messageTimeout = setTimeout(() => {
     overlay.classList.add("hidden");
   }, duration * 16); // 기존 duration이 프레임 단위였으므로 대략 ms로 변환
+}
+
+function showDevilPopup() {
+  const popup = document.getElementById("target-popup");
+  const popupImg = document.getElementById("target-popup-img");
+  const popupText = document.getElementById("target-popup-text");
+
+  if (popup && popupImg && popupText) {
+    const sourceImg = document.getElementById("img-D");
+    if (sourceImg) {
+      popupImg.src = sourceImg.src;
+      popupText.textContent = "데빌카드가 존재합니다";
+      popupText.style.color = "#c62828";
+
+      if (popupTimeout) clearTimeout(popupTimeout);
+      popup.classList.remove("hidden");
+
+      popupTimeout = setTimeout(() => {
+        popup.classList.add("hidden");
+        popupText.style.color = "";
+        popupTimeout = null;
+      }, 2000);
+    }
+  }
 }
 
 function updateTargetDisplay() {
@@ -2329,11 +2590,14 @@ function updateTargetDisplay() {
     if (sourceImg) {
       popupImg.src = sourceImg.src;
       popupText.textContent = `Target: ${rank}`;
+
+      if (popupTimeout) clearTimeout(popupTimeout);
       popup.classList.remove("hidden");
 
       // 2초 후 사라짐
-      setTimeout(() => {
+      popupTimeout = setTimeout(() => {
         popup.classList.add("hidden");
+        popupTimeout = null;
       }, 2000);
     }
   }
@@ -2366,15 +2630,15 @@ function showGameOver(isWin) {
 
     // 승리 효과: 환호성 및 폭죽 3개
     playSound("cheer");
-    setTimeout(
+    addTimeout(
       () => createFirework(canvas.width * 0.3, canvas.height * 0.3),
       0,
     );
-    setTimeout(
+    addTimeout(
       () => createFirework(canvas.width * 0.7, canvas.height * 0.3),
       400,
     );
-    setTimeout(
+    addTimeout(
       () => createFirework(canvas.width * 0.5, canvas.height * 0.2),
       800,
     );
@@ -2394,9 +2658,8 @@ document.getElementById("btn-start").addEventListener("click", () => {
     audioCtx.resume();
   }
 
-  gameState.phase = "DEALING";
   playSound("select");
-  playBGM("main");
+  startRound(); // 게임 시작 시에도 라운드 초기화 로직(데빌 카드 체크 등)을 실행하도록 변경
 });
 
 // 게임 방법 버튼 이벤트
@@ -2445,41 +2708,101 @@ document.getElementById("btn-restart").addEventListener("click", () => {
 });
 
 document.getElementById("btn-fullscreen").addEventListener("click", (e) => {
-  // 한 번이라도 클릭하면 스타일을 강제로 변경하여 우상단에 고정 (모바일/작은 화면 대응)
-  const btn = e.currentTarget;
-  btn.style.position = "absolute";
-  btn.style.top = "20px";
-  btn.style.right = "20px";
-  btn.style.left = "auto";
-  btn.style.bottom = "auto";
-  btn.style.transform = "none";
-  btn.style.margin = "0";
-
+  const container = document.getElementById("game-container");
   if (!document.fullscreenElement) {
-    // 브라우저가 전체 화면 기능을 지원하는지 확인 (인앱 브라우저 오류 방지)
-    if (document.documentElement.requestFullscreen) {
-      document.documentElement
-        .requestFullscreen()
-        .then(() => {
-          // 전체 화면 성공 시 가로 모드로 고정 시도
-          if (screen.orientation && screen.orientation.lock) {
-            screen.orientation
-              .lock("landscape")
-              .catch((err) => console.log("가로 모드 고정 실패:", err));
-          }
-        })
-        .catch((err) => {
-          console.log(
-            `Error attempting to enable full-screen mode: ${err.message}`,
-          );
-        });
-    }
+    document.documentElement
+      .requestFullscreen()
+      .then(() => {
+        if (container) container.classList.add("fullscreen");
+
+        // 즉시 리사이즈 및 지연 리사이즈 (모바일 화면 전환/회전 딜레이 대응)
+        resizeGame();
+        setTimeout(resizeGame, 500);
+
+        // 모바일에서 전체화면 시 가로 모드 고정
+        if (screen.orientation && screen.orientation.lock) {
+          screen.orientation.lock("landscape").catch((err) => {
+            console.log("Orientation lock failed: ", err);
+          });
+        }
+      })
+      .catch((err) => {
+        console.log(
+          `Error attempting to enable full-screen mode: ${err.message}`,
+        );
+      });
   } else {
-    if (document.exitFullscreen) {
-      document.exitFullscreen();
+    document.exitFullscreen().then(() => {
+      if (container) container.classList.remove("fullscreen");
+      resizeGame();
+    });
+    // 전체화면 해제 시 방향 잠금 해제
+    if (screen.orientation && screen.orientation.unlock) {
+      screen.orientation.unlock();
     }
   }
 });
+
+// 화면 크기에 맞춰 게임 컨테이너 크기 조절 (비율 유지)
+function resizeGame() {
+  const container = document.getElementById("game-container");
+  if (!container) return;
+
+  let winW = window.innerWidth;
+  let winH = window.innerHeight;
+
+  // 모바일 브라우저 주소창/하단바 대응 (Visual Viewport API 사용)
+  if (window.visualViewport) {
+    winW = window.visualViewport.width;
+    winH = window.visualViewport.height;
+  }
+
+  const baseHeight = 900;
+
+  // 1. 화면 비율에 맞춰 캔버스 너비 동적 계산 (최소 1024px 유지)
+  // 가로가 긴 모바일 화면에서 여백 없이 꽉 채우기 위함
+  let newCanvasWidth = (winW / winH) * baseHeight;
+  if (newCanvasWidth < 1024) newCanvasWidth = 1024;
+
+  // 2. 캔버스 및 컨테이너 크기 업데이트
+  canvas.width = newCanvasWidth;
+  canvas.height = baseHeight;
+  container.style.width = `${newCanvasWidth}px`;
+  container.style.height = `${baseHeight}px`;
+
+  // 3. 윈도우 크기에 맞춰 스케일링 (Fit)
+  const scale = Math.min(winW / newCanvasWidth, winH / baseHeight);
+  container.style.transform = `scale(${scale})`;
+  container.style.setProperty("--game-scale", scale);
+
+  // 4. 게임 내부 레이아웃 재정렬 (중앙 정렬 유지)
+  updateLayout();
+}
+
+window.addEventListener("resize", resizeGame);
+if (window.visualViewport) {
+  // 모바일 키보드/주소창 변경 등에 대응
+  window.visualViewport.addEventListener("resize", resizeGame);
+}
+
+// 레이아웃 업데이트 함수 (화면 크기 변경 시 호출)
+function updateLayout() {
+  centerX = canvas.width / 2;
+  centerY = canvas.height / 2;
+  tableY = centerY + 30;
+
+  // 플레이어 위치 재설정 (중앙 기준 상대 위치 유지)
+  if (players.length > 0) {
+    players[0].x = centerX + 430;
+    players[0].y = tableY; // East
+    players[1].x = centerX;
+    players[1].y = tableY - 280; // North
+    players[2].x = centerX - 430;
+    players[2].y = tableY; // West
+    players[3].x = centerX;
+    players[3].y = tableY + 280; // South
+  }
+}
 
 // --- 사운드 컨트롤 이벤트 ---
 const btnMute = document.getElementById("btn-mute");
@@ -2612,35 +2935,17 @@ function setDynamicFavicon() {
 
 setDynamicFavicon();
 
-// 그리기 실행
-draw();
-
-// 히든 이미지 치트키 (Shift + H)
-let hiddenRewardTimeout;
-document.addEventListener("keydown", (e) => {
-  if (e.shiftKey && (e.key === "H" || e.key === "h")) {
-    const hiddenReward = document.getElementById("hidden-reward");
-    if (hiddenReward) {
-      const gameContainer = document.getElementById("game-container");
-
-      if (hiddenReward && gameContainer) {
-        // 천천히 등장 (페이드 인)
-        hiddenReward.style.opacity = "1";
-
-        // 화면 스크롤 효과 (컨테이너를 위로 이동시켜 아래쪽 공간 보여주기)
-        gameContainer.style.transition = "transform 1s ease-in-out";
-        gameContainer.style.transform = "translateY(-300px)"; // 300px 만큼 아래를 보여줌
-
-        // 기존 타이머가 있다면 취소 (연타 방지)
-        if (hiddenRewardTimeout) clearTimeout(hiddenRewardTimeout);
-
-        // 3초 뒤에 다시 사라짐 (페이드 아웃)
-        // 3초 뒤에 다시 사라짐 (페이드 아웃 및 스크롤 복귀)
-        hiddenRewardTimeout = setTimeout(() => {
-          hiddenReward.style.opacity = "0";
-          gameContainer.style.transform = "translateY(0)"; // 원위치
-        }, 3000);
-      }
+// 오디오 리소스 미리 로드 (재생 지연 방지)
+window.addEventListener("load", () => {
+  const preloadIds = ["sfx-cock", "sfx-click", "sfx-gun", "sfx-devil"];
+  preloadIds.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.load();
     }
-  }
+  });
 });
+
+// 게임 루프 시작
+resizeGame();
+draw();
