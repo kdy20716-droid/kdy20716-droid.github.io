@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pocketball Game</title>
+    <link rel="stylesheet" href="pocket-ball.css" />
+    <!-- Matter.js 물리 엔진 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+  </head>
+  <body>
+    <div id="game-container">
+      <!-- 게임 캔버스 -->
+      <canvas id="game-canvas"></canvas>
+
+      <!-- UI 레이어 -->
+      <div id="ui-layer">
+        <!-- 시작 화면 -->
+        <div id="start-screen" class="screen">
+          <div class="main-image-container">
+            <img src="asset/main.jpg" alt="Pocketball Main" id="main-img" />
+          </div>
+          <h1 class="game-title">POCKETBALL</h1>
+          <div class="btn-group">
+            <button id="btn-start" class="btn btn-purple">게임 시작</button>
+            <button id="btn-back" class="btn btn-green">뒤로 가기</button>
+          </div>
+        </div>
+
+        <!-- 인게임 HUD -->
+        <div id="game-hud" class="hidden">
+          <div class="score-board">SCORE: <span id="score">0</span></div>
+          <button id="btn-quit" class="btn btn-green small">나가기</button>
+        </div>
+
+        <!-- 파워 게이지 -->
+        <div id="power-gauge-container" class="hidden">
+          <div id="power-gauge-bar"></div>
+        </div>
+
+        <!-- 게임 오버 화면 -->
+        <div id="game-over-screen" class="screen hidden">
+          <h2>GAME OVER</h2>
+          <p>최종 점수: <span id="final-score">0</span></p>
+          <button id="btn-restart" class="btn btn-purple">다시 시작</button>
+        </div>
+      </div>
+    </div>
+    <script src="pocket-ball.js"></script>
+  </body>
+</html>
