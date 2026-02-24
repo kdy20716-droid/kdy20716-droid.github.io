@@ -31,7 +31,14 @@ ul {
 }
 
 html {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
   scroll-behavior: smooth;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+::-webkit-scrollbar {
+  display: none;
 }
 
 /* Scroll Progress Bar */
@@ -39,9 +46,14 @@ html {
   position: fixed;
   top: 0;
   right: 0;
-  width: 5px;
+  width: 8px;
   height: 0%;
-  background: #3498db;
+  background: linear-gradient(
+    to bottom,
+    #ffe2b5,
+    #df3b29
+  ); /* 낮: 노랑 -> 빨강 */
+  background-size: 100% 100vh;
   z-index: 2000;
 }
 
@@ -354,6 +366,16 @@ body.dark-mode .portfolio-info p,
 body.dark-mode .date,
 body.dark-mode .modal-text {
   color: #bbb;
+}
+
+/* Dark Mode Scroll Progress Bar */
+body.dark-mode #scroll-progress {
+  background: linear-gradient(
+    to bottom,
+    #ffffff,
+    #f9e79f
+  ); /* 밤: 연한 노랑 -> 흰색 */
+  background-size: 100% 100vh;
 }
 
 /* Portfolio Grid */
