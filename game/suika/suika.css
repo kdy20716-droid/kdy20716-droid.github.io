@@ -195,7 +195,8 @@ canvas {
   border-radius: 20px;
   text-align: center;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-  width: 320px;
+  width: 90%;
+  max-width: 400px;
   border: 5px solid #fab1a0;
   animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   transition:
@@ -235,6 +236,36 @@ canvas {
   margin-bottom: 30px;
 }
 
+/* 게임 방법 리스트 스타일 */
+.howto-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 25px 0;
+  text-align: left;
+}
+
+.howto-list li {
+  background-color: #fff8e1;
+  margin-bottom: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  color: #555;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.howto-list li .icon {
+  font-size: 1.4rem;
+}
+
+.howto-list li strong {
+  color: #ff6b6b;
+  font-weight: bold;
+}
+
 #final-score {
   color: #fab1a0;
   font-size: 1.5rem;
@@ -257,7 +288,10 @@ canvas {
 }
 
 #restart-btn,
-#start-btn {
+#start-btn,
+#back-btn-start,
+#howto-btn,
+#close-howto-btn {
   padding: 12px 30px;
   font-size: 1.1rem;
   background-color: #fab1a0;
@@ -273,15 +307,42 @@ canvas {
 }
 
 #restart-btn:hover,
-#start-btn:hover {
+#start-btn:hover,
+#back-btn-start:hover,
+#howto-btn:hover,
+#close-howto-btn:hover {
   background-color: #ff9f89;
   transform: translateY(-2px);
+}
+
+/* 시작 화면 버튼 세로 정렬 */
+#start-btn,
+#howto-btn,
+#back-btn-start {
+  display: block;
+  width: 80%;
+  margin: 10px auto;
+}
+
+#back-btn-start {
+  background-color: #bdc3c7;
+}
+#back-btn-start:hover {
+  background-color: #aab7b8;
+}
+
+#howto-btn {
+  background-color: #3498db;
+}
+#howto-btn:hover {
+  background-color: #2980b9;
 }
 
 #bgm-btn,
 #shake-btn,
 #theme-btn,
-#share-btn {
+#share-btn,
+#back-btn-ingame {
   background-color: #fab1a0;
   padding: 10px 20px;
   border-radius: 15px;
@@ -317,6 +378,11 @@ canvas {
 }
 
 #share-btn {
+  width: 100%;
+  font-size: 13px;
+}
+
+#back-btn-ingame {
   width: 100%;
   font-size: 13px;
 }
@@ -436,6 +502,15 @@ body.night-mode #player-name {
   background-color: #2c3e50;
   color: white;
   border: 1px solid #7f8c8d;
+}
+
+body.night-mode .howto-list li {
+  background-color: #2c3e50;
+  color: #ecf0f1;
+}
+
+body.night-mode .howto-list li strong {
+  color: #e74c3c;
 }
 
 /* 📱 반응형 미디어 쿼리 (화면이 좁을 때 레이아웃 변경) */

@@ -21,10 +21,35 @@
           <button id="btn-howto" class="btn secondary" style="margin-top: 20px">
             게임 방법
           </button>
+          <button
+            id="btn-back-start"
+            class="btn danger"
+            style="margin-top: 20px"
+          >
+            뒤로 가기
+          </button>
         </div>
 
         <!-- 전체 화면 버튼 -->
         <button id="btn-fullscreen" class="btn">전체 화면</button>
+        <!-- 인게임 뒤로가기 버튼 (좌측 상단) -->
+        <button
+          id="btn-back-ingame"
+          class="btn"
+          style="
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 200;
+            padding: 8px 15px;
+            font-size: 14px;
+            background-color: rgba(198, 40, 40, 0.6);
+            color: white;
+            border: 1px solid rgba(255, 82, 82, 0.5);
+          "
+        >
+          🔙 목록
+        </button>
 
         <!-- 사운드 컨트롤 (음소거 및 볼륨) -->
         <div id="sound-controls">

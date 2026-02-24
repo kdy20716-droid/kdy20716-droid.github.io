@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>수박 게임</title>
-    <meta name="color-scheme" content="light only">
+    <meta name="color-scheme" content="light only" />
     <!-- 파비콘 (브라우저 탭 아이콘) -->
     <link
       rel="icon"
@@ -38,6 +38,7 @@
         <ul id="evolution-list"></ul>
       </div>
       <div class="control-box">
+        <button id="back-btn-ingame">🔙 목록으로</button>
         <button id="shake-btn">🫨 흔들기 (3)</button>
         <button id="theme-btn">🌙 Night</button>
         <button id="share-btn">🔗 공유하기</button>
@@ -76,6 +77,8 @@
           클릭하여 떨어뜨립니다.
         </p>
         <button id="start-btn">게임 시작</button>
+        <button id="howto-btn">게임 방법</button>
+        <button id="back-btn-start">뒤로 가기</button>
       </div>
     </div>
     <!-- 게임 오버 모달 -->
@@ -91,6 +94,35 @@
         />
         <br />
         <button id="restart-btn">기록 저장 및 재시작</button>
+      </div>
+    </div>
+    <!-- 게임 방법 모달 -->
+    <div id="howto-modal" class="modal hidden">
+      <div class="modal-content">
+        <h2>게임 방법</h2>
+        <ul class="howto-list">
+          <li>
+            <span class="icon">👇</span>
+            <span
+              >과일을 떨어뜨려 <strong>같은 과일</strong>끼리 합치세요.</span
+            >
+          </li>
+          <li>
+            <span class="icon">✨</span>
+            <span
+              >과일이 합쳐지면 <strong>더 큰 과일</strong>로 진화합니다.</span
+            >
+          </li>
+          <li>
+            <span class="icon">🍉</span>
+            <span>가장 큰 과일인 <strong>수박</strong>을 만들어보세요!</span>
+          </li>
+          <li>
+            <span class="icon">⚠️</span>
+            <span>과일이 <strong>상단 라인</strong>을 넘어가면 게임 오버!</span>
+          </li>
+        </ul>
+        <button id="close-howto-btn">닫기</button>
       </div>
     </div>
     <script type="module" src="suika.js"></script>

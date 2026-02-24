@@ -1456,3 +1456,37 @@ document.querySelectorAll("button, input[type='range']").forEach((el) => {
   el.addEventListener("mouseenter", playUIHoverSound);
   el.addEventListener("click", playUIClickSound); // 슬라이더는 클릭 시에도 소리 발생
 });
+
+// --- 뒤로 가기 버튼 기능 ---
+const backBtnStart = document.getElementById("back-btn-start");
+const backBtnIngame = document.getElementById("back-btn-ingame");
+
+if (backBtnStart) {
+  backBtnStart.addEventListener(
+    "click",
+    () => (window.location.href = "../game-list.html"),
+  );
+}
+if (backBtnIngame) {
+  backBtnIngame.addEventListener(
+    "click",
+    () => (window.location.href = "../game-list.html"),
+  );
+}
+
+// --- 게임 방법 모달 기능 ---
+const howtoBtn = document.getElementById("howto-btn");
+const howtoModal = document.getElementById("howto-modal");
+const closeHowtoBtn = document.getElementById("close-howto-btn");
+
+if (howtoBtn && howtoModal) {
+  howtoBtn.addEventListener("click", () =>
+    howtoModal.classList.remove("hidden"),
+  );
+}
+
+if (closeHowtoBtn && howtoModal) {
+  closeHowtoBtn.addEventListener("click", () =>
+    howtoModal.classList.add("hidden"),
+  );
+}

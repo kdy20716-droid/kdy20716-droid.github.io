@@ -2743,6 +2743,14 @@ document.getElementById("btn-fullscreen").addEventListener("click", (e) => {
   }
 });
 
+// --- 뒤로 가기 버튼 이벤트 ---
+document.getElementById("btn-back-start").addEventListener("click", () => {
+  window.location.href = "../game-list.html";
+});
+document.getElementById("btn-back-ingame").addEventListener("click", () => {
+  window.location.href = "../game-list.html";
+});
+
 // 화면 크기에 맞춰 게임 컨테이너 크기 조절 (비율 유지)
 function resizeGame() {
   const container = document.getElementById("game-container");
