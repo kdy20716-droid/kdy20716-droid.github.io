@@ -368,7 +368,6 @@ let isShooting = false; // 샷 진행 중 여부
 let pottedThisTurn = []; // 이번 턴에 넣은 공들
 let foulThisTurn = false; // 이번 턴 파울 여부
 let isBallInHand = false; // 프리볼 상태
-let isPlacingCueBall = false; // 큐볼 배치 중
 let firstHitRecorded = false; // 턴 시작 후 첫 충돌 감지 여부
 let slowMotionTimer = 0; // 슬로우 모션(정지 대기) 타이머
 let messageTimeout = null; // 메시지 타이머
@@ -390,10 +389,21 @@ function handleInputStart(e) {
 
   // 프리볼(Ball in Hand) 상태일 때 배치 시작
   if (isBallInHand) {
-    isPlacingCueBall = true;
     const pos = getMousePos(e);
-    Body.setPosition(cueBall, pos);
+
+    // 테이블 범위 제한
+    const halfW = tableWidth / 2 - ballRadius;
+    const halfH = tableHeight / 2 - ballRadius;
+    const centerX = width / 2;
+    const centerY = height / 2;
+    let x = Math.max(centerX - halfW, Math.min(centerX + halfW, pos.x));
+    let y = Math.max(centerY - halfH, Math.min(centerY + halfH, pos.y));
+
+    Body.setPosition(cueBall, { x, y });
     Body.setVelocity(cueBall, { x: 0, y: 0 });
+
+    isBallInHand = false; // 클릭 즉시 배치 완료
+    document.getElementById("message-overlay").classList.add("hidden");
     return;
   }
 
@@ -412,18 +422,6 @@ function handleInputMove(e) {
   const pos = getMousePos(e);
   currentMousePos = pos;
 
-  // 프리볼 배치 중일 때 큐볼 이동 (테이블 범위 제한)
-  if (isPlacingCueBall) {
-    const halfW = tableWidth / 2 - ballRadius;
-    const halfH = tableHeight / 2 - ballRadius;
-    const centerX = width / 2;
-    const centerY = height / 2;
-    let x = Math.max(centerX - halfW, Math.min(centerX + halfW, pos.x));
-    let y = Math.max(centerY - halfH, Math.min(centerY + halfH, pos.y));
-    Body.setPosition(cueBall, { x, y });
-    return;
-  }
-
   if (!isDragging) return;
   e.preventDefault();
   const forceVector = Vector.sub(dragStart, pos);
@@ -435,12 +433,6 @@ function handleInputMove(e) {
 
 function handleInputEnd(e) {
   if (isGameEnded || !cueBall) return;
-  if (isPlacingCueBall) {
-    isPlacingCueBall = false;
-    isBallInHand = false; // 배치 완료
-    document.getElementById("message-overlay").classList.add("hidden");
-    return;
-  }
 
   if (!isDragging) return;
   const pos = getMousePos(e);
