@@ -3,46 +3,89 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pocketball Game</title>
+    <title>Pocketball</title>
     <link rel="stylesheet" href="pocket-ball.css" />
     <!-- Matter.js 물리 엔진 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
   </head>
   <body>
     <div id="game-container">
-      <!-- 게임 캔버스 -->
       <canvas id="game-canvas"></canvas>
 
       <!-- UI 레이어 -->
       <div id="ui-layer">
         <!-- 시작 화면 -->
         <div id="start-screen" class="screen">
-          <div class="main-image-container">
-            <img src="asset/main.jpg" alt="Pocketball Main" id="main-img" />
-          </div>
-          <h1 class="game-title">POCKETBALL</h1>
+          <h1 class="title">POCKETBALL</h1>
           <div class="btn-group">
-            <button id="btn-start" class="btn btn-purple">게임 시작</button>
-            <button id="btn-back" class="btn btn-green">뒤로 가기</button>
+            <button id="btn-start" class="btn purple">게임 시작</button>
+            <button id="btn-howto" class="btn green">게임 방법</button>
+            <button id="btn-home" class="btn red">나가기</button>
           </div>
         </div>
 
         <!-- 인게임 HUD -->
-        <div id="game-hud" class="hidden">
-          <div class="score-board">SCORE: <span id="score">0</span></div>
-          <button id="btn-quit" class="btn btn-green small">나가기</button>
+        <div id="hud" class="hidden">
+          <div id="turn-indicator" class="p1-turn">Player 1 Turn</div>
+          <div class="score-box">
+            <div class="ball-score">
+              <span class="player-label p1-label">1P</span>
+              <span id="solid-count">7</span>
+            </div>
+            <div class="ball-score">
+              <span class="player-label p2-label">2P</span>
+              <span id="stripe-count">7</span>
+            </div>
+          </div>
+          <button id="btn-quit" class="btn red small">나가기</button>
+        </div>
+        <div id="message-overlay" class="hidden">
+          원하는 곳에 볼을 놓아 주세요
         </div>
 
         <!-- 파워 게이지 -->
-        <div id="power-gauge-container" class="hidden">
-          <div id="power-gauge-bar"></div>
+        <div id="power-gauge-wrap" class="hidden">
+          <div id="power-gauge-fill"></div>
         </div>
 
-        <!-- 게임 오버 화면 -->
-        <div id="game-over-screen" class="screen hidden">
+        <!-- 게임 오버 -->
+        <div id="game-over" class="screen hidden">
           <h2>GAME OVER</h2>
-          <p>최종 점수: <span id="final-score">0</span></p>
-          <button id="btn-restart" class="btn btn-purple">다시 시작</button>
+          <p>게임이 종료되었습니다.</p>
+          <div class="btn-group">
+            <button id="btn-restart" class="btn purple">다시 시작</button>
+            <button id="btn-home-over" class="btn red">나가기</button>
+          </div>
+        </div>
+
+        <!-- 게임 방법 모달 -->
+        <div id="howto-modal" class="modal hidden">
+          <div class="modal-content">
+            <h2>게임 방법</h2>
+            <ul>
+              <li>
+                🎱 <strong>1P</strong>는 단색(Solid), <strong>2P</strong>는
+                줄무늬(Stripe) 공을 넣어야 합니다.
+              </li>
+              <li>
+                ⚠️ 자신의 공을 모두 넣기 전에 <strong>8번 공(검은색)</strong>을
+                넣으면 패배합니다.
+              </li>
+              <li>
+                🏆 자신의 공을 모두 넣은 후 <strong>8번 공</strong>을 넣으면
+                승리합니다.
+              </li>
+              <li>
+                🚫 상대방 공을 먼저 맞추거나 넣으면 <strong>파울</strong>입니다.
+                (상대방 프리볼)
+              </li>
+              <li>
+                🚀 공이 테이블 밖으로 나가면 <strong>파울</strong>입니다.
+                (조심히 치세요!)
+              </li>
+            </ul>
+            <button id="btn-close-howto" class="btn purple">닫기</button>
+          </div>
         </div>
       </div>
     </div>

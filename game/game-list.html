@@ -57,10 +57,24 @@
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        background: linear-gradient(-45deg, #1a1a2e, #16213e, #243b55, #1a1a2e);
+        background-size: 400% 400%;
+        animation: gradientBG 15s ease infinite;
         color: white;
         font-family: "Noto Sans KR", sans-serif;
         color-scheme: light;
+      }
+
+      @keyframes gradientBG {
+        0% {
+          background-position: 0% 50%;
+        }
+        50% {
+          background-position: 100% 50%;
+        }
+        100% {
+          background-position: 0% 50%;
+        }
       }
 
       .container {
@@ -161,13 +175,6 @@
       <h1>🎮 GAME PROJECT</h1>
       <p>수정 작업 중 입니다!</p>
       <div class="game-list">
-        <a href="./liars-roulette/liars-roulette.html" class="game-card liar">
-          <span class="icon">🔫</span>
-          <div class="info">
-            <span class="title">라이어 룰렛[BETA]</span>
-            <span class="desc">심리전과 운의 대결, 최후의 승자는?</span>
-          </div>
-        </a>
         <a href="./suika/suika.html" class="game-card suika">
           <span class="icon">🍉</span>
           <div class="info">
@@ -175,10 +182,18 @@
             <span class="desc">과일을 합쳐 수박을 만들어보세요!</span>
           </div>
         </a>
+        <a href="./liars-roulette/liars-roulette.html" class="game-card liar">
+          <span class="icon">🔫</span>
+          <div class="info">
+            <span class="title">라이어 룰렛</span>
+            <span class="desc">심리전과 운의 대결, 최후의 승자는?</span>
+          </div>
+        </a>
+
         <a href="./pocket-ball/pocket-ball.html" class="game-card pocketball">
           <span class="icon">🎱</span>
           <div class="info">
-            <span class="title">포켓볼</span>
+            <span class="title">포켓볼[미완]</span>
             <span class="desc">정교한 샷으로 공을 넣으세요!</span>
           </div>
         </a>
