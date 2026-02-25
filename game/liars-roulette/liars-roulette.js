@@ -20,7 +20,7 @@ const ctx = canvas.getContext("2d");
 
 // 캔버스 크기 설정
 canvas.width = 1300;
-canvas.height = 1000;
+canvas.height = 1200;
 
 // --- 멀티플레이 상태 변수 (초기화 위치 이동) ---
 const lobbyScreen = document.getElementById("lobby-screen");
@@ -2551,7 +2551,7 @@ function resizeGame() {
 
   // [수정] 고정 해상도 설정 (로비 크기 1300px에 맞춤)
   const baseWidth = 1300;
-  const baseHeight = 1000;
+  const baseHeight = 1200;
 
   // 여백 확보 (상하좌우 100px)
   const margin = 100;

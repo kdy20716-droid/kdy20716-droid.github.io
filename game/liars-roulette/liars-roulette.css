@@ -21,7 +21,7 @@ body {
 #game-container {
   position: relative;
   width: 1024px;
-  height: 1000px;
+  height: 1200px;
   transform-origin: center center;
   flex-shrink: 0; /* 화면이 작아져도 레이아웃이 깨지지 않도록 고정 */
 }
@@ -67,7 +67,7 @@ canvas {
   top: 50%;
   right: 20px;
   transform: translateY(-50%);
-  margin: 160px;
+  margin: 100px;
 } /* East */
 #bubble-1 {
   top: 80px;
@@ -84,10 +84,10 @@ canvas {
   left: 50%;
   transform: translateX(-50%);
   /* 내 말풍선(South) 전용 크기 조절 */
-  padding: 4px 10px; /* [조절] 상하(4px), 좌우(10px) 여백 - 숫자를 줄이면 더 작아집니다 */
+  padding: -100px 10px; /* [조절] 상하(4px), 좌우(10px) 여백 - 숫자를 줄이면 더 작아집니다 */
   font-size: 11px; /* [조절] 글자 크기 */
   line-height: 1.2; /* 줄 간격 조절 */
-  margin-bottom: 100px;
+  margin-bottom: 260px;
 } /* South */
 
 /* UI 레이어 스타일 */
