@@ -22,6 +22,11 @@ const ctx = canvas.getContext("2d");
 canvas.width = 1024;
 canvas.height = 900;
 
+// --- 멀티플레이 상태 변수 (초기화 위치 이동) ---
+const lobbyScreen = document.getElementById("lobby-screen");
+const countdownOverlay = document.getElementById("countdown-overlay");
+let isMultiplayerGame = false;
+
 // 먼지 입자 초기화
 const particles = [];
 for (let i = 0; i < 50; i++) {
@@ -144,6 +149,20 @@ for (const [key, id] of Object.entries(imgIds)) {
       console.warn(`이미지 로드 실패: ${id} (경로 확인 필요)`);
   }
 }
+
+// 캐릭터 Sitdown 이미지 로드 (멀티플레이용)
+const sitdownCharImages = [];
+const sitdownSources = [
+  "sitdown_male.png",
+  "sitdown_female.png",
+  "sitdown_black_male.png",
+  "sitdown_asian_female.png",
+];
+sitdownSources.forEach((src) => {
+  const img = new Image();
+  img.src = `./character/${src}`;
+  sitdownCharImages.push(img);
+});
 
 // 배분 애니메이션 상태
 let dealingState = {
@@ -524,6 +543,9 @@ function draw() {
   ctx.lineWidth = 15;
   ctx.stroke();
   ctx.lineWidth = 1;
+
+  // 4.5 캐릭터 그리기 (멀티플레이 전용)
+  if (isMultiplayerGame) drawSitdownCharacters();
 
   // 5. 카드 덱 그리기
   // 딜링 중이거나 이동 중인 카드가 있을 때만 그림 (끝나면 사라짐)
@@ -1263,6 +1285,41 @@ function updateAndDrawSlam() {
   ctx.restore();
 }
 
+// 멀티플레이 캐릭터 그리기 (Sitdown)
+function drawSitdownCharacters() {
+  players.forEach((player) => {
+    if (player.charIndex !== undefined && sitdownCharImages[player.charIndex]) {
+      const img = sitdownCharImages[player.charIndex];
+      if (img.complete && img.naturalWidth > 0) {
+        ctx.save();
+        ctx.translate(player.x, player.y);
+        // 발이 캔버스(중앙)를 향하게 하려면 180도 회전 필요
+        // player.angle은 플레이어가 테이블을 바라보는 방향(South=0, North=PI 등)
+        // 이미지가 정방향(머리 위, 발 아래)이라면, 180도 돌려야 발이 테이블 쪽으로 감
+        ctx.rotate(player.angle + Math.PI);
+
+        const size = 270; // 크기 1.5배 (180 -> 270)
+        ctx.translate(0, -80); // 테이블에서 더 멀리 이동
+        ctx.drawImage(img, -size / 2, -size / 2, size, size);
+        const targetHeight = 350; // 크기 키움 (270 -> 350)
+        const ratio = img.naturalWidth / img.naturalHeight;
+        const targetWidth = targetHeight * ratio; // 원본 비율 유지
+
+        ctx.translate(0, -120); // 테이블에서 더 멀리 이동
+        ctx.drawImage(
+          img,
+          -targetWidth / 2,
+          -targetHeight / 2,
+          targetWidth,
+          targetHeight,
+        );
+
+        ctx.restore();
+      }
+    }
+  });
+}
+
 // 마우스 클릭 이벤트 처리
 canvas.addEventListener("click", (e) => {
   if (gameState.phase === "GAME_OVER") {
@@ -1507,7 +1564,6 @@ function processAiTurn() {
         );
         console.log(`${aiPlayer.name} challenges!`);
         if (isMultiplayerGame) {
-          sendGameAction("CHALLENGE", {}, aiIndex);
           sendGameAction("CHALLENGE", {}, serverAiIndex);
         } else {
           challenge();
@@ -1607,7 +1663,6 @@ function processAiTurn() {
       }
 
       if (isMultiplayerGame) {
-        sendGameAction("SUBMIT", { cardIndices: indicesToPlay }, aiIndex);
         sendGameAction("SUBMIT", { cardIndices: indicesToPlay }, serverAiIndex);
       } else {
         submitCards(aiIndex, indicesToPlay);
@@ -2662,10 +2717,6 @@ draw();
 
 // --- 멀티플레이 연동 ---
 
-const lobbyScreen = document.getElementById("lobby-screen");
-const countdownOverlay = document.getElementById("countdown-overlay");
-let isMultiplayerGame = false;
-
 // 멀티플레이 초기화
 initMultiplayer({
   onStart: startMultiplayerSequence,
@@ -2711,6 +2762,7 @@ function startMultiplayerSequence(roomPlayers) {
 
     players[i].displayName = roomPlayer.nickname;
     players[i].isAI = !!roomPlayer.isAI;
+    players[i].charIndex = roomPlayer.charIndex; // 캐릭터 인덱스 저장
     // 캐릭터 이미지 등 추가 속성 설정 가능
   }
 
