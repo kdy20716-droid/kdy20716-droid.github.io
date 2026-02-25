@@ -3436,12 +3436,20 @@ if (chatInput) {
 // --- 대기실 플레이어 슬롯 및 캐릭터 선택 로직 ---
 
 const charImages = [
-  "킹카드 스페이드.jpg",
-  "퀸카드 스페이드.jpg",
-  "조커카드.jpg",
-  "스페이드 카드.png",
+  "male.png",
+  "female.png",
+  "black_male.png",
+  "asian_female.png",
 ];
-const charNames = ["King", "Queen", "Joker", "Ace"];
+const charVideos = [
+  "male.mp4",
+  "female.mp4",
+  "black_male.mp4",
+  "asian_female.mp4",
+];
+const charNames = ["Male", "Female", "Black Male", "Asian Female"];
+
+const playedVideos = new Set(); // 현재 세션에서 재생된 비디오 추적
 
 function setupRoomListener(roomId) {
   unsubscribeRoom = window.fs.onSnapshot(
@@ -3476,6 +3484,7 @@ function renderLobbySlots(playersData) {
   for (let i = 0; i < 4; i++) {
     const charName = charNames[i];
     const charImg = charImages[i];
+    const charVideo = charVideos[i];
 
     // 이 캐릭터를 선택한 플레이어 찾기
     const ownerIndex = playersData.findIndex((p) => p.charIndex === i);
@@ -3483,6 +3492,11 @@ function renderLobbySlots(playersData) {
 
     const isTaken = owner !== undefined;
     const isMe = owner && owner.nickname === myNickname;
+
+    // 내가 선택하지 않은 캐릭터는 비디오 재생 기록 초기화 (나중에 다시 선택하면 또 재생되게)
+    if (!isMe) {
+      playedVideos.delete(i);
+    }
 
     const slot = document.createElement("div");
     slot.className = "player-slot";
@@ -3495,6 +3509,12 @@ function renderLobbySlots(playersData) {
     // 이미지 스타일 (선택된 상태 표시)
     const imgClass = isTaken ? (isMe ? "selected" : "taken") : "";
 
+    // 비디오 재생 여부 결정 (내 캐릭터이고, 아직 재생 안 했으면)
+    let showVideo = false;
+    if (isMe && !playedVideos.has(i)) {
+      showVideo = true;
+    }
+
     let btnHtml = "";
     if (isMe) {
       btnHtml = `<button class="btn-select selected" disabled>선택됨</button>`;
@@ -3506,12 +3526,27 @@ function renderLobbySlots(playersData) {
 
     slot.innerHTML = `
       <div class="slot-char-area">
-        <img src="./pokercard/${charImg}" alt="${charName}" class="${imgClass}">
+        <img src="./character/${charImg}" alt="${charName}" class="${imgClass}" style="${showVideo ? "display:none" : "display:block"}">
+        <video src="./character/${charVideo}" class="char-video" style="${showVideo ? "display:block" : "display:none"}" muted playsinline></video>
       </div>
       <div class="slot-name" style="${isMe ? "color: #d4af37;" : ""}">${nameText}</div>
       ${btnHtml}
     `;
     container.appendChild(slot);
+
+    // 비디오 이벤트 리스너 등록
+    if (showVideo) {
+      const videoEl = slot.querySelector("video");
+      const imgEl = slot.querySelector("img");
+      if (videoEl) {
+        videoEl.play().catch((e) => console.log("Video play failed:", e));
+        videoEl.onended = () => {
+          videoEl.style.display = "none";
+          imgEl.style.display = "block";
+          playedVideos.add(i); // 재생 완료 기록
+        };
+      }
+    }
   }
 }
 

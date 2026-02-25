@@ -456,6 +456,14 @@ body.fade-out {
   border-radius: 5px;
 }
 
+/* 캐릭터 비디오 스타일 */
+.char-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 5px;
+}
+
 /* 선택된(다른 사람이 가져간) 이미지 어둡게 처리 */
 .slot-char-area img.taken {
   filter: brightness(0.3) grayscale(100%);
