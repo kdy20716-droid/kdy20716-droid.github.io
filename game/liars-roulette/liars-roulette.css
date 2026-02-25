@@ -55,6 +55,13 @@ canvas {
   opacity: 1;
 }
 
+/* 이모티콘 전용 스타일 (크게) */
+.speech-bubble.emoji-mode {
+  font-size: 32px !important;
+  padding: 4px 8px !important;
+  border-radius: 12px;
+}
+
 /* 플레이어별 말풍선 위치 */
 #bubble-0 {
   top: 50%;
@@ -77,7 +84,7 @@ canvas {
   left: 50%;
   transform: translateX(-50%);
   /* 내 말풍선(South) 전용 크기 조절 */
-  padding: -1px 100px; /* [조절] 상하(4px), 좌우(10px) 여백 - 숫자를 줄이면 더 작아집니다 */
+  padding: 4px 10px; /* [조절] 상하(4px), 좌우(10px) 여백 - 숫자를 줄이면 더 작아집니다 */
   font-size: 11px; /* [조절] 글자 크기 */
   line-height: 1.2; /* 줄 간격 조절 */
   margin-bottom: 100px;
@@ -529,12 +536,19 @@ body.fade-out {
 }
 
 .input-field {
-  padding: 10px;
+  padding: 12px;
   font-size: 16px;
   border-radius: 5px;
-  border: 1px solid #555;
-  background: #333;
+  border: 1px solid #444;
+  background: rgba(0, 0, 0, 0.6);
   color: white;
+  outline: none;
+  transition: all 0.3s ease;
+}
+.input-field:focus {
+  border-color: #d4af37;
+  box-shadow: 0 0 8px rgba(212, 175, 55, 0.4);
+  background: rgba(0, 0, 0, 0.8);
 }
 
 .btn-send {
@@ -609,6 +623,12 @@ body.fade-out {
   flex-direction: column;
   pointer-events: auto;
   z-index: 150;
+  opacity: 0.3;
+  transition: opacity 0.3s ease;
+}
+
+#ingame-chat:hover {
+  opacity: 1;
 }
 
 #ingame-messages {
@@ -618,6 +638,11 @@ body.fade-out {
   color: white;
   font-size: 14px;
   text-shadow: 1px 1px 2px black;
+  scrollbar-width: none;
+}
+
+#ingame-messages::-webkit-scrollbar {
+  display: none;
 }
 
 .chat-controls {
@@ -630,11 +655,37 @@ body.fade-out {
 
 #ingame-input {
   flex: 1;
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   color: white;
-  padding: 5px;
-  border-radius: 3px;
+  padding: 8px;
+  border-radius: 5px;
+  outline: none;
+  transition: all 0.3s ease;
+}
+#ingame-input:focus {
+  border-color: #d4af37;
+  background: rgba(0, 0, 0, 0.8);
+  box-shadow: 0 0 5px rgba(212, 175, 55, 0.4);
+}
+
+/* 로비 채팅 입력창 스타일 추가 */
+#chat-input {
+  flex: 1;
+  padding: 10px;
+  font-size: 14px;
+  border-radius: 5px;
+  border: 1px solid #444;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  outline: none;
+  transition:
+    border-color 0.3s,
+    box-shadow 0.3s;
+}
+#chat-input:focus {
+  border-color: #d4af37;
+  box-shadow: 0 0 5px rgba(212, 175, 55, 0.5);
 }
 
 #emoji-picker {

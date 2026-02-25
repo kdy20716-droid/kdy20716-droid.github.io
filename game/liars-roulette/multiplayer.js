@@ -44,6 +44,7 @@ let unsubscribeActions = null;
 let gameCallbacks = {
   onStart: null,
   onAction: null,
+  onChat: null,
 };
 
 // --- UI 요소 (liars-roulette.html에 있는 요소들) ---
@@ -327,6 +328,10 @@ function setupChatListener(roomId) {
       if (change.type === "added") {
         const msg = change.doc.data();
         addMessageToUI(msg.sender, msg.text);
+        // 채팅 콜백 호출 (말풍선 표시용)
+        if (gameCallbacks.onChat) {
+          gameCallbacks.onChat(msg.sender, msg.text);
+        }
       }
     });
   });

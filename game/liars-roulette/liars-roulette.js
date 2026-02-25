@@ -169,6 +169,15 @@ function showBubble(playerIndex, text) {
   if (bubble) {
     updateBubblePosition(playerIndex);
     bubble.textContent = text;
+
+    // 이모티콘 감지 (이모티콘만 있는 경우 크기 확대)
+    const isEmoji = /^[\p{Extended_Pictographic}\u200d\ufe0f]+$/u.test(text);
+    if (isEmoji) {
+      bubble.classList.add("emoji-mode");
+    } else {
+      bubble.classList.remove("emoji-mode");
+    }
+
     bubble.classList.add("show");
     setTimeout(() => {
       bubble.classList.remove("show");
@@ -1461,6 +1470,14 @@ function processAiTurn() {
   // 고민하는 시간 랜덤 설정 (2초 ~ 4초) - 템포 조절
   const thinkingTime = Math.random() * 2000 + 2000;
 
+  // 멀티플레이 시 AI의 서버 인덱스 계산 (호스트 기준)
+  let serverAiIndex = aiIndex;
+  if (isMultiplayerGame) {
+    // 로컬 인덱스(aiIndex) -> 서버 인덱스 변환 공식
+    const offset = (3 - aiIndex + 4) % 4;
+    serverAiIndex = (myPlayerIndex + offset) % 4;
+  }
+
   addTimeout(() => {
     // 상대방이 카드를 냈을 때 반응 (50% 확률)
     if (gameState.lastPlayedBatch && Math.random() < 0.5) {
@@ -1491,6 +1508,7 @@ function processAiTurn() {
         console.log(`${aiPlayer.name} challenges!`);
         if (isMultiplayerGame) {
           sendGameAction("CHALLENGE", {}, aiIndex);
+          sendGameAction("CHALLENGE", {}, serverAiIndex);
         } else {
           challenge();
         }
@@ -1590,6 +1608,7 @@ function processAiTurn() {
 
       if (isMultiplayerGame) {
         sendGameAction("SUBMIT", { cardIndices: indicesToPlay }, aiIndex);
+        sendGameAction("SUBMIT", { cardIndices: indicesToPlay }, serverAiIndex);
       } else {
         submitCards(aiIndex, indicesToPlay);
       }
@@ -1900,12 +1919,12 @@ function triggerSimultaneousRoulette(victims) {
     victims.forEach((victim) => {
       // 각자 확률 계산 (독립 시행)
       // 주의: revolver 객체는 하나지만 여기서는 각자 쏘는 것으로 연출하므로
-      // 실제로는 각자의 운명을 따로 계산해야 함.
-      // 게임의 재미를 위해 revolver 상태를 공유하지 않고 랜덤 확률(1/6)로 처리하거나
-      // revolver를 돌려가며 쏜다고 가정. 여기서는 단순하게 1/6 확률 독립 시행으로 처리.
-      const bulletPos = Math.floor(Math.random() * 6);
-      const currentChamber = Math.floor(Math.random() * 6);
-      const isBang = bulletPos === currentChamber;
+      // 실제로는 각자의 운명을 따로 계산해야 함. -> [수정] 동기화를 위해 공유된 revolver 사용
+      // 순서대로 방아쇠를 당기는 것으로 처리하여 결과 동기화
+
+      const isBang = revolver.currentChamber === revolver.bulletPosition;
+      revolver.currentChamber =
+        (revolver.currentChamber + 1) % revolver.chambers;
 
       if (isBang) {
         anyDeath = true;
@@ -2012,7 +2031,7 @@ function checkWinCondition() {
   }
 }
 
-function startRound(deck = null) {
+function startRound(deck = null, bulletPos = null, rank = null) {
   clearAllTimeouts(); // 게임 시작/재시작 시 예약된 모든 연출 취소
 
   // 팝업 타이머 초기화 (이전 팝업이 남아있다면 제거)
@@ -2026,7 +2045,17 @@ function startRound(deck = null) {
   // 멀티플레이 호스트 로직: 덱 생성 및 전송
   if (isMultiplayerGame && isHost && !deck) {
     const newDeck = createDeck();
-    sendGameAction("START_GAME", { deck: newDeck });
+    // 총알 위치도 생성하여 전송
+    const newBulletPos = Math.floor(Math.random() * 6);
+    // [수정] 목표 카드(Rank)도 생성하여 전송 (동기화)
+    const ranks = ["K", "Q", "A"];
+    const newRank = ranks[Math.floor(Math.random() * ranks.length)];
+
+    sendGameAction("START_GAME", {
+      deck: newDeck,
+      bulletPosition: newBulletPos,
+      currentRank: newRank,
+    });
     return; // 액션이 돌아올 때까지 대기
   }
   // 멀티플레이 클라이언트 로직: 덱 없이 호출되면 무시 (액션 대기)
@@ -2050,6 +2079,12 @@ function startRound(deck = null) {
 
   // 덱 재생성 (20% 확률로 데빌 카드 포함)
   cardTypes = deck || createDeck();
+
+  // 총알 위치 설정 (멀티플레이 동기화)
+  if (bulletPos !== null) {
+    revolver.bulletPosition = bulletPos;
+    revolver.currentChamber = 0; // 새 라운드 시작 시 챔버 초기화
+  }
 
   // 데빌 카드 존재 여부 확인 및 알림
   let hasDevil = false;
@@ -2092,6 +2127,12 @@ function startRound(deck = null) {
   // 새 랭크 설정
   const ranks = ["K", "Q", "A"];
   gameState.currentRank = ranks[Math.floor(Math.random() * ranks.length)];
+  if (rank) {
+    gameState.currentRank = rank;
+  } else {
+    const ranks = ["K", "Q", "A"];
+    gameState.currentRank = ranks[Math.floor(Math.random() * ranks.length)];
+  }
   updateTargetDisplay();
 
   if (hasDevil) {
@@ -2372,37 +2413,30 @@ function resizeGame() {
     winH = window.visualViewport.height;
   }
 
-  // [수정] 여백 확보 (상하좌우 100px)
+  // [수정] 고정 해상도 설정 (로비 크기 1300px에 맞춤)
+  const baseWidth = 1300;
+  const baseHeight = 900;
+
+  // 여백 확보 (상하좌우 100px)
   const margin = 100;
   const availW = Math.max(winW - margin * 2, 320); // 최소 너비 안전장치
   const availH = Math.max(winH - margin * 2, 320); // 최소 높이 안전장치
 
-  const baseHeight = 900;
-
-  // 1. 화면 비율에 맞춰 캔버스 너비 동적 계산 (최소 1024px 유지)
-  // 가로가 긴 모바일 화면에서 여백 없이 꽉 채우기 위함
-  let newCanvasWidth = (winW / winH) * baseHeight;
-  // 여백을 제외한 가용 공간 비율을 사용
-  let newCanvasWidth1 = (availW / availH) * baseHeight;
-  if (newCanvasWidth < 1024) newCanvasWidth = 1024;
-
-  // 2. 캔버스 및 컨테이너 크기 업데이트
-  canvas.width = newCanvasWidth;
+  // 1. 캔버스 및 컨테이너 크기 고정
+  canvas.width = baseWidth;
   canvas.height = baseHeight;
-  container.style.width = `${newCanvasWidth}px`;
+  container.style.width = `${baseWidth}px`;
   container.style.height = `${baseHeight}px`;
 
-  // 3. 윈도우 크기에 맞춰 스케일링 (Fit)
-  const scale = Math.min(winW / newCanvasWidth, winH / baseHeight);
-  // 가용 공간(availW, availH)에 맞춤
-  const scale1 = Math.min(availW / newCanvasWidth, availH / baseHeight);
+  // 2. 가용 공간에 맞춰 비율 유지하며 스케일링 (Fit)
+  const scale = Math.min(availW / baseWidth, availH / baseHeight);
+
   container.style.transform = `scale(${scale})`;
   container.style.setProperty("--game-scale", scale);
 
   // 4. 게임 내부 레이아웃 재정렬 (중앙 정렬 유지)
   updateLayout();
 }
-
 window.addEventListener("resize", resizeGame);
 if (window.visualViewport) {
   // 모바일 키보드/주소창 변경 등에 대응
@@ -2636,6 +2670,7 @@ let isMultiplayerGame = false;
 initMultiplayer({
   onStart: startMultiplayerSequence,
   onAction: handleRemoteAction,
+  onChat: handleRemoteChat,
 });
 
 // 멀티플레이 시작 시퀀스 (카운트다운 -> 게임 진입)
@@ -2678,6 +2713,13 @@ function startMultiplayerSequence(roomPlayers) {
     players[i].isAI = !!roomPlayer.isAI;
     // 캐릭터 이미지 등 추가 속성 설정 가능
   }
+
+  // [수정] 턴 순서 동기화: 방장(Server Index 0)부터 시작하도록 설정
+  // 내(baseIndex)가 0번 플레이어를 어디(localIndex)로 보고 있는지 계산
+  const server0Relative = (0 - baseIndex + 4) % 4;
+  const server0Local = (3 - server0Relative + 4) % 4;
+  gameState.turnIndex = server0Local;
+  updateGameStatus(); // UI 업데이트
 
   // 카운트다운 시작
   let count = 3;
@@ -2733,7 +2775,11 @@ function handleRemoteAction(action) {
       if (action.payload && action.payload.deck) {
         cardTypes = action.payload.deck;
       }
-      startRound(action.payload.deck);
+      startRound(
+        action.payload.deck,
+        action.payload.bulletPosition,
+        action.payload.currentRank,
+      );
       break;
 
     case "SUBMIT":
@@ -2756,5 +2802,16 @@ function handleRemoteAction(action) {
       break;
 
     // 룰렛 결과 등 추가 가능
+  }
+}
+
+// 서버에서 온 채팅 처리 (말풍선 표시)
+function handleRemoteChat(sender, text) {
+  if (sender === "System") return;
+
+  // 닉네임으로 플레이어 인덱스 찾기
+  const playerIndex = players.findIndex((p) => p.displayName === sender);
+  if (playerIndex !== -1) {
+    showBubble(playerIndex, text);
   }
 }
