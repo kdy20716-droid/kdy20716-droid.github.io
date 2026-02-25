@@ -1,12 +1,22 @@
+import {
+  initMultiplayer,
+  sendGameAction,
+  myNickname,
+  isHost,
+  myPlayerIndex,
+  currentRoomId,
+  sendExternalChatMessage,
+} from "./multiplayer.js";
+import {
+  audioCtx,
+  playSound,
+  playBGM,
+  setupUISounds,
+} from "./sound-manager.js";
+import { drawBackCard, drawFrontCard, drawCardDeck } from "./graphics-utils.js";
+
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
-
-// Web Audio API Context (사운드 생성을 위한 객체)
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-// 마스터 볼륨 노드 생성
-const masterGain = audioCtx.createGain();
-masterGain.connect(audioCtx.destination);
-masterGain.gain.value = 0.5; // 초기 볼륨 50%
 
 // 캔버스 크기 설정
 canvas.width = 1024;
@@ -154,286 +164,6 @@ let slamState = {
   progress: 0,
 };
 
-// --- 사운드 생성 시스템 (Web Audio API) ---
-const SoundGen = {
-  // 노이즈 버퍼 생성 (재사용)
-  createNoiseBuffer: function () {
-    if (this.noiseBuffer) return this.noiseBuffer;
-    const bufferSize = audioCtx.sampleRate * 2; // 2초 분량
-    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = Math.random() * 2 - 1;
-    }
-    this.noiseBuffer = buffer;
-    return buffer;
-  },
-
-  // 총소리 (Bang!)
-  gun: function () {
-    const t = audioCtx.currentTime;
-    // 1. 폭발음 (Noise)
-    const noise = audioCtx.createBufferSource();
-    noise.buffer = this.createNoiseBuffer();
-    const noiseFilter = audioCtx.createBiquadFilter();
-    noiseFilter.type = "lowpass";
-    noiseFilter.frequency.setValueAtTime(1000, t);
-    noiseFilter.frequency.exponentialRampToValueAtTime(100, t + 0.5);
-    const noiseGain = audioCtx.createGain();
-    noiseGain.gain.setValueAtTime(1, t);
-    noiseGain.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
-    noise.connect(noiseFilter);
-    noiseFilter.connect(noiseGain);
-    noiseGain.connect(masterGain);
-    noise.start(t);
-    noise.stop(t + 0.5);
-
-    // 2. 타격감 (Kick)
-    const osc = audioCtx.createOscillator();
-    osc.type = "triangle";
-    osc.frequency.setValueAtTime(150, t);
-    osc.frequency.exponentialRampToValueAtTime(0.01, t + 0.5);
-    const oscGain = audioCtx.createGain();
-    oscGain.gain.setValueAtTime(1, t);
-    oscGain.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
-    osc.connect(oscGain);
-    oscGain.connect(masterGain);
-    osc.start(t);
-    osc.stop(t + 0.5);
-  },
-
-  // 빈 총 소리 (Click)
-  click: function () {
-    const t = audioCtx.currentTime;
-
-    // 1. 날카로운 금속음 (High-pass filtered noise)
-    const noise = audioCtx.createBufferSource();
-    noise.buffer = this.createNoiseBuffer();
-
-    const noiseFilter = audioCtx.createBiquadFilter();
-    noiseFilter.type = "highpass";
-    noiseFilter.frequency.setValueAtTime(1500, t); // 1.5kHz 이상 대역
-
-    const noiseGain = audioCtx.createGain();
-    noiseGain.gain.setValueAtTime(1.2, t); // [사운드 조절] 빈 총 금속음 볼륨 (기본: 1.2)
-    noiseGain.gain.exponentialRampToValueAtTime(0.01, t + 0.1); // 짧은 여운
-
-    noise.connect(noiseFilter);
-    noiseFilter.connect(noiseGain);
-    noiseGain.connect(masterGain);
-
-    noise.start(t);
-    noise.stop(t + 0.1);
-
-    // 2. 기계적 타격음 (Impulse)
-    const osc = audioCtx.createOscillator();
-    osc.type = "triangle";
-    osc.frequency.setValueAtTime(300, t);
-
-    const oscGain = audioCtx.createGain();
-    oscGain.gain.setValueAtTime(0.8, t); // [사운드 조절] 빈 총 기계음 볼륨 (기본: 0.8)
-    oscGain.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
-
-    osc.connect(oscGain);
-    oscGain.connect(masterGain);
-
-    osc.start(t);
-    osc.stop(t + 0.05);
-  },
-
-  // 카드 소리 (쓱-)
-  card: function () {
-    const t = audioCtx.currentTime;
-    const noise = audioCtx.createBufferSource();
-    noise.buffer = this.createNoiseBuffer();
-    const filter = audioCtx.createBiquadFilter();
-    filter.type = "bandpass";
-    filter.frequency.setValueAtTime(800, t);
-    filter.frequency.linearRampToValueAtTime(1200, t + 0.1);
-    const gain = audioCtx.createGain();
-    gain.gain.setValueAtTime(0.2, t); // [사운드 조절] 카드 낼 때 소리 볼륨 (기본: 0.2)
-    gain.gain.linearRampToValueAtTime(0, t + 0.1);
-    noise.connect(filter);
-    filter.connect(gain);
-    gain.connect(masterGain);
-    noise.start(t);
-    noise.stop(t + 0.1);
-  },
-
-  // 딜링 소리 (착!)
-  deal: function () {
-    const t = audioCtx.currentTime;
-    const noise = audioCtx.createBufferSource();
-    noise.buffer = this.createNoiseBuffer();
-    const gain = audioCtx.createGain();
-    gain.gain.setValueAtTime(0.3, t); // [사운드 조절] 카드 딜링 소리 볼륨 (기본: 0.3)
-    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
-    noise.connect(gain);
-    gain.connect(masterGain);
-    noise.start(t);
-    noise.stop(t + 0.05);
-  },
-
-  // 선택 소리 (뾱)
-  select: function () {
-    const t = audioCtx.currentTime;
-    const osc = audioCtx.createOscillator();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(600, t);
-    const gain = audioCtx.createGain();
-    gain.gain.setValueAtTime(0.1, t); // [사운드 조절] 카드 선택 효과음 볼륨 (기본: 0.1)
-    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
-    osc.connect(gain);
-    gain.connect(masterGain);
-    osc.start(t);
-    osc.stop(t + 0.05);
-  },
-
-  // 드라마틱 효과음 (두둥!)
-  drama: function () {
-    const t = audioCtx.currentTime;
-    // Impact 1
-    this.playLowImpact(t);
-    // Impact 2
-    this.playLowImpact(t + 0.2);
-  },
-
-  playLowImpact: function (t) {
-    const osc = audioCtx.createOscillator();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(80, t);
-    osc.frequency.exponentialRampToValueAtTime(10, t + 0.8);
-    const gain = audioCtx.createGain();
-    gain.gain.setValueAtTime(0.8, t); // [사운드 조절] 드라마틱 임팩트 볼륨 (기본: 0.8)
-    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.8);
-    osc.connect(gain);
-    gain.connect(masterGain);
-    osc.start(t);
-    osc.stop(t + 0.8);
-  },
-
-  // 심장박동 (쿵... 쿵...)
-  heartbeat: function () {
-    const t = audioCtx.currentTime;
-    const osc = audioCtx.createOscillator();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(50, t);
-    osc.frequency.exponentialRampToValueAtTime(40, t + 0.1);
-    const gain = audioCtx.createGain();
-    gain.gain.setValueAtTime(0.8, t); // [사운드 조절] 심장박동 소리 볼륨 (기본: 0.8)
-    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.15);
-    osc.connect(gain);
-    gain.connect(masterGain);
-    osc.start(t);
-    osc.stop(t + 0.2);
-  },
-
-  // 환호/팡파레 (승리 시)
-  cheer: function () {
-    const t = audioCtx.currentTime;
-
-    // 1. 팡파레 (Major Chord Arpeggio)
-    const notes = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6
-    notes.forEach((freq, i) => {
-      const osc = audioCtx.createOscillator();
-      osc.type = "triangle";
-      osc.frequency.setValueAtTime(freq, t + i * 0.15);
-
-      const gain = audioCtx.createGain();
-      gain.gain.setValueAtTime(0.1, t + i * 0.15); // [사운드 조절] 승리 팡파레 볼륨 (기본: 0.1)
-      gain.gain.exponentialRampToValueAtTime(0.01, t + i * 0.15 + 1.0);
-
-      osc.connect(gain);
-      gain.connect(masterGain);
-      osc.start(t + i * 0.15);
-      osc.stop(t + i * 0.15 + 1.0);
-    });
-
-    // 2. 박수 갈채 (Noise bursts)
-    const noise = audioCtx.createBufferSource();
-    noise.buffer = this.createNoiseBuffer();
-    const noiseFilter = audioCtx.createBiquadFilter();
-    noiseFilter.type = "lowpass";
-    noiseFilter.frequency.value = 1000;
-
-    const noiseGain = audioCtx.createGain();
-    noiseGain.gain.setValueAtTime(0.3, t); // [사운드 조절] 승리 박수 소리 볼륨 (기본: 0.3)
-    noiseGain.gain.exponentialRampToValueAtTime(0.01, t + 2.5);
-
-    noise.connect(noiseFilter);
-    noiseFilter.connect(noiseGain);
-    noiseGain.connect(masterGain);
-    noise.start(t);
-    noise.stop(t + 2.5);
-  },
-
-  // 악마 효과음 (대체 사운드)
-  devil: function () {
-    const t = audioCtx.currentTime;
-
-    // 1. 낮은 드론 사운드 (Low Drone)
-    const osc1 = audioCtx.createOscillator();
-    osc1.type = "sawtooth";
-    osc1.frequency.setValueAtTime(50, t);
-    osc1.frequency.linearRampToValueAtTime(30, t + 2.0);
-
-    const gain1 = audioCtx.createGain();
-    gain1.gain.setValueAtTime(0.4, t);
-    gain1.gain.exponentialRampToValueAtTime(0.01, t + 2.0);
-
-    osc1.connect(gain1);
-    gain1.connect(masterGain);
-    osc1.start(t);
-    osc1.stop(t + 2.0);
-
-    // 2. 불협화음 (Dissonance)
-    const osc2 = audioCtx.createOscillator();
-    osc2.type = "square";
-    osc2.frequency.setValueAtTime(60, t); // 50Hz와 불협화음
-    osc2.frequency.linearRampToValueAtTime(40, t + 2.0);
-
-    const gain2 = audioCtx.createGain();
-    gain2.gain.setValueAtTime(0.2, t);
-    gain2.gain.exponentialRampToValueAtTime(0.01, t + 2.0);
-
-    osc2.connect(gain2);
-    gain2.connect(masterGain);
-    osc2.start(t);
-    osc2.stop(t + 2.0);
-  },
-};
-
-function playSound(type) {
-  if (audioCtx.state === "suspended") {
-    audioCtx.resume();
-  }
-
-  // 볼륨 슬라이더 값 가져오기
-  const slider = document.getElementById("volume-slider");
-  const vol = slider ? parseFloat(slider.value) : 0.5;
-
-  // 1. HTML Audio 태그 확인 (파일 재생: 철컥, 착!, 탕!)
-  const audioEl = document.getElementById(`sfx-${type}`);
-  if (audioEl) {
-    audioEl.volume = vol; // 볼륨 적용
-    // [사운드 조절] 파일 기반 효과음 볼륨 설정
-    if (type === "devil") {
-      audioEl.volume = vol * 0.3; // 악마 웃음소리가 너무 커서 30%로 줄임
-    } else {
-      audioEl.volume = vol; // 나머지는 슬라이더 값 그대로 사용
-    }
-
-    audioEl.currentTime = 0;
-    audioEl.play().catch((e) => console.log("Audio play failed:", e));
-    return;
-  }
-
-  // 2. Web Audio API 생성 (기존 로직: 카드 소리 등)
-  if (SoundGen[type]) {
-    SoundGen[type]();
-  }
-}
-
 function showBubble(playerIndex, text) {
   const bubble = document.getElementById(`bubble-${playerIndex}`);
   if (bubble) {
@@ -472,36 +202,6 @@ function updateBubblePosition(playerIndex) {
 
   bubble.style.left = `${player.x + offsetX}px`;
   bubble.style.top = `${player.y + offsetY}px`;
-}
-
-// BGM 관리 함수
-function playBGM(type) {
-  const mainBgm = document.getElementById("bgm-main");
-  const rouletteBgm = document.getElementById("bgm-roulette");
-
-  // 현재 볼륨 설정 (슬라이더 값 기준)
-  const slider = document.getElementById("volume-slider");
-  const vol = slider ? parseFloat(slider.value) : 0.5;
-  const bgmVol = vol * 0.1; // 배경음악 볼륨을 효과음 대비 10%로 설정
-
-  if (type === "main") {
-    if (rouletteBgm) {
-      rouletteBgm.pause();
-      rouletteBgm.currentTime = 0;
-    }
-    if (mainBgm) {
-      mainBgm.volume = bgmVol;
-      if (mainBgm.paused) mainBgm.play().catch(() => {});
-    }
-  } else if (type === "roulette") {
-    if (mainBgm) {
-      mainBgm.pause();
-    }
-    if (rouletteBgm) {
-      rouletteBgm.volume = bgmVol;
-      if (rouletteBgm.paused) rouletteBgm.play().catch(() => {});
-    }
-  }
 }
 
 // 러시안 룰렛 상태
@@ -819,7 +519,7 @@ function draw() {
   // 5. 카드 덱 그리기
   // 딜링 중이거나 이동 중인 카드가 있을 때만 그림 (끝나면 사라짐)
   if (dealingState.isDealing || dealingState.movingCard) {
-    drawCardDeck(centerX, tableY - 40);
+    drawCardDeck(ctx, cardImages, centerX, tableY - 40);
   }
 
   // 5.5 리볼버 그리기 (각 플레이어 앞)
@@ -889,6 +589,8 @@ function draw() {
 
         if (isBack) {
           drawBackCard(
+            ctx,
+            cardImages,
             player.x,
             player.y,
             player.angle,
@@ -899,6 +601,8 @@ function draw() {
           );
         } else {
           drawFrontCard(
+            ctx,
+            cardImages,
             player.x,
             player.y,
             player.angle,
@@ -918,7 +622,7 @@ function draw() {
   // 7. 이동 중인 카드 그리기
   if (dealingState.movingCard) {
     const mc = dealingState.movingCard;
-    drawBackCard(mc.x, mc.y, mc.angle, 0, 0);
+    drawBackCard(ctx, cardImages, mc.x, mc.y, mc.angle, 0, 0);
   }
 
   // 10. 애니메이션 업데이트 및 그리기 (카드 제출 등)
@@ -933,9 +637,19 @@ function draw() {
   if (gameState.phase !== "ROULETTE") {
     gameState.tableCards.forEach((card, i) => {
       if (card.faceUp) {
-        drawFrontCard(card.x, card.y, card.angle, card.type, 0, 0, 1);
+        drawFrontCard(
+          ctx,
+          cardImages,
+          card.x,
+          card.y,
+          card.angle,
+          card.type,
+          0,
+          0,
+          1,
+        );
       } else {
-        drawBackCard(card.x, card.y, card.angle, 0, 0, 1);
+        drawBackCard(ctx, cardImages, card.x, card.y, card.angle, 0, 0, 1);
       }
     });
   }
@@ -1172,223 +886,7 @@ function updateAndDrawDevilCardAnim() {
   ctx.scale(3, 3);
 
   // 카드 그리기 (좌표 0,0 기준)
-  drawFrontCard(0, 0, 0, "D");
-
-  ctx.restore();
-}
-
-// 단일 카드 뒷면 그리기 (이동 및 손패용)
-function drawBackCard(
-  x,
-  y,
-  rotation,
-  offsetX = 0,
-  offsetY = 0,
-  scaleX = 1,
-  isSelected = false,
-) {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(rotation);
-  ctx.translate(offsetX, offsetY);
-  ctx.scale(scaleX, 1); // 가로 스케일 적용 (뒤집기 효과용)
-
-  // 그림자
-  if (isSelected) {
-    ctx.shadowColor = "rgba(255, 223, 0, 1)"; // 노란색 빛
-    ctx.shadowBlur = 20;
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 0;
-  } else {
-    ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
-    ctx.shadowBlur = 6;
-    ctx.shadowOffsetX = 3;
-    ctx.shadowOffsetY = 3;
-  }
-
-  const w = 80;
-  const h = 120;
-  const r = 5;
-  const cx = -w / 2;
-  const cy = -h / 2;
-
-  // 카드 외형 경로 생성
-  ctx.beginPath();
-  ctx.moveTo(cx + r, cy);
-  ctx.lineTo(cx + w - r, cy);
-  ctx.quadraticCurveTo(cx + w, cy, cx + w, cy + r);
-  ctx.lineTo(cx + w, cy + h - r);
-  ctx.quadraticCurveTo(cx + w, cy + h, cx + w - r, cy + h);
-  ctx.lineTo(cx + r, cy + h);
-  ctx.quadraticCurveTo(cx, cy + h, cx, cy + h - r);
-  ctx.lineTo(cx, cy + r);
-  ctx.quadraticCurveTo(cx, cy, cx + r, cy);
-  ctx.closePath();
-
-  // 뒷면 이미지 그리기
-  ctx.save();
-  ctx.clip();
-  if (
-    cardImages.BACK &&
-    cardImages.BACK.complete &&
-    cardImages.BACK.naturalWidth > 0
-  ) {
-    ctx.drawImage(cardImages.BACK, cx, cy, w, h);
-  } else {
-    ctx.fillStyle = "#b71c1c"; // 이미지 로드 전 대체 색상
-    ctx.fillRect(cx, cy, w, h);
-  }
-  ctx.restore();
-
-  ctx.strokeStyle = "#dcdcdc";
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  ctx.restore();
-}
-
-// 단일 카드 앞면 그리기
-function drawFrontCard(
-  x,
-  y,
-  rotation,
-  type,
-  offsetX = 0,
-  offsetY = 0,
-  scaleX = 1,
-  isSelected = false,
-) {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(rotation);
-  ctx.translate(offsetX, offsetY);
-  ctx.scale(scaleX, 1);
-
-  // 그림자
-  if (isSelected) {
-    ctx.shadowColor = "rgba(255, 223, 0, 1)"; // 노란색 빛
-    ctx.shadowBlur = 20;
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 0;
-  } else {
-    ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
-    ctx.shadowBlur = 6;
-    ctx.shadowOffsetX = 3;
-    ctx.shadowOffsetY = 3;
-  }
-
-  const w = 80;
-  const h = 120;
-  const r = 5;
-  const cx = -w / 2;
-  const cy = -h / 2;
-
-  // 카드 베이스 경로 함수
-  const drawCardPath = () => {
-    ctx.beginPath();
-    ctx.moveTo(cx + r, cy);
-    ctx.lineTo(cx + w - r, cy);
-    ctx.quadraticCurveTo(cx + w, cy, cx + w, cy + r);
-    ctx.lineTo(cx + w, cy + h - r);
-    ctx.quadraticCurveTo(cx + w, cy + h, cx + w - r, cy + h);
-    ctx.lineTo(cx + r, cy + h);
-    ctx.quadraticCurveTo(cx, cy + h, cx, cy + h - r);
-    ctx.lineTo(cx, cy + r);
-    ctx.quadraticCurveTo(cx, cy, cx + r, cy);
-    ctx.closePath();
-  };
-
-  ctx.save();
-  drawCardPath();
-  ctx.clip();
-
-  // 앞면 이미지 그리기
-  if (
-    cardImages[type] &&
-    cardImages[type].complete &&
-    cardImages[type].naturalWidth > 0
-  ) {
-    ctx.drawImage(cardImages[type], cx, cy, w, h);
-  } else {
-    ctx.fillStyle = "white";
-    ctx.fill();
-  }
-  ctx.restore();
-
-  ctx.strokeStyle = "#dcdcdc";
-  ctx.lineWidth = 1;
-  drawCardPath(); // 테두리를 위해 경로 다시 생성
-  ctx.stroke();
-
-  ctx.restore();
-}
-
-function drawCardDeck(x, y) {
-  ctx.save();
-  ctx.translate(x, y);
-
-  // 그림자 효과
-  ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
-  ctx.shadowBlur = 6;
-  ctx.shadowOffsetX = 3;
-  ctx.shadowOffsetY = 3;
-
-  const w = 80;
-  const h = 120;
-  const r = 5; // 모서리 둥글기
-
-  // 카드 외형 경로
-  const drawCardPath = (x, y) => {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.lineTo(x + w - r, y);
-    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-    ctx.lineTo(x + w, y + h - r);
-    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-    ctx.lineTo(x + r, y + h);
-    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-    ctx.lineTo(x, y + r);
-    ctx.quadraticCurveTo(x, y, x + r, y);
-    ctx.closePath();
-  };
-
-  // 카드 더미 (쌓인 효과)
-  for (let i = 0; i < 5; i++) {
-    ctx.save();
-    // 약간씩 비틀어서 자연스럽게
-    ctx.rotate(0.05 * (i - 2));
-
-    const cx = -w / 2;
-    const cy = -h / 2;
-
-    // 카드 베이스 (흰색)
-    drawCardPath(cx, cy);
-    ctx.fillStyle = "#ffffff";
-    ctx.fill();
-    ctx.strokeStyle = "#dcdcdc";
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    // 맨 위 카드 뒷면 디자인
-    if (i === 4) {
-      ctx.save();
-      ctx.clip(); // 카드 모양대로 클리핑
-
-      if (
-        cardImages.BACK &&
-        cardImages.BACK.complete &&
-        cardImages.BACK.naturalWidth > 0
-      ) {
-        ctx.drawImage(cardImages.BACK, cx, cy, w, h);
-      } else {
-        ctx.fillStyle = "#b71c1c";
-        ctx.fillRect(cx, cy, w, h);
-      }
-
-      ctx.restore();
-    }
-    ctx.restore();
-  }
+  drawFrontCard(ctx, cardImages, 0, 0, 0, "D");
 
   ctx.restore();
 }
@@ -1437,9 +935,20 @@ function updateAndDrawAnimations() {
       anim.trail.forEach((pos, idx) => {
         ctx.globalAlpha = (idx / anim.trail.length) * 0.3; // 뒤로 갈수록 투명하게
         if (pos.isBack) {
-          drawBackCard(pos.x, pos.y, pos.angle, 0, 0, pos.scaleX);
+          drawBackCard(
+            ctx,
+            cardImages,
+            pos.x,
+            pos.y,
+            pos.angle,
+            0,
+            0,
+            pos.scaleX,
+          );
         } else {
           drawFrontCard(
+            ctx,
+            cardImages,
             pos.x,
             pos.y,
             pos.angle,
@@ -1454,9 +963,19 @@ function updateAndDrawAnimations() {
 
       // 현재 카드 그리기
       if (isBack) {
-        drawBackCard(curX, curY, curAngle, 0, 0, scaleX);
+        drawBackCard(ctx, cardImages, curX, curY, curAngle, 0, 0, scaleX);
       } else {
-        drawFrontCard(curX, curY, curAngle, anim.cardType, 0, 0, scaleX);
+        drawFrontCard(
+          ctx,
+          cardImages,
+          curX,
+          curY,
+          curAngle,
+          anim.cardType,
+          0,
+          0,
+          scaleX,
+        );
       }
     }
   }
@@ -1932,6 +1451,12 @@ function processAiTurn() {
   const aiIndex = gameState.turnIndex;
   const aiPlayer = players[aiIndex];
 
+  // 멀티플레이 시 호스트만 AI 로직 수행
+  if (isMultiplayerGame && !isHost) return;
+
+  // 멀티플레이 시 AI 플레이어인지 확인 (사람이면 리턴)
+  if (isMultiplayerGame && !aiPlayer.isAI) return;
+
   // 고민하는 시간 랜덤 설정 (1초 ~ 3초)
   // 고민하는 시간 랜덤 설정 (2초 ~ 4초) - 템포 조절
   const thinkingTime = Math.random() * 2000 + 2000;
@@ -1964,7 +1489,11 @@ function processAiTurn() {
           phrases[Math.floor(Math.random() * phrases.length)],
         );
         console.log(`${aiPlayer.name} challenges!`);
-        challenge();
+        if (isMultiplayerGame) {
+          sendGameAction("CHALLENGE", {}, aiIndex);
+        } else {
+          challenge();
+        }
         return;
       }
 
@@ -2059,7 +1588,11 @@ function processAiTurn() {
         indicesToPlay.push(0);
       }
 
-      submitCards(aiIndex, indicesToPlay);
+      if (isMultiplayerGame) {
+        sendGameAction("SUBMIT", { cardIndices: indicesToPlay }, aiIndex);
+      } else {
+        submitCards(aiIndex, indicesToPlay);
+      }
     }, 1500); // 반응 후 1.5초 대기
   }, thinkingTime);
 }
@@ -2479,7 +2012,7 @@ function checkWinCondition() {
   }
 }
 
-function startRound() {
+function startRound(deck = null) {
   clearAllTimeouts(); // 게임 시작/재시작 시 예약된 모든 연출 취소
 
   // 팝업 타이머 초기화 (이전 팝업이 남아있다면 제거)
@@ -2488,6 +2021,17 @@ function startRound() {
     popupTimeout = null;
     const popup = document.getElementById("target-popup");
     if (popup) popup.classList.add("hidden");
+  }
+
+  // 멀티플레이 호스트 로직: 덱 생성 및 전송
+  if (isMultiplayerGame && isHost && !deck) {
+    const newDeck = createDeck();
+    sendGameAction("START_GAME", { deck: newDeck });
+    return; // 액션이 돌아올 때까지 대기
+  }
+  // 멀티플레이 클라이언트 로직: 덱 없이 호출되면 무시 (액션 대기)
+  if (isMultiplayerGame && !isHost && !deck) {
+    return;
   }
 
   // 테이블 초기화
@@ -2505,7 +2049,7 @@ function startRound() {
   }
 
   // 덱 재생성 (20% 확률로 데빌 카드 포함)
-  cardTypes = createDeck();
+  cardTypes = deck || createDeck();
 
   // 데빌 카드 존재 여부 확인 및 알림
   let hasDevil = false;
@@ -2713,6 +2257,9 @@ document.getElementById("btn-play").addEventListener("click", () => {
     .map((card, index) => (card.isSelected ? index : -1))
     .filter((index) => index !== -1);
 
+  // 멀티플레이: 내 턴이 아니면 클릭 방지 (UI 상으로도 막혀있지만 이중 체크)
+  if (isMultiplayerGame && gameState.turnIndex !== 3) return;
+
   // 데빌 카드 규칙: 데빌 카드가 포함되면 데빌 카드만 낼 수 있음
   const selectedCards = selectedIndices.map((idx) => player.hand[idx]);
   const hasDevil = selectedCards.some((c) => c.type === "D");
@@ -2722,11 +2269,21 @@ document.getElementById("btn-play").addEventListener("click", () => {
     return;
   }
 
-  submitCards(3, selectedIndices);
+  if (isMultiplayerGame) {
+    // 멀티플레이: 서버로 액션 전송
+    sendGameAction("SUBMIT", { cardIndices: selectedIndices });
+  } else {
+    // 싱글플레이: 로컬 실행
+    submitCards(3, selectedIndices);
+  }
 });
 
 document.getElementById("btn-liar").addEventListener("click", () => {
-  challenge();
+  if (isMultiplayerGame) {
+    sendGameAction("CHALLENGE", {});
+  } else {
+    challenge();
+  }
 });
 
 document.getElementById("btn-restart").addEventListener("click", () => {
@@ -2771,6 +2328,27 @@ document.getElementById("btn-fullscreen").addEventListener("click", (e) => {
     }
   }
 });
+
+// --- 인게임 채팅 이모티콘 로직 ---
+const btnEmoji = document.getElementById("btn-emoji");
+const emojiPicker = document.getElementById("emoji-picker");
+const emojiItems = document.querySelectorAll(".emoji-item");
+
+if (btnEmoji && emojiPicker) {
+  btnEmoji.addEventListener("click", () => {
+    emojiPicker.classList.toggle("hidden");
+  });
+
+  emojiItems.forEach((item) => {
+    item.addEventListener("click", () => {
+      const emoji = item.textContent;
+      if (isMultiplayerGame) {
+        sendExternalChatMessage(emoji);
+      }
+      emojiPicker.classList.add("hidden");
+    });
+  });
+}
 
 // --- 뒤로 가기 버튼 이벤트 ---
 document.getElementById("btn-back-start").addEventListener("click", () => {
@@ -3045,571 +2623,55 @@ window.addEventListener("load", () => {
 // 게임 루프 시작
 resizeGame();
 
-// --- UI 버튼 효과음 연결 ---
-function setupUISounds() {
-  const uiButtons = document.querySelectorAll("button, .btn, .btn-icon");
-
-  uiButtons.forEach((btn) => {
-    // 마우스 올렸을 때: 기존 'select' 사운드 (뾱)
-    btn.addEventListener("mouseenter", () => {
-      if (!btn.disabled) playSound("select");
-    });
-
-    // 클릭했을 때: 기존 'deal' 사운드 (착! - 카드 내는 소리 느낌)
-    btn.addEventListener("click", () => {
-      if (!btn.disabled) playSound("deal");
-    });
-  });
-}
 setupUISounds();
 draw();
 
-// --- 멀티플레이 로직 (Beta) ---
+// --- 멀티플레이 연동 ---
 
-// UI 요소 가져오기
-const btnMulti = document.getElementById("btn-multi");
-const multiMenuScreen = document.getElementById("multi-menu-screen");
 const lobbyScreen = document.getElementById("lobby-screen");
-const btnCreateRoom = document.getElementById("btn-create-room");
-const btnGameStartMulti = document.getElementById("btn-game-start-multi");
-const btnJoinCheck = document.getElementById("btn-join-check");
-const btnBackMenu = document.getElementById("btn-back-menu");
-const btnBackLobby = document.getElementById("btn-back-lobby");
-const roomInput = document.getElementById("room-code-input");
-const multiStatus = document.getElementById("multi-status");
-
-// 로비 UI 요소
-const displayRoomCode = document.getElementById("display-room-code");
-const chatMessages = document.getElementById("chat-messages");
-const chatInput = document.getElementById("chat-input");
-const btnSendChat = document.getElementById("btn-send-chat");
-const joinModal = document.getElementById("join-modal");
-const nicknameInput = document.getElementById("nickname-input");
-const btnJoinConfirm = document.getElementById("btn-join-confirm");
-const btnJoinCancel = document.getElementById("btn-join-cancel");
 const countdownOverlay = document.getElementById("countdown-overlay");
-
-let db = null; // Firestore 인스턴스
-let currentRoomId = null;
-let myNickname = "Player";
-let unsubscribeChat = null;
-let unsubscribeRoom = null;
-let isCreatingRoom = false;
 let isMultiplayerGame = false;
 
-// 멀티플레이 버튼 클릭 시
-if (btnMulti) {
-  btnMulti.addEventListener("click", async () => {
-    document.getElementById("start-screen").classList.add("hidden");
-    multiMenuScreen.classList.remove("hidden");
-
-    // Firebase 동적 로드 (필요할 때만 불러옴)
-    if (!db) {
-      multiStatus.textContent = "서버 연결 중...";
-      try {
-        const { initializeApp } =
-          await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js");
-        const {
-          getFirestore,
-          collection,
-          addDoc,
-          doc,
-          onSnapshot,
-          setDoc,
-          getDoc,
-          updateDoc,
-          arrayUnion,
-          serverTimestamp,
-          runTransaction,
-        } =
-          await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
-        // suika 폴더에 있는 설정 파일 경로 주의 (현재 위치 기준)
-        const { firebaseConfig } = await import("../suika/firebaseConfig.js");
-
-        const app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
-        multiStatus.textContent = "서버 연결 성공!";
-
-        // 전역 변수에 할당 (나중에 쓰기 위해)
-        window.fs = {
-          collection,
-          addDoc,
-          doc,
-          onSnapshot,
-          setDoc,
-          getDoc,
-          updateDoc,
-          arrayUnion,
-          serverTimestamp,
-          runTransaction,
-        };
-      } catch (e) {
-        console.error(e);
-        multiStatus.textContent = "서버 연결 실패: " + e.message;
-      }
-    }
-  });
-}
-
-// 로비 뒤로가기
-if (btnBackMenu) {
-  btnBackMenu.addEventListener("click", () => {
-    multiMenuScreen.classList.add("hidden");
-    document.getElementById("start-screen").classList.remove("hidden");
-  });
-}
-
-// 대기실 나가기
-if (btnBackLobby) {
-  btnBackLobby.addEventListener("click", () => {
-    if (unsubscribeChat) unsubscribeChat(); // 채팅 리스너 해제
-    if (unsubscribeRoom) unsubscribeRoom(); // 방 정보 리스너 해제
-    lobbyScreen.classList.add("hidden");
-    document.getElementById("start-screen").classList.remove("hidden");
-    multiMenuScreen.classList.remove("hidden");
-    currentRoomId = null;
-    chatMessages.innerHTML = "";
-  });
-}
-
-// 방 만들기
-if (btnCreateRoom) {
-  btnCreateRoom.addEventListener("click", async () => {
-    if (!db) return;
-    isCreatingRoom = true;
-    joinModal.classList.remove("hidden");
-    nicknameInput.value = "";
-    nicknameInput.placeholder = "방장 닉네임 입력";
-    nicknameInput.focus();
-  });
-}
-
-// 게임 시작 버튼 (방장 전용)
-if (btnGameStartMulti) {
-  btnGameStartMulti.addEventListener("click", async () => {
-    if (!db || !currentRoomId) return;
-
-    try {
-      const roomRef = window.fs.doc(db, "liar_rooms", currentRoomId);
-      const roomSnap = await window.fs.getDoc(roomRef);
-      const roomData = roomSnap.data();
-
-      let currentPlayers = [...roomData.players];
-
-      // 인원이 부족하면 AI로 채우기
-      const usedChars = currentPlayers.map((p) => p.charIndex);
-      let botCount = 1;
-
-      while (currentPlayers.length < 4) {
-        let newCharIndex = 0;
-        while (usedChars.includes(newCharIndex)) newCharIndex++;
-        usedChars.push(newCharIndex);
-
-        currentPlayers.push({
-          nickname: `Bot ${botCount++}`,
-          charIndex: newCharIndex,
-          isHost: false,
-          isAI: true,
-        });
-      }
-
-      // 플레이어 목록 업데이트 및 상태 변경 (starting)
-      await window.fs.updateDoc(roomRef, {
-        players: currentPlayers,
-        status: "starting",
-      });
-    } catch (e) {
-      console.error("게임 시작 실패:", e);
-      alert("게임 시작 중 오류가 발생했습니다.");
-    }
-  });
-}
-
-// 방 참가 확인 (코드 입력 후)
-if (btnJoinCheck) {
-  btnJoinCheck.addEventListener("click", async () => {
-    if (!db) return;
-    const code = roomInput.value;
-    if (code.length !== 4) {
-      multiStatus.textContent = "4자리 코드를 입력하세요.";
-      return;
-    }
-
-    isCreatingRoom = false;
-    multiStatus.textContent = "방 찾는 중...";
-    try {
-      const roomRef = window.fs.doc(db, "liar_rooms", code);
-      const roomSnap = await window.fs.getDoc(roomRef);
-
-      if (!roomSnap.exists()) {
-        multiStatus.textContent = "존재하지 않는 방입니다.";
-        return;
-      }
-
-      const roomData = roomSnap.data();
-      if (roomData.players && roomData.players.length >= 4) {
-        multiStatus.textContent = "이미 꽉 찬 방입니다.";
-        return;
-      }
-
-      // 방이 존재하면 닉네임 입력 모달 띄우기
-      currentRoomId = code;
-      joinModal.classList.remove("hidden");
-      nicknameInput.value = "";
-      nicknameInput.placeholder = "이름을 입력하세요";
-      nicknameInput.focus();
-    } catch (e) {
-      console.error(e);
-      multiStatus.textContent = "참가 오류: " + e.message;
-    }
-  });
-}
-
-// 닉네임 입력 후 입장
-if (btnJoinConfirm) {
-  btnJoinConfirm.addEventListener("click", async () => {
-    const name = nicknameInput.value.trim();
-    if (!name) return;
-
-    myNickname = name;
-    joinModal.classList.add("hidden");
-
-    if (isCreatingRoom) {
-      // --- 방 생성 로직 ---
-      multiStatus.textContent = "방 생성 중...";
-      try {
-        const roomCode = Math.floor(1000 + Math.random() * 9000).toString();
-        currentRoomId = roomCode;
-
-        const initialPlayer = {
-          nickname: myNickname,
-          charIndex: 0,
-          isHost: true,
-        };
-
-        await window.fs.setDoc(window.fs.doc(db, "liar_rooms", roomCode), {
-          host: myNickname,
-          status: "waiting",
-          createdAt: Date.now(),
-          players: [initialPlayer],
-        });
-
-        multiMenuScreen.classList.add("hidden");
-        lobbyScreen.classList.remove("hidden");
-        displayRoomCode.textContent = roomCode;
-        addSystemMessage("방이 생성되었습니다.");
-
-        setupChatListener(roomCode);
-        setupRoomListener(roomCode);
-      } catch (e) {
-        multiStatus.textContent = "오류: " + e.message;
-        console.error(e);
-      }
-    } else {
-      // --- 방 참가 로직 ---
-      multiMenuScreen.classList.add("hidden");
-      lobbyScreen.classList.remove("hidden");
-      displayRoomCode.textContent = currentRoomId;
-
-      try {
-        const roomRef = window.fs.doc(db, "liar_rooms", currentRoomId);
-        const roomSnap = await window.fs.getDoc(roomRef);
-        const roomData = roomSnap.data();
-
-        // 현재 플레이어 수 확인 및 캐릭터 인덱스 할당 (중복 방지)
-        const currentPlayers = roomData.players || [];
-        if (currentPlayers.length >= 4) {
-          alert("방이 꽉 찼습니다.");
-          return;
-        }
-
-        // 사용되지 않은 캐릭터 인덱스 찾기
-        const usedChars = currentPlayers.map((p) => p.charIndex);
-        let newCharIndex = 0;
-        while (usedChars.includes(newCharIndex)) newCharIndex++;
-
-        const newPlayer = {
-          nickname: myNickname,
-          charIndex: newCharIndex,
-          isHost: false,
-        };
-
-        // 방 정보 업데이트 (플레이어 추가)
-        await window.fs.updateDoc(roomRef, {
-          players: window.fs.arrayUnion(newPlayer),
-        });
-
-        // 입장 메시지 전송
-        await sendChatMessage(`${myNickname}님이 입장하셨습니다.`, true);
-
-        // 채팅 리스너 연결
-        setupChatListener(currentRoomId);
-
-        // 방 정보 리스너 연결
-        setupRoomListener(currentRoomId);
-      } catch (e) {
-        console.error(e);
-        alert("입장 중 오류 발생: " + e.message);
-      }
-    }
-  });
-}
-
-if (btnJoinCancel) {
-  btnJoinCancel.addEventListener("click", () => {
-    joinModal.classList.add("hidden");
-    currentRoomId = null;
-  });
-}
-
-// --- 채팅 기능 ---
-
-async function sendChatMessage(text, isSystem = false) {
-  if (!db || !currentRoomId) return;
-  const messagesRef = window.fs.collection(
-    db,
-    "liar_rooms",
-    currentRoomId,
-    "messages",
-  );
-  await window.fs.addDoc(messagesRef, {
-    text: text,
-    sender: isSystem ? "System" : myNickname,
-    timestamp: window.fs.serverTimestamp(),
-  });
-}
-
-function setupChatListener(roomId) {
-  const messagesRef = window.fs.collection(
-    db,
-    "liar_rooms",
-    roomId,
-    "messages",
-  );
-  // 시간순 정렬 필요 (쿼리 사용)
-  // const q = window.fs.query(messagesRef, window.fs.orderBy("timestamp"));
-
-  unsubscribeChat = window.fs.onSnapshot(messagesRef, (snapshot) => {
-    snapshot.docChanges().forEach((change) => {
-      if (change.type === "added") {
-        const msg = change.doc.data();
-        addMessageToUI(msg.sender, msg.text);
-      }
-    });
-  });
-}
-
-function addMessageToUI(sender, text) {
-  const div = document.createElement("div");
-  div.style.marginBottom = "5px";
-  if (sender === "System") {
-    div.style.color = "#ffff00";
-    div.textContent = `[알림] ${text}`;
-  } else {
-    div.innerHTML = `<span style="color: #aaa;">${sender}:</span> ${text}`;
-  }
-  chatMessages.appendChild(div);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
-}
-
-function addSystemMessage(text) {
-  addMessageToUI("System", text);
-}
-
-// 채팅 전송 버튼
-if (btnSendChat) {
-  btnSendChat.addEventListener("click", () => {
-    const text = chatInput.value.trim();
-    if (text) {
-      sendChatMessage(text);
-      chatInput.value = "";
-    }
-  });
-}
-
-if (chatInput) {
-  chatInput.addEventListener("keypress", (e) => {
-    if (e.key === "Enter") btnSendChat.click();
-  });
-}
-
-// --- 대기실 플레이어 슬롯 및 캐릭터 선택 로직 ---
-
-const charImages = [
-  "male.png",
-  "female.png",
-  "black_male.png",
-  "asian_female.png",
-];
-const charVideos = [
-  "male.mp4",
-  "female.mp4",
-  "black_male.mp4",
-  "asian_female.mp4",
-];
-const charNames = ["Male", "Female", "Black Male", "Asian Female"];
-
-const playedVideos = new Set(); // 현재 세션에서 재생된 비디오 추적
-
-function setupRoomListener(roomId) {
-  unsubscribeRoom = window.fs.onSnapshot(
-    window.fs.doc(db, "liar_rooms", roomId),
-    (doc) => {
-      const data = doc.data();
-      if (data && data.players) {
-        renderLobbySlots(data.players);
-
-        // 게임 시작 신호 감지
-        if (data.status === "starting" && !isMultiplayerGame) {
-          startMultiplayerSequence(data.players);
-        }
-      }
-    },
-  );
-}
-
-function renderLobbySlots(playersData) {
-  const container = document.getElementById("lobby-player-slots");
-  if (!container) return;
-
-  container.innerHTML = ""; // 초기화
-
-  // 방장인지 확인하여 시작 버튼 활성화
-  const amIHost = playersData.some(
-    (p) => p.nickname === myNickname && p.isHost,
-  );
-  if (btnGameStartMulti) btnGameStartMulti.disabled = !amIHost;
-
-  // 4개의 캐릭터 슬롯 생성 (고정)
-  for (let i = 0; i < 4; i++) {
-    const charName = charNames[i];
-    const charImg = charImages[i];
-    const charVideo = charVideos[i];
-
-    // 이 캐릭터를 선택한 플레이어 찾기
-    const ownerIndex = playersData.findIndex((p) => p.charIndex === i);
-    const owner = playersData[ownerIndex];
-
-    const isTaken = owner !== undefined;
-    const isMe = owner && owner.nickname === myNickname;
-
-    // 내가 선택하지 않은 캐릭터는 비디오 재생 기록 초기화 (나중에 다시 선택하면 또 재생되게)
-    if (!isMe) {
-      playedVideos.delete(i);
-    }
-
-    const slot = document.createElement("div");
-    slot.className = "player-slot";
-
-    let nameText = "";
-    if (owner) {
-      nameText = `${ownerIndex + 1}P(${owner.nickname})`;
-    }
-
-    // 이미지 스타일 (선택된 상태 표시)
-    const imgClass = isTaken ? (isMe ? "selected" : "taken") : "";
-
-    // 비디오 재생 여부 결정 (내 캐릭터이고, 아직 재생 안 했으면)
-    let showVideo = false;
-    if (isMe && !playedVideos.has(i)) {
-      showVideo = true;
-    }
-
-    let btnHtml = "";
-    if (isMe) {
-      btnHtml = `<button class="btn-select selected" disabled>선택됨</button>`;
-    } else if (isTaken) {
-      btnHtml = `<button class="btn-select disabled" disabled>선택불가</button>`;
-    } else {
-      btnHtml = `<button class="btn-select" onclick="selectChar(${i})">선택</button>`;
-    }
-
-    slot.innerHTML = `
-      <div class="slot-char-area">
-        <img src="./character/${charImg}" alt="${charName}" class="${imgClass}" style="${showVideo ? "display:none" : "display:block"}">
-        <video src="./character/${charVideo}" class="char-video" style="${showVideo ? "display:block" : "display:none"}" muted playsinline></video>
-      </div>
-      <div class="slot-name" style="${isMe ? "color: #d4af37;" : ""}">${nameText}</div>
-      ${btnHtml}
-    `;
-    container.appendChild(slot);
-
-    // 비디오 이벤트 리스너 등록
-    if (showVideo) {
-      const videoEl = slot.querySelector("video");
-      const imgEl = slot.querySelector("img");
-      if (videoEl) {
-        videoEl.play().catch((e) => console.log("Video play failed:", e));
-        videoEl.onended = () => {
-          videoEl.style.display = "none";
-          imgEl.style.display = "block";
-          playedVideos.add(i); // 재생 완료 기록
-        };
-      }
-    }
-  }
-}
-
-// 전역 함수로 등록 (HTML onclick에서 접근 가능하도록)
-window.selectChar = async function (newCharIndex) {
-  if (!db || !currentRoomId) return;
-
-  const roomRef = window.fs.doc(db, "liar_rooms", currentRoomId);
-
-  try {
-    // 트랜잭션을 사용하여 동시 선택 방지
-    await window.fs.runTransaction(db, async (transaction) => {
-      const roomDoc = await transaction.get(roomRef);
-      if (!roomDoc.exists()) throw "방이 존재하지 않습니다.";
-
-      const players = roomDoc.data().players;
-      const myIndex = players.findIndex((p) => p.nickname === myNickname);
-      if (myIndex === -1) throw "플레이어 정보를 찾을 수 없습니다.";
-
-      // 이미 선택된 캐릭터인지 확인
-      const isTaken = players.some((p) => p.charIndex === newCharIndex);
-      if (isTaken) throw "이미 선택된 캐릭터입니다.";
-
-      // 캐릭터 변경
-      players[myIndex].charIndex = newCharIndex;
-      transaction.update(roomRef, { players: players });
-    });
-  } catch (e) {
-    console.error("캐릭터 선택 실패:", e);
-    alert("캐릭터 선택 실패: " + e);
-  }
-};
+// 멀티플레이 초기화
+initMultiplayer({
+  onStart: startMultiplayerSequence,
+  onAction: handleRemoteAction,
+});
 
 // 멀티플레이 시작 시퀀스 (카운트다운 -> 게임 진입)
 function startMultiplayerSequence(roomPlayers) {
   isMultiplayerGame = true;
-  lobbyScreen.classList.add("hidden");
-  document.getElementById("game-hud").classList.remove("hidden");
 
   // 플레이어 매핑 (나를 South(3) 위치로 고정하고 나머지를 회전)
-  // roomPlayers 순서: [P1, P2, P3, P4]
-  // 내 인덱스가 1(P2)라면:
-  // South(3) = P2 (Me)
-  // West(2) = P3
-  // North(1) = P4
-  // East(0) = P1
-
-  const myIndex = roomPlayers.findIndex((p) => p.nickname === myNickname);
-  // 관전자거나 못 찾으면 0번 기준
-  const baseIndex = myIndex === -1 ? 0 : myIndex;
-
-  // 게임 내 players 배열 업데이트
-  // players[0]: East, players[1]: North, players[2]: West, players[3]: South
-  // 매핑 공식: (baseIndex + offset) % 4
-  // East(0) <- room[(baseIndex + 3) % 4]
-  // North(1) <- room[(baseIndex + 2) % 4]
-  // West(2) <- room[(baseIndex + 1) % 4]
+  // roomPlayers 순서: [P1, P2, P3, P4] (서버 기준 0, 1, 2, 3)
+  // 내 인덱스(myPlayerIndex)가 1이라면:
+  // South(3) = P2 (Me, idx 1)
+  // West(2) = P3 (idx 2)
+  // North(1) = P4 (idx 3)
+  // East(0) = P1 (idx 0)
+  // 공식: (serverIndex - myIndex + 4) % 4 -> localIndex (0:East, 1:North, 2:West, 3:South)
+  // 하지만 기존 코드의 mapping 배열은 [3, 2, 1, 0] 순서로 할당하고 있음.
   // South(3) <- room[baseIndex]
+  // West(2) <- room[(baseIndex + 1) % 4]
+  // North(1) <- room[(baseIndex + 2) % 4]
+  // East(0) <- room[(baseIndex + 3) % 4]
 
-  const mapping = [3, 2, 1, 0]; // East, North, West, South 순서에 맞는 오프셋
+  const baseIndex = myPlayerIndex === -1 ? 0 : myPlayerIndex;
+
+  // 로컬 players 배열 업데이트 (시각적 위치 할당)
+  // players[0] = East, [1] = North, [2] = West, [3] = South
+  // roomPlayers[baseIndex]는 무조건 South(3)에 와야 함.
 
   for (let i = 0; i < 4; i++) {
-    const roomPlayerIndex = (baseIndex + mapping[i]) % 4;
+    // i: 로컬 인덱스 (0:East, 1:North, 2:West, 3:South)
+    // offset: South(3) 기준으로 얼마나 떨어져 있는지
+    // South(3) -> offset 0
+    // West(2) -> offset 1
+    // North(1) -> offset 2
+    // East(0) -> offset 3
+    const offset = (3 - i + 4) % 4;
+    const roomPlayerIndex = (baseIndex + offset) % 4;
+
     const roomPlayer = roomPlayers[roomPlayerIndex];
 
     players[i].displayName = roomPlayer.nickname;
@@ -3634,8 +2696,65 @@ function startMultiplayerSequence(roomPlayers) {
       playSound("drama");
       setTimeout(() => {
         countdownOverlay.classList.add("hidden");
+        lobbyScreen.classList.add("hidden");
+        document.getElementById("game-hud").classList.remove("hidden");
+        document.getElementById("ingame-chat").classList.remove("hidden");
         startRound(); // 게임 라운드 시작
       }, 1000);
     }
   }, 1000);
+}
+
+// 서버에서 온 액션 처리
+function handleRemoteAction(action) {
+  // action.senderIndex는 서버 기준 인덱스 (0~3)
+  // 로컬 인덱스로 변환 필요
+  // 내 인덱스(myPlayerIndex)가 1일 때, sender가 2라면?
+  // South(3) = 1
+  // West(2) = 2 -> 로컬 인덱스 2
+
+  const baseIndex = myPlayerIndex === -1 ? 0 : myPlayerIndex;
+  // 서버 인덱스 -> 로컬 인덱스 변환 공식
+  // (sender - base + 4) % 4 -> 상대적 위치 (0:나, 1:오른쪽, 2:맞은편, 3:왼쪽)
+  // 로컬 배치: 3(나), 2(오른쪽/West), 1(맞은편/North), 0(왼쪽/East)
+  // 따라서: localIndex = (3 - (sender - base + 4) % 4 + 4) % 4
+
+  const relativePos = (action.senderIndex - baseIndex + 4) % 4;
+  const localIndex = (3 - relativePos + 4) % 4;
+
+  console.log(
+    `Action received: ${action.type} from Server ${action.senderIndex} -> Local ${localIndex}`,
+  );
+
+  switch (action.type) {
+    case "START_GAME":
+      // 덱 정보 동기화 등 (현재는 startRound에서 랜덤 생성하므로 생략 가능하나,
+      // 완벽한 동기화를 위해선 호스트가 덱을 보내줘야 함)
+      if (action.payload && action.payload.deck) {
+        cardTypes = action.payload.deck;
+      }
+      startRound(action.payload.deck);
+      break;
+
+    case "SUBMIT":
+      // 카드 제출
+      // payload: { cardIndices: [...] }
+      // 로컬에서는 submitCards 호출
+      // 주의: submitCards는 내부적으로 nextTurn()을 호출함
+      submitCards(localIndex, action.payload.cardIndices);
+      break;
+
+    case "CHALLENGE":
+      // 도전
+      // challenge() 함수는 현재 턴(gameState.turnIndex)의 플레이어가 도전하는 것으로 가정
+      // 동기화가 잘 되어 있다면 gameState.turnIndex == localIndex 여야 함
+      if (gameState.turnIndex !== localIndex) {
+        console.warn("Turn mismatch sync warning!");
+        gameState.turnIndex = localIndex; // 강제 동기화
+      }
+      challenge();
+      break;
+
+    // 룰렛 결과 등 추가 가능
+  }
 }

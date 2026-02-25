@@ -177,8 +177,9 @@ canvas {
 
 #target-rank {
   position: absolute;
-  bottom: 20px;
-  left: 20px;
+  top: 120px;
+  left: 120px;
+  bottom: auto;
   transform: none;
   background-color: rgba(0, 0, 0, 0.7);
   color: white;
@@ -392,7 +393,7 @@ body.fade-out {
 .lobby-container {
   display: flex;
   width: 1300px;
-  height: 700px;
+  height: 600px;
   background: rgba(0, 0, 0, 0.8);
   border: 2px solid #555;
   border-radius: 20px;
@@ -456,22 +457,11 @@ body.fade-out {
   border-radius: 5px;
 }
 
-/* 캐릭터 비디오 스타일 */
 .char-video {
   width: 100%;
   height: 100%;
   object-fit: cover;
   border-radius: 5px;
-}
-
-/* 선택된(다른 사람이 가져간) 이미지 어둡게 처리 */
-.slot-char-area img.taken {
-  filter: brightness(0.3) grayscale(100%);
-}
-
-/* 내가 선택한 이미지 살짝 어둡게 */
-.slot-char-area img.selected {
-  filter: brightness(0.6);
 }
 
 .slot-char-area.empty {
@@ -581,32 +571,6 @@ body.fade-out {
   color: #d4af37;
 }
 
-/* 캐릭터 선택 버튼 */
-.btn-select {
-  width: 100%;
-  padding: 8px 0;
-  margin-top: 10px;
-  background-color: #444;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-weight: bold;
-}
-.btn-select:hover {
-  background-color: #d4af37;
-  color: black;
-}
-.btn-select.selected {
-  background-color: #2e7d32;
-  cursor: default;
-}
-.btn-select.disabled {
-  background-color: #222;
-  color: #555;
-  cursor: not-allowed;
-}
-
 /* 카운트다운 스타일 */
 #countdown-overlay {
   font-size: 120px;
@@ -630,4 +594,70 @@ body.fade-out {
     transform: translate(-50%, -50%) scale(1);
     opacity: 0;
   }
+}
+
+/* 인게임 채팅 스타일 */
+#ingame-chat {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  width: 300px;
+  height: 250px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  pointer-events: auto;
+  z-index: 150;
+}
+
+#ingame-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  color: white;
+  font-size: 14px;
+  text-shadow: 1px 1px 2px black;
+}
+
+.chat-controls {
+  display: flex;
+  padding: 5px;
+  gap: 5px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 0 0 10px 10px;
+}
+
+#ingame-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  padding: 5px;
+  border-radius: 3px;
+}
+
+#emoji-picker {
+  position: absolute;
+  bottom: 40px;
+  left: 0;
+  background: rgba(20, 20, 20, 0.95);
+  border: 1px solid #555;
+  border-radius: 5px;
+  padding: 5px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 5px;
+}
+
+.emoji-item {
+  font-size: 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+}
+.emoji-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
 }
