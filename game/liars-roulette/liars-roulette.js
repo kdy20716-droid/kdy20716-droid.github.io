@@ -437,12 +437,41 @@ function playSound(type) {
 function showBubble(playerIndex, text) {
   const bubble = document.getElementById(`bubble-${playerIndex}`);
   if (bubble) {
+    updateBubblePosition(playerIndex);
     bubble.textContent = text;
     bubble.classList.add("show");
     setTimeout(() => {
       bubble.classList.remove("show");
     }, 2000);
   }
+}
+
+function updateBubblePosition(playerIndex) {
+  const bubble = document.getElementById(`bubble-${playerIndex}`);
+  if (!bubble || !players[playerIndex]) return;
+
+  const player = players[playerIndex];
+  let offsetX = 0;
+  let offsetY = 0;
+
+  if (playerIndex === 0) {
+    // East
+    offsetX = -120;
+    offsetY = -100;
+  } else if (playerIndex === 1) {
+    // North
+    offsetY = -120;
+  } else if (playerIndex === 2) {
+    // West
+    offsetX = 50;
+    offsetY = -100;
+  } else if (playerIndex === 3) {
+    // South
+    offsetY = -100;
+  }
+
+  bubble.style.left = `${player.x + offsetX}px`;
+  bubble.style.top = `${player.y + offsetY}px`;
 }
 
 // BGM 관리 함수
@@ -2765,11 +2794,18 @@ function resizeGame() {
     winH = window.visualViewport.height;
   }
 
+  // [수정] 여백 확보 (상하좌우 100px)
+  const margin = 100;
+  const availW = Math.max(winW - margin * 2, 320); // 최소 너비 안전장치
+  const availH = Math.max(winH - margin * 2, 320); // 최소 높이 안전장치
+
   const baseHeight = 900;
 
   // 1. 화면 비율에 맞춰 캔버스 너비 동적 계산 (최소 1024px 유지)
   // 가로가 긴 모바일 화면에서 여백 없이 꽉 채우기 위함
   let newCanvasWidth = (winW / winH) * baseHeight;
+  // 여백을 제외한 가용 공간 비율을 사용
+  let newCanvasWidth1 = (availW / availH) * baseHeight;
   if (newCanvasWidth < 1024) newCanvasWidth = 1024;
 
   // 2. 캔버스 및 컨테이너 크기 업데이트
@@ -2780,6 +2816,8 @@ function resizeGame() {
 
   // 3. 윈도우 크기에 맞춰 스케일링 (Fit)
   const scale = Math.min(winW / newCanvasWidth, winH / baseHeight);
+  // 가용 공간(availW, availH)에 맞춤
+  const scale1 = Math.min(availW / newCanvasWidth, availH / baseHeight);
   container.style.transform = `scale(${scale})`;
   container.style.setProperty("--game-scale", scale);
 
@@ -2795,9 +2833,55 @@ if (window.visualViewport) {
 
 // 레이아웃 업데이트 함수 (화면 크기 변경 시 호출)
 function updateLayout() {
+  const oldCenterX = centerX;
+  const oldCenterY = centerY;
+
   centerX = canvas.width / 2;
   centerY = canvas.height / 2;
   tableY = centerY + 30;
+
+  const dx = centerX - oldCenterX;
+  const dy = centerY - oldCenterY;
+
+  // 화면 크기가 변하면 테이블 위의 요소들도 같이 이동 (중앙 정렬 유지)
+  if (dx !== 0 || dy !== 0) {
+    gameState.tableCards.forEach((card) => {
+      card.x += dx;
+      card.y += dy;
+    });
+
+    gameState.bloodSplatters.forEach((splat) => {
+      splat.x += dx;
+      splat.y += dy;
+    });
+
+    animations.forEach((anim) => {
+      anim.startX += dx;
+      anim.startY += dy;
+      anim.targetX += dx;
+      anim.targetY += dy;
+      if (anim.trail) {
+        anim.trail.forEach((t) => {
+          t.x += dx;
+          t.y += dy;
+        });
+      }
+    });
+
+    if (dealingState.movingCard) {
+      dealingState.movingCard.startX += dx;
+      dealingState.movingCard.startY += dy;
+      dealingState.movingCard.targetX += dx;
+      dealingState.movingCard.targetY += dy;
+      dealingState.movingCard.x += dx;
+      dealingState.movingCard.y += dy;
+    }
+
+    fireworks.forEach((fw) => {
+      fw.x += dx;
+      fw.y += dy;
+    });
+  }
 
   // 플레이어 위치 재설정 (중앙 기준 상대 위치 유지)
   if (players.length > 0) {
@@ -2809,6 +2893,10 @@ function updateLayout() {
     players[2].y = tableY; // West
     players[3].x = centerX;
     players[3].y = tableY + 280; // South
+  }
+
+  for (let i = 0; i < players.length; i++) {
+    updateBubblePosition(i);
   }
 }
 
@@ -2975,3 +3063,544 @@ function setupUISounds() {
 }
 setupUISounds();
 draw();
+
+// --- 멀티플레이 로직 (Beta) ---
+
+// UI 요소 가져오기
+const btnMulti = document.getElementById("btn-multi");
+const multiMenuScreen = document.getElementById("multi-menu-screen");
+const lobbyScreen = document.getElementById("lobby-screen");
+const btnCreateRoom = document.getElementById("btn-create-room");
+const btnGameStartMulti = document.getElementById("btn-game-start-multi");
+const btnJoinCheck = document.getElementById("btn-join-check");
+const btnBackMenu = document.getElementById("btn-back-menu");
+const btnBackLobby = document.getElementById("btn-back-lobby");
+const roomInput = document.getElementById("room-code-input");
+const multiStatus = document.getElementById("multi-status");
+
+// 로비 UI 요소
+const displayRoomCode = document.getElementById("display-room-code");
+const chatMessages = document.getElementById("chat-messages");
+const chatInput = document.getElementById("chat-input");
+const btnSendChat = document.getElementById("btn-send-chat");
+const joinModal = document.getElementById("join-modal");
+const nicknameInput = document.getElementById("nickname-input");
+const btnJoinConfirm = document.getElementById("btn-join-confirm");
+const btnJoinCancel = document.getElementById("btn-join-cancel");
+const countdownOverlay = document.getElementById("countdown-overlay");
+
+let db = null; // Firestore 인스턴스
+let currentRoomId = null;
+let myNickname = "Player";
+let unsubscribeChat = null;
+let unsubscribeRoom = null;
+let isCreatingRoom = false;
+let isMultiplayerGame = false;
+
+// 멀티플레이 버튼 클릭 시
+if (btnMulti) {
+  btnMulti.addEventListener("click", async () => {
+    document.getElementById("start-screen").classList.add("hidden");
+    multiMenuScreen.classList.remove("hidden");
+
+    // Firebase 동적 로드 (필요할 때만 불러옴)
+    if (!db) {
+      multiStatus.textContent = "서버 연결 중...";
+      try {
+        const { initializeApp } =
+          await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js");
+        const {
+          getFirestore,
+          collection,
+          addDoc,
+          doc,
+          onSnapshot,
+          setDoc,
+          getDoc,
+          updateDoc,
+          arrayUnion,
+          serverTimestamp,
+          runTransaction,
+        } =
+          await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+        // suika 폴더에 있는 설정 파일 경로 주의 (현재 위치 기준)
+        const { firebaseConfig } = await import("../suika/firebaseConfig.js");
+
+        const app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        multiStatus.textContent = "서버 연결 성공!";
+
+        // 전역 변수에 할당 (나중에 쓰기 위해)
+        window.fs = {
+          collection,
+          addDoc,
+          doc,
+          onSnapshot,
+          setDoc,
+          getDoc,
+          updateDoc,
+          arrayUnion,
+          serverTimestamp,
+          runTransaction,
+        };
+      } catch (e) {
+        console.error(e);
+        multiStatus.textContent = "서버 연결 실패: " + e.message;
+      }
+    }
+  });
+}
+
+// 로비 뒤로가기
+if (btnBackMenu) {
+  btnBackMenu.addEventListener("click", () => {
+    multiMenuScreen.classList.add("hidden");
+    document.getElementById("start-screen").classList.remove("hidden");
+  });
+}
+
+// 대기실 나가기
+if (btnBackLobby) {
+  btnBackLobby.addEventListener("click", () => {
+    if (unsubscribeChat) unsubscribeChat(); // 채팅 리스너 해제
+    if (unsubscribeRoom) unsubscribeRoom(); // 방 정보 리스너 해제
+    lobbyScreen.classList.add("hidden");
+    document.getElementById("start-screen").classList.remove("hidden");
+    multiMenuScreen.classList.remove("hidden");
+    currentRoomId = null;
+    chatMessages.innerHTML = "";
+  });
+}
+
+// 방 만들기
+if (btnCreateRoom) {
+  btnCreateRoom.addEventListener("click", async () => {
+    if (!db) return;
+    isCreatingRoom = true;
+    joinModal.classList.remove("hidden");
+    nicknameInput.value = "";
+    nicknameInput.placeholder = "방장 닉네임 입력";
+    nicknameInput.focus();
+  });
+}
+
+// 게임 시작 버튼 (방장 전용)
+if (btnGameStartMulti) {
+  btnGameStartMulti.addEventListener("click", async () => {
+    if (!db || !currentRoomId) return;
+
+    try {
+      const roomRef = window.fs.doc(db, "liar_rooms", currentRoomId);
+      const roomSnap = await window.fs.getDoc(roomRef);
+      const roomData = roomSnap.data();
+
+      let currentPlayers = [...roomData.players];
+
+      // 인원이 부족하면 AI로 채우기
+      const usedChars = currentPlayers.map((p) => p.charIndex);
+      let botCount = 1;
+
+      while (currentPlayers.length < 4) {
+        let newCharIndex = 0;
+        while (usedChars.includes(newCharIndex)) newCharIndex++;
+        usedChars.push(newCharIndex);
+
+        currentPlayers.push({
+          nickname: `Bot ${botCount++}`,
+          charIndex: newCharIndex,
+          isHost: false,
+          isAI: true,
+        });
+      }
+
+      // 플레이어 목록 업데이트 및 상태 변경 (starting)
+      await window.fs.updateDoc(roomRef, {
+        players: currentPlayers,
+        status: "starting",
+      });
+    } catch (e) {
+      console.error("게임 시작 실패:", e);
+      alert("게임 시작 중 오류가 발생했습니다.");
+    }
+  });
+}
+
+// 방 참가 확인 (코드 입력 후)
+if (btnJoinCheck) {
+  btnJoinCheck.addEventListener("click", async () => {
+    if (!db) return;
+    const code = roomInput.value;
+    if (code.length !== 4) {
+      multiStatus.textContent = "4자리 코드를 입력하세요.";
+      return;
+    }
+
+    isCreatingRoom = false;
+    multiStatus.textContent = "방 찾는 중...";
+    try {
+      const roomRef = window.fs.doc(db, "liar_rooms", code);
+      const roomSnap = await window.fs.getDoc(roomRef);
+
+      if (!roomSnap.exists()) {
+        multiStatus.textContent = "존재하지 않는 방입니다.";
+        return;
+      }
+
+      const roomData = roomSnap.data();
+      if (roomData.players && roomData.players.length >= 4) {
+        multiStatus.textContent = "이미 꽉 찬 방입니다.";
+        return;
+      }
+
+      // 방이 존재하면 닉네임 입력 모달 띄우기
+      currentRoomId = code;
+      joinModal.classList.remove("hidden");
+      nicknameInput.value = "";
+      nicknameInput.placeholder = "이름을 입력하세요";
+      nicknameInput.focus();
+    } catch (e) {
+      console.error(e);
+      multiStatus.textContent = "참가 오류: " + e.message;
+    }
+  });
+}
+
+// 닉네임 입력 후 입장
+if (btnJoinConfirm) {
+  btnJoinConfirm.addEventListener("click", async () => {
+    const name = nicknameInput.value.trim();
+    if (!name) return;
+
+    myNickname = name;
+    joinModal.classList.add("hidden");
+
+    if (isCreatingRoom) {
+      // --- 방 생성 로직 ---
+      multiStatus.textContent = "방 생성 중...";
+      try {
+        const roomCode = Math.floor(1000 + Math.random() * 9000).toString();
+        currentRoomId = roomCode;
+
+        const initialPlayer = {
+          nickname: myNickname,
+          charIndex: 0,
+          isHost: true,
+        };
+
+        await window.fs.setDoc(window.fs.doc(db, "liar_rooms", roomCode), {
+          host: myNickname,
+          status: "waiting",
+          createdAt: Date.now(),
+          players: [initialPlayer],
+        });
+
+        multiMenuScreen.classList.add("hidden");
+        lobbyScreen.classList.remove("hidden");
+        displayRoomCode.textContent = roomCode;
+        addSystemMessage("방이 생성되었습니다.");
+
+        setupChatListener(roomCode);
+        setupRoomListener(roomCode);
+      } catch (e) {
+        multiStatus.textContent = "오류: " + e.message;
+        console.error(e);
+      }
+    } else {
+      // --- 방 참가 로직 ---
+      multiMenuScreen.classList.add("hidden");
+      lobbyScreen.classList.remove("hidden");
+      displayRoomCode.textContent = currentRoomId;
+
+      try {
+        const roomRef = window.fs.doc(db, "liar_rooms", currentRoomId);
+        const roomSnap = await window.fs.getDoc(roomRef);
+        const roomData = roomSnap.data();
+
+        // 현재 플레이어 수 확인 및 캐릭터 인덱스 할당 (중복 방지)
+        const currentPlayers = roomData.players || [];
+        if (currentPlayers.length >= 4) {
+          alert("방이 꽉 찼습니다.");
+          return;
+        }
+
+        // 사용되지 않은 캐릭터 인덱스 찾기
+        const usedChars = currentPlayers.map((p) => p.charIndex);
+        let newCharIndex = 0;
+        while (usedChars.includes(newCharIndex)) newCharIndex++;
+
+        const newPlayer = {
+          nickname: myNickname,
+          charIndex: newCharIndex,
+          isHost: false,
+        };
+
+        // 방 정보 업데이트 (플레이어 추가)
+        await window.fs.updateDoc(roomRef, {
+          players: window.fs.arrayUnion(newPlayer),
+        });
+
+        // 입장 메시지 전송
+        await sendChatMessage(`${myNickname}님이 입장하셨습니다.`, true);
+
+        // 채팅 리스너 연결
+        setupChatListener(currentRoomId);
+
+        // 방 정보 리스너 연결
+        setupRoomListener(currentRoomId);
+      } catch (e) {
+        console.error(e);
+        alert("입장 중 오류 발생: " + e.message);
+      }
+    }
+  });
+}
+
+if (btnJoinCancel) {
+  btnJoinCancel.addEventListener("click", () => {
+    joinModal.classList.add("hidden");
+    currentRoomId = null;
+  });
+}
+
+// --- 채팅 기능 ---
+
+async function sendChatMessage(text, isSystem = false) {
+  if (!db || !currentRoomId) return;
+  const messagesRef = window.fs.collection(
+    db,
+    "liar_rooms",
+    currentRoomId,
+    "messages",
+  );
+  await window.fs.addDoc(messagesRef, {
+    text: text,
+    sender: isSystem ? "System" : myNickname,
+    timestamp: window.fs.serverTimestamp(),
+  });
+}
+
+function setupChatListener(roomId) {
+  const messagesRef = window.fs.collection(
+    db,
+    "liar_rooms",
+    roomId,
+    "messages",
+  );
+  // 시간순 정렬 필요 (쿼리 사용)
+  // const q = window.fs.query(messagesRef, window.fs.orderBy("timestamp"));
+
+  unsubscribeChat = window.fs.onSnapshot(messagesRef, (snapshot) => {
+    snapshot.docChanges().forEach((change) => {
+      if (change.type === "added") {
+        const msg = change.doc.data();
+        addMessageToUI(msg.sender, msg.text);
+      }
+    });
+  });
+}
+
+function addMessageToUI(sender, text) {
+  const div = document.createElement("div");
+  div.style.marginBottom = "5px";
+  if (sender === "System") {
+    div.style.color = "#ffff00";
+    div.textContent = `[알림] ${text}`;
+  } else {
+    div.innerHTML = `<span style="color: #aaa;">${sender}:</span> ${text}`;
+  }
+  chatMessages.appendChild(div);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function addSystemMessage(text) {
+  addMessageToUI("System", text);
+}
+
+// 채팅 전송 버튼
+if (btnSendChat) {
+  btnSendChat.addEventListener("click", () => {
+    const text = chatInput.value.trim();
+    if (text) {
+      sendChatMessage(text);
+      chatInput.value = "";
+    }
+  });
+}
+
+if (chatInput) {
+  chatInput.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") btnSendChat.click();
+  });
+}
+
+// --- 대기실 플레이어 슬롯 및 캐릭터 선택 로직 ---
+
+const charImages = [
+  "킹카드 스페이드.jpg",
+  "퀸카드 스페이드.jpg",
+  "조커카드.jpg",
+  "스페이드 카드.png",
+];
+const charNames = ["King", "Queen", "Joker", "Ace"];
+
+function setupRoomListener(roomId) {
+  unsubscribeRoom = window.fs.onSnapshot(
+    window.fs.doc(db, "liar_rooms", roomId),
+    (doc) => {
+      const data = doc.data();
+      if (data && data.players) {
+        renderLobbySlots(data.players);
+
+        // 게임 시작 신호 감지
+        if (data.status === "starting" && !isMultiplayerGame) {
+          startMultiplayerSequence(data.players);
+        }
+      }
+    },
+  );
+}
+
+function renderLobbySlots(playersData) {
+  const container = document.getElementById("lobby-player-slots");
+  if (!container) return;
+
+  container.innerHTML = ""; // 초기화
+
+  // 방장인지 확인하여 시작 버튼 활성화
+  const amIHost = playersData.some(
+    (p) => p.nickname === myNickname && p.isHost,
+  );
+  if (btnGameStartMulti) btnGameStartMulti.disabled = !amIHost;
+
+  // 4개의 캐릭터 슬롯 생성 (고정)
+  for (let i = 0; i < 4; i++) {
+    const charName = charNames[i];
+    const charImg = charImages[i];
+
+    // 이 캐릭터를 선택한 플레이어 찾기
+    const ownerIndex = playersData.findIndex((p) => p.charIndex === i);
+    const owner = playersData[ownerIndex];
+
+    const isTaken = owner !== undefined;
+    const isMe = owner && owner.nickname === myNickname;
+
+    const slot = document.createElement("div");
+    slot.className = "player-slot";
+
+    let nameText = "";
+    if (owner) {
+      nameText = `${ownerIndex + 1}P(${owner.nickname})`;
+    }
+
+    // 이미지 스타일 (선택된 상태 표시)
+    const imgClass = isTaken ? (isMe ? "selected" : "taken") : "";
+
+    let btnHtml = "";
+    if (isMe) {
+      btnHtml = `<button class="btn-select selected" disabled>선택됨</button>`;
+    } else if (isTaken) {
+      btnHtml = `<button class="btn-select disabled" disabled>선택불가</button>`;
+    } else {
+      btnHtml = `<button class="btn-select" onclick="selectChar(${i})">선택</button>`;
+    }
+
+    slot.innerHTML = `
+      <div class="slot-char-area">
+        <img src="./pokercard/${charImg}" alt="${charName}" class="${imgClass}">
+      </div>
+      <div class="slot-name" style="${isMe ? "color: #d4af37;" : ""}">${nameText}</div>
+      ${btnHtml}
+    `;
+    container.appendChild(slot);
+  }
+}
+
+// 전역 함수로 등록 (HTML onclick에서 접근 가능하도록)
+window.selectChar = async function (newCharIndex) {
+  if (!db || !currentRoomId) return;
+
+  const roomRef = window.fs.doc(db, "liar_rooms", currentRoomId);
+
+  try {
+    // 트랜잭션을 사용하여 동시 선택 방지
+    await window.fs.runTransaction(db, async (transaction) => {
+      const roomDoc = await transaction.get(roomRef);
+      if (!roomDoc.exists()) throw "방이 존재하지 않습니다.";
+
+      const players = roomDoc.data().players;
+      const myIndex = players.findIndex((p) => p.nickname === myNickname);
+      if (myIndex === -1) throw "플레이어 정보를 찾을 수 없습니다.";
+
+      // 이미 선택된 캐릭터인지 확인
+      const isTaken = players.some((p) => p.charIndex === newCharIndex);
+      if (isTaken) throw "이미 선택된 캐릭터입니다.";
+
+      // 캐릭터 변경
+      players[myIndex].charIndex = newCharIndex;
+      transaction.update(roomRef, { players: players });
+    });
+  } catch (e) {
+    console.error("캐릭터 선택 실패:", e);
+    alert("캐릭터 선택 실패: " + e);
+  }
+};
+
+// 멀티플레이 시작 시퀀스 (카운트다운 -> 게임 진입)
+function startMultiplayerSequence(roomPlayers) {
+  isMultiplayerGame = true;
+  lobbyScreen.classList.add("hidden");
+  document.getElementById("game-hud").classList.remove("hidden");
+
+  // 플레이어 매핑 (나를 South(3) 위치로 고정하고 나머지를 회전)
+  // roomPlayers 순서: [P1, P2, P3, P4]
+  // 내 인덱스가 1(P2)라면:
+  // South(3) = P2 (Me)
+  // West(2) = P3
+  // North(1) = P4
+  // East(0) = P1
+
+  const myIndex = roomPlayers.findIndex((p) => p.nickname === myNickname);
+  // 관전자거나 못 찾으면 0번 기준
+  const baseIndex = myIndex === -1 ? 0 : myIndex;
+
+  // 게임 내 players 배열 업데이트
+  // players[0]: East, players[1]: North, players[2]: West, players[3]: South
+  // 매핑 공식: (baseIndex + offset) % 4
+  // East(0) <- room[(baseIndex + 3) % 4]
+  // North(1) <- room[(baseIndex + 2) % 4]
+  // West(2) <- room[(baseIndex + 1) % 4]
+  // South(3) <- room[baseIndex]
+
+  const mapping = [3, 2, 1, 0]; // East, North, West, South 순서에 맞는 오프셋
+
+  for (let i = 0; i < 4; i++) {
+    const roomPlayerIndex = (baseIndex + mapping[i]) % 4;
+    const roomPlayer = roomPlayers[roomPlayerIndex];
+
+    players[i].displayName = roomPlayer.nickname;
+    players[i].isAI = !!roomPlayer.isAI;
+    // 캐릭터 이미지 등 추가 속성 설정 가능
+  }
+
+  // 카운트다운 시작
+  let count = 3;
+  countdownOverlay.classList.remove("hidden");
+  countdownOverlay.textContent = count;
+  playSound("select");
+
+  const timer = setInterval(() => {
+    count--;
+    if (count > 0) {
+      countdownOverlay.textContent = count;
+      playSound("select");
+    } else {
+      clearInterval(timer);
+      countdownOverlay.textContent = "START!";
+      playSound("drama");
+      setTimeout(() => {
+        countdownOverlay.classList.add("hidden");
+        startRound(); // 게임 라운드 시작
+      }, 1000);
+    }
+  }, 1000);
+}

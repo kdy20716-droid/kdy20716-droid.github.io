@@ -36,18 +36,19 @@ canvas {
 .speech-bubble {
   position: absolute;
   background: white;
-  border: 3px solid #333;
-  border-radius: 15px;
-  padding: 10px 15px;
+  border: 2px solid #333;
+  border-radius: 8px;
+  padding: 8px 12px; /* [크기 조절] 내부 여백: 첫번째 숫자(상하), 두번째 숫자(좌우)를 늘리면 말풍선이 커집니다 */
   font-family: sans-serif;
   font-weight: bold;
-  font-size: 14px;
+  font-size: 12px; /* [크기 조절] 글자 크기 */
   color: black;
   opacity: 0;
   transition: opacity 0.3s ease;
   pointer-events: none;
   z-index: 10;
-  white-space: nowrap;
+  white-space: nowrap; /* 줄바꿈 방지 (위아래로 길어지는 것 막음) */
+  text-align: center;
 }
 
 .speech-bubble.show {
@@ -59,6 +60,7 @@ canvas {
   top: 50%;
   right: 20px;
   transform: translateY(-50%);
+  margin: 160px;
 } /* East */
 #bubble-1 {
   top: 80px;
@@ -71,9 +73,14 @@ canvas {
   transform: translateY(-50%);
 } /* West */
 #bubble-3 {
-  bottom: 150px;
+  bottom: 100px;
   left: 50%;
   transform: translateX(-50%);
+  /* 내 말풍선(South) 전용 크기 조절 */
+  padding: -1px 100px; /* [조절] 상하(4px), 좌우(10px) 여백 - 숫자를 줄이면 더 작아집니다 */
+  font-size: 11px; /* [조절] 글자 크기 */
+  line-height: 1.2; /* 줄 간격 조절 */
+  margin-bottom: 100px;
 } /* South */
 
 /* UI 레이어 스타일 */
@@ -311,6 +318,21 @@ canvas {
   z-index: 200;
 }
 
+/* 모달 배경 및 위치 설정 */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  pointer-events: auto;
+}
+
 /* 게임 방법 모달 스타일 */
 .modal-content {
   background-color: rgba(20, 20, 20, 0.95);
@@ -364,4 +386,240 @@ canvas {
 body.fade-out {
   opacity: 0;
   transition: opacity 1s ease-out;
+}
+
+/* --- 멀티플레이 로비 스타일 --- */
+.lobby-container {
+  display: flex;
+  width: 1300px;
+  height: 700px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 2px solid #555;
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.lobby-main {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-right: 2px solid #555;
+  padding: 0px;
+}
+
+.lobby-chat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: rgba(20, 20, 20, 0.9);
+}
+
+.player-slots-container {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 30px;
+  width: 100%;
+  justify-content: center;
+}
+
+.player-slot {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid #555;
+  border-radius: 10px;
+  padding: 10px;
+  width: 160px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.slot-header {
+  font-size: 14px;
+  color: #aaa;
+  margin-bottom: 5px;
+}
+
+.slot-char-area {
+  position: relative;
+  width: 140px;
+  height: 196px;
+  margin-bottom: 10px;
+}
+
+.slot-char-area img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 5px;
+}
+
+/* 선택된(다른 사람이 가져간) 이미지 어둡게 처리 */
+.slot-char-area img.taken {
+  filter: brightness(0.3) grayscale(100%);
+}
+
+/* 내가 선택한 이미지 살짝 어둡게 */
+.slot-char-area img.selected {
+  filter: brightness(0.6);
+}
+
+.slot-char-area.empty {
+  border: 2px dashed #555;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #555;
+}
+
+.slot-name {
+  font-size: 16px;
+  font-weight: bold;
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.room-info {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.room-label {
+  display: block;
+  font-size: 14px;
+  color: #aaa;
+  margin-bottom: 5px;
+}
+
+.room-code {
+  font-size: 48px;
+  font-weight: bold;
+  color: white;
+  letter-spacing: 5px;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+.chat-header {
+  padding: 15px;
+  background: #333;
+  color: white;
+  font-weight: bold;
+  text-align: center;
+}
+
+.chat-messages {
+  flex: 1;
+  padding: 15px;
+  overflow-y: auto;
+  color: #ddd;
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chat-input-area {
+  padding: 10px;
+  display: flex;
+  gap: 5px;
+  background: #222;
+}
+
+.input-field {
+  padding: 10px;
+  font-size: 16px;
+  border-radius: 5px;
+  border: 1px solid #555;
+  background: #333;
+  color: white;
+}
+
+.btn-send {
+  padding: 0 15px;
+  background: #444;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.btn-send:hover {
+  background: #555;
+}
+
+.slot-controls {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.btn-mini {
+  background: none;
+  border: none;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 5px 10px;
+}
+.btn-mini:hover {
+  color: #d4af37;
+}
+
+/* 캐릭터 선택 버튼 */
+.btn-select {
+  width: 100%;
+  padding: 8px 0;
+  margin-top: 10px;
+  background-color: #444;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+}
+.btn-select:hover {
+  background-color: #d4af37;
+  color: black;
+}
+.btn-select.selected {
+  background-color: #2e7d32;
+  cursor: default;
+}
+.btn-select.disabled {
+  background-color: #222;
+  color: #555;
+  cursor: not-allowed;
+}
+
+/* 카운트다운 스타일 */
+#countdown-overlay {
+  font-size: 120px;
+  font-weight: 900;
+  color: #d4af37;
+  text-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+  animation: pulseCount 1s infinite;
+}
+
+@keyframes pulseCount {
+  0% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 0;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0;
+  }
 }

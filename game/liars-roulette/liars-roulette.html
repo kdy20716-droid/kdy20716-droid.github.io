@@ -18,6 +18,9 @@
         <div id="start-screen" class="screen">
           <h1 class="title">Liars-Roulette</h1>
           <button id="btn-start" class="btn primary">게임 시작</button>
+          <button id="btn-multi" class="btn success" style="margin-top: 20px">
+            멀티플레이 (Beta)
+          </button>
           <button id="btn-howto" class="btn secondary" style="margin-top: 20px">
             게임 방법
           </button>
@@ -28,6 +31,102 @@
           >
             뒤로 가기
           </button>
+        </div>
+
+        <!-- 멀티플레이 로비 -->
+        <div id="lobby-screen" class="screen hidden">
+          <div class="lobby-container">
+            <!-- 왼쪽: 캐릭터 선택 및 방 정보 -->
+            <div class="lobby-main">
+              <h2 class="lobby-title">대기실</h2>
+
+              <!-- 4인 플레이어 슬롯 영역 -->
+              <div id="lobby-player-slots" class="player-slots-container">
+                <!-- JS로 동적 생성됨 -->
+              </div>
+
+              <!-- 방 번호 표시 -->
+              <div class="room-info">
+                <span class="room-label">ROOM CODE</span>
+                <span id="display-room-code" class="room-code">----</span>
+              </div>
+
+              <div class="lobby-buttons">
+                <button id="btn-game-start-multi" class="btn primary" disabled>
+                  게임 시작
+                </button>
+                <button id="btn-back-lobby" class="btn danger">나가기</button>
+              </div>
+            </div>
+
+            <!-- 오른쪽: 채팅창 -->
+            <div class="lobby-chat">
+              <div class="chat-header">Chat</div>
+              <div id="chat-messages" class="chat-messages">
+                <!-- 메시지가 여기에 추가됨 -->
+              </div>
+              <div class="chat-input-area">
+                <input
+                  type="text"
+                  id="chat-input"
+                  placeholder="메시지 입력..."
+                  maxlength="50"
+                />
+                <button id="btn-send-chat" class="btn-send">전송</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 방 참가 코드 입력 화면 (초기 화면에서 멀티플레이 눌렀을 때) -->
+        <div id="multi-menu-screen" class="screen hidden">
+          <h2 style="color: white; margin-bottom: 30px">멀티플레이</h2>
+          <div style="display: flex; gap: 10px; margin-bottom: 20px">
+            <input
+              type="text"
+              id="room-code-input"
+              placeholder="방 코드 입력"
+              class="input-field"
+            />
+            <button id="btn-join-check" class="btn primary">참가</button>
+          </div>
+          <button id="btn-create-room" class="btn secondary">방 만들기</button>
+          <button
+            id="btn-back-menu"
+            class="btn danger"
+            style="margin-top: 20px"
+          >
+            뒤로 가기
+          </button>
+          <p
+            id="multi-status"
+            style="color: #ccc; margin-top: 20px; font-size: 16px"
+          ></p>
+        </div>
+
+        <!-- 닉네임 입력 모달 -->
+        <div id="join-modal" class="modal hidden">
+          <div
+            class="modal-content"
+            style="border-color: #444; background: #222; color: white"
+          >
+            <h3 style="color: white">닉네임 입력</h3>
+            <input
+              type="text"
+              id="nickname-input"
+              placeholder="이름을 입력하세요"
+              class="input-field"
+              style="margin: 20px 0; width: 80%"
+            />
+            <div style="display: flex; gap: 10px; justify-content: center">
+              <button id="btn-join-confirm" class="btn primary small">
+                입장
+              </button>
+              <button id="btn-join-cancel" class="btn danger small">
+                취소
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- 전체 화면 버튼 -->
@@ -172,6 +271,19 @@
 
         <!-- 메시지 오버레이 -->
         <div id="message-overlay" class="hidden"></div>
+
+        <!-- 카운트다운 오버레이 -->
+        <div
+          id="countdown-overlay"
+          class="hidden"
+          style="
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 500;
+          "
+        ></div>
       </div>
 
       <!-- 말풍선 UI -->
@@ -202,7 +314,7 @@
       >
         <!-- 크기 조절: 부모 div의 width(%)를 따라갑니다 -->
         <img
-          src="./pokercard/breast.png"
+          src="./pokercard/EX.png"
           alt="Hidden Reward"
           style="width: 100%; height: auto; display: block"
         />

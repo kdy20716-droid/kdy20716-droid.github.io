@@ -152,7 +152,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (modalTitle) modalTitle.innerText = title;
       if (modalText) modalText.innerText = desc;
 
-      if (url) {
+      if (url && url !== "#") {
         if (modalLink) {
           modalLink.href = url;
           modalLink.style.display = "inline-block";
@@ -261,9 +261,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const smoothScrollLinks = document.querySelectorAll('a[href^="#"]');
   smoothScrollLinks.forEach((link) => {
     link.addEventListener("click", (e) => {
-      e.preventDefault();
       const targetId = link.getAttribute("href");
+
+      // href가 #으로 시작하지 않으면(외부 링크, 게임 페이지 등) 기본 동작 허용
+      if (!targetId || !targetId.startsWith("#")) return;
+
+      e.preventDefault();
       if (targetId === "#") return;
+
       const targetSection = document.querySelector(targetId);
       if (!targetSection) return;
 
