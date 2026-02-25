@@ -21,7 +21,7 @@ body {
 #game-container {
   position: relative;
   width: 1024px;
-  height: 900px;
+  height: 1000px;
   transform-origin: center center;
   flex-shrink: 0; /* 화면이 작아져도 레이아웃이 깨지지 않도록 고정 */
 }

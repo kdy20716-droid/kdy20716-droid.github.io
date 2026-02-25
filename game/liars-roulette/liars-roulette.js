@@ -19,13 +19,17 @@ const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
 // 캔버스 크기 설정
-canvas.width = 1024;
-canvas.height = 900;
+canvas.width = 1300;
+canvas.height = 1000;
 
 // --- 멀티플레이 상태 변수 (초기화 위치 이동) ---
 const lobbyScreen = document.getElementById("lobby-screen");
 const countdownOverlay = document.getElementById("countdown-overlay");
 let isMultiplayerGame = false;
+
+let cameraOffsetY = 0;
+let myCharScale = 1.0;
+let gameScale = 1.0;
 
 // 먼지 입자 초기화
 const particles = [];
@@ -68,6 +72,8 @@ const players = [
     hand: [],
     spacing: 15,
     isDead: false,
+    animScale: 1.0,
+    hiddenAnim: { active: false, phase: "IDLE", progress: 0, timer: 0 },
   },
   {
     name: "North",
@@ -78,6 +84,8 @@ const players = [
     hand: [],
     spacing: 15,
     isDead: false,
+    animScale: 1.0,
+    hiddenAnim: { active: false, phase: "IDLE", progress: 0, timer: 0 },
   },
   {
     name: "West",
@@ -88,6 +96,8 @@ const players = [
     hand: [],
     spacing: 15,
     isDead: false,
+    animScale: 1.0,
+    hiddenAnim: { active: false, phase: "IDLE", progress: 0, timer: 0 },
   },
   {
     name: "South",
@@ -98,6 +108,8 @@ const players = [
     hand: [],
     spacing: 15,
     isDead: false,
+    animScale: 1.0,
+    hiddenAnim: { active: false, phase: "IDLE", progress: 0, timer: 0 },
   },
 ];
 
@@ -695,6 +707,9 @@ function draw() {
 
   // 8. 데빌 카드 등장 애니메이션
   updateAndDrawDevilCardAnim();
+
+  // 9. 히든 리워드 애니메이션 (Shift + H)
+  updateAndDrawHiddenRewardAnim();
 
   requestAnimationFrame(draw);
 }
@@ -1298,10 +1313,11 @@ function drawSitdownCharacters() {
         // 이미지가 정방향(머리 위, 발 아래)이라면, 180도 돌려야 발이 테이블 쪽으로 감
         ctx.rotate(player.angle + Math.PI);
 
-        const size = 270; // 크기 1.5배 (180 -> 270)
-        ctx.translate(0, -80); // 테이블에서 더 멀리 이동
-        ctx.drawImage(img, -size / 2, -size / 2, size, size);
-        const targetHeight = 350; // 크기 키움 (270 -> 350)
+        // 히든 리워드 애니메이션 스케일 적용 (개별 플레이어)
+        const scale = player.animScale || 1.0;
+        ctx.scale(scale, scale);
+
+        const targetHeight = 350; // 크기 키움
         const ratio = img.naturalWidth / img.naturalHeight;
         const targetWidth = targetHeight * ratio; // 원본 비율 유지
 
@@ -1318,6 +1334,60 @@ function drawSitdownCharacters() {
       }
     }
   });
+}
+
+// 히든 리워드 애니메이션 업데이트 및 그리기
+function updateAndDrawHiddenRewardAnim() {
+  let anyActive = false;
+
+  players.forEach((player, index) => {
+    const anim = player.hiddenAnim;
+    if (!anim.active) return;
+
+    anyActive = true;
+
+    if (anim.phase === "DOWN") {
+      anim.progress += 0.05;
+      if (anim.progress >= 1) {
+        anim.progress = 1;
+        anim.phase = "STAY";
+        anim.timer = 60; // 1초 유지
+      }
+    } else if (anim.phase === "STAY") {
+      anim.timer--;
+      if (anim.timer <= 0) {
+        anim.phase = "UP";
+      }
+    } else if (anim.phase === "UP") {
+      anim.progress -= 0.05;
+      if (anim.progress <= 0) {
+        anim.progress = 0;
+        anim.active = false;
+        anim.phase = "IDLE";
+      }
+    }
+
+    // Easing
+    const t = anim.progress;
+    const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+
+    // 캐릭터 확대 (1.0 -> 1.5)
+    player.animScale = 1 + 0.5 * ease;
+
+    // 카메라 이동 (내 캐릭터인 경우에만)
+    if (index === 3) {
+      // South (Me)
+      cameraOffsetY = -300 * ease;
+    }
+  });
+
+  // 컨테이너 Transform 업데이트 (카메라 이동 적용)
+  const container = document.getElementById("game-container");
+  if (container) {
+    container.style.transform = `translateY(${cameraOffsetY}px) scale(${gameScale})`;
+  }
+
+  if (!anyActive && cameraOffsetY !== 0) cameraOffsetY = 0;
 }
 
 // 마우스 클릭 이벤트 처리
@@ -2446,6 +2516,17 @@ if (btnEmoji && emojiPicker) {
   });
 }
 
+// 히든 리워드 트리거 (Shift + H)
+window.addEventListener("keydown", (e) => {
+  if (isMultiplayerGame && e.shiftKey && (e.key === "H" || e.key === "h")) {
+    // 내 캐릭터(South, index 3)가 애니메이션 중이 아니면 실행
+    if (!players[3].hiddenAnim.active) {
+      // 서버로 액션 전송 (나를 포함한 모두에게 알림)
+      sendGameAction("HIDDEN_REWARD", {}, myPlayerIndex);
+    }
+  }
+});
+
 // --- 뒤로 가기 버튼 이벤트 ---
 document.getElementById("btn-back-start").addEventListener("click", () => {
   window.location.href = "../game-list.html";
@@ -2470,7 +2551,7 @@ function resizeGame() {
 
   // [수정] 고정 해상도 설정 (로비 크기 1300px에 맞춤)
   const baseWidth = 1300;
-  const baseHeight = 900;
+  const baseHeight = 1000;
 
   // 여백 확보 (상하좌우 100px)
   const margin = 100;
@@ -2484,10 +2565,10 @@ function resizeGame() {
   container.style.height = `${baseHeight}px`;
 
   // 2. 가용 공간에 맞춰 비율 유지하며 스케일링 (Fit)
-  const scale = Math.min(availW / baseWidth, availH / baseHeight);
+  gameScale = Math.min(availW / baseWidth, availH / baseHeight);
 
-  container.style.transform = `scale(${scale})`;
-  container.style.setProperty("--game-scale", scale);
+  container.style.transform = `translateY(${cameraOffsetY}px) scale(${gameScale})`;
+  container.style.setProperty("--game-scale", gameScale);
 
   // 4. 게임 내부 레이아웃 재정렬 (중앙 정렬 유지)
   updateLayout();
@@ -2851,6 +2932,16 @@ function handleRemoteAction(action) {
         gameState.turnIndex = localIndex; // 강제 동기화
       }
       challenge();
+      break;
+
+    case "HIDDEN_REWARD":
+      // 해당 플레이어의 애니메이션 시작
+      if (players[localIndex]) {
+        const anim = players[localIndex].hiddenAnim;
+        anim.active = true;
+        anim.phase = "DOWN";
+        anim.progress = 0;
+      }
       break;
 
     // 룰렛 결과 등 추가 가능
