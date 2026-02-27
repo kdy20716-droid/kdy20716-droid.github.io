@@ -1,4 +1,3 @@
-@ -1,3607 +1,3642 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
