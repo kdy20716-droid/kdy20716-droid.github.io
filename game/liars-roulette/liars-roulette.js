@@ -3609,6 +3609,10 @@ function startMultiplayerSequence(roomPlayers) {
 
   const mapping = [3, 2, 1, 0]; // East, North, West, South 순서에 맞는 오프셋
 
+  // 카운트다운 동안 로비 화면이 보이도록 보장하고, 게임 HUD는 숨김
+  lobbyScreen.classList.remove("hidden");
+  document.getElementById("game-hud").classList.add("hidden");
+
   for (let i = 0; i < 4; i++) {
     const roomPlayerIndex = (baseIndex + mapping[i]) % 4;
     const roomPlayer = roomPlayers[roomPlayerIndex];
@@ -3634,6 +3638,8 @@ function startMultiplayerSequence(roomPlayers) {
       countdownOverlay.textContent = "START!";
       playSound("drama");
       setTimeout(() => {
+        lobbyScreen.classList.add("hidden"); // Hide lobby after countdown
+        document.getElementById("game-hud").classList.remove("hidden"); // Show HUD after countdown
         countdownOverlay.classList.add("hidden");
         startRound(); // 게임 라운드 시작
       }, 1000);

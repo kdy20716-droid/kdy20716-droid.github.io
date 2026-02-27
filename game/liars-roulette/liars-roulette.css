@@ -37,13 +37,14 @@ canvas {
   position: absolute;
   background: white;
   border: 2px solid #333;
-  border-radius: 8px;
-  padding: 8px 12px; /* [크기 조절] 내부 여백: 첫번째 숫자(상하), 두번째 숫자(좌우)를 늘리면 말풍선이 커집니다 */
-  font-family: sans-serif;
+  border-radius: 10px; /* 모서리 둥글기 약간 증가 */
+  padding: 6px 10px; /* [크기 조절] 내부 여백: 첫번째 숫자(상하), 두번째 숫자(좌우)를 늘리면 말풍선이 커집니다 */
+  font-family: "Noto Sans KR", sans-serif; /* 폰트 변경 */
   font-weight: bold;
-  font-size: 12px; /* [크기 조절] 글자 크기 */
+  font-size: 14px; /* [크기 조절] 글자 크기 */
   color: black;
   opacity: 0;
+  transform: translate(-50%, -50%); /* 중앙 정렬을 위해 추가 */
   transition: opacity 0.3s ease;
   pointer-events: none;
   z-index: 10;
@@ -57,38 +58,23 @@ canvas {
 
 /* 이모티콘 전용 스타일 (크게) */
 .speech-bubble.emoji-mode {
-  font-size: 32px !important;
-  padding: 4px 8px !important;
+  font-size: 36px !important; /* 이모티콘 크기 더 키움 */
+  padding: 8px 12px !important; /* 이모티콘에 맞춰 패딩 조정 */
   border-radius: 12px;
 }
 
 /* 플레이어별 말풍선 위치 */
 #bubble-0 {
-  top: 50%;
-  right: 20px;
-  transform: translateY(-50%);
-  margin: 100px;
 } /* East */
 #bubble-1 {
-  top: 80px;
-  left: 50%;
-  transform: translateX(-50%);
 } /* North */
 #bubble-2 {
-  top: 50%;
-  left: 20px;
-  transform: translateY(-50%);
 } /* West */
 #bubble-3 {
-  bottom: 100px;
-  left: 50%;
-  transform: translateX(-50%);
-  /* 내 말풍선(South) 전용 크기 조절 */
-  padding: -100px 10px; /* [조절] 상하(4px), 좌우(10px) 여백 - 숫자를 줄이면 더 작아집니다 */
-  font-size: 11px; /* [조절] 글자 크기 */
-  line-height: 1.2; /* 줄 간격 조절 */
-  margin-bottom: 260px;
 } /* South */
+
+/* 기존에 개별적으로 적용되던 위치 및 변형 속성은 JS에서 처리하거나,
+   .speech-bubble의 transform: translate(-50%, -50%)으로 일관되게 처리 */
 
 /* UI 레이어 스타일 */
 #ui-layer {
@@ -399,7 +385,7 @@ body.fade-out {
 /* --- 멀티플레이 로비 스타일 --- */
 .lobby-container {
   display: flex;
-  width: 1300px;
+  width: 80%; /* 부모 요소(lobby-screen)의 너비에 맞게 조정 */
   height: 600px;
   background: rgba(0, 0, 0, 0.8);
   border: 2px solid #555;
@@ -437,11 +423,46 @@ body.fade-out {
   border: 1px solid #555;
   border-radius: 10px;
   padding: 10px;
-  width: 160px;
+  width: 150px; /* 캔버스 최소 너비에서도 잘리지 않도록 너비 조정 */
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
+}
+
+.btn-select {
+  padding: 8px 15px;
+  font-size: 16px;
+  font-weight: bold;
+  border: 2px solid #616161; /* secondary 버튼과 유사한 테두리 */
+  border-radius: 8px;
+  cursor: pointer;
+  transition:
+    transform 0.1s,
+    background-color 0.2s,
+    border-color 0.2s;
+  pointer-events: auto;
+  white-space: nowrap;
+  background-color: #424242; /* secondary 버튼과 유사한 배경 */
+  color: white;
+  width: 100%; /* 슬롯 너비에 맞춤 */
+  box-sizing: border-box; /* 패딩, 보더 포함 너비 계산 */
+}
+
+.btn-select:hover:not(:disabled) {
+  background-color: #616161;
+}
+
+.btn-select.selected {
+  border-color: #d4af37; /* 황금색 테두리로 선택 강조 */
+  background-color: #555; /* 선택 시 약간 더 밝은 배경 */
+}
+.btn-select.disabled,
+.btn-select[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: #333; /* 비활성화 시 더 어두운 배경 */
+  border-color: #444;
 }
 
 .slot-header {
