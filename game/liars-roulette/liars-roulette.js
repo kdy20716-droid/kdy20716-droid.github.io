@@ -110,6 +110,7 @@ function createDeck() {
 }
 
 let cardTypes = [];
+let isMultiplayerGame = false;
 
 // 카드 이미지 로드 (HTML에 있는 img 태그 가져오기)
 const cardImages = {};
@@ -123,6 +124,25 @@ const imgIds = {
   REVOLVER: "img-revolver",
   FIST: "img-fist",
 };
+
+// Import MultiplayerGameManager
+import MultiplayerGameManager from "./multi-play.js";
+// 플레이어 앉아있는 캐릭터 이미지 로드
+const sitdownCharImages = [
+  "sitdown_male.png",
+  "sitdown_female.png",
+  "sitdown_black_male.png",
+  "sitdown_asian_female.png",
+];
+
+const sitdownImages = {};
+sitdownCharImages.forEach((filename) => {
+  const img = new Image();
+  img.src = `./character/${filename}`; // character 폴더에 있다고 가정
+  sitdownImages[filename] = img;
+  img.onload = () => console.log(`Sitdown image loaded: ${filename}`);
+  img.onerror = () => console.warn(`Sitdown image failed to load: ${filename}`);
+});
 
 for (const [key, id] of Object.entries(imgIds)) {
   const img = document.getElementById(id);
@@ -529,6 +549,7 @@ const gameState = {
   activeTimeouts: [], // 활성화된 타임아웃 ID 관리
 };
 
+let multiplayerGameManager = null; // Multiplayer game manager instance
 // 타임아웃 관리 헬퍼 함수 (게임 리셋 시 취소 가능하도록)
 function addTimeout(callback, delay) {
   const id = setTimeout(() => {
@@ -546,6 +567,10 @@ function clearAllTimeouts() {
 }
 
 function draw() {
+  // 멀티플레이 게임 중일 때는 multiplayerGameManager가 게임 상태를 업데이트하므로,
+  // dealingState.isDealing은 로컬 딜링 애니메이션 제어용으로만 사용
+  // gameState.phase는 multiplayerGameManager에서 동기화된 값을 사용
+
   // 카드 배분 로직 업데이트
   if (dealingState.isDealing && gameState.phase !== "START") {
     updateDealing();
@@ -817,6 +842,46 @@ function draw() {
   ctx.lineWidth = 1;
 
   // 5. 카드 덱 그리기
+
+  // 5.1 플레이어 앉아있는 이미지 그리기 (멀티플레이 시)
+  if (isMultiplayerGame) {
+    players.forEach((player) => {
+      if (player.isDead) return; // 죽은 플레이어는 이미지 표시 안 함
+
+      let sitdownImgKey;
+      let imgWidth = 180; // 기본 너비
+      let imgHeight = 180; // 기본 높이
+
+      // 플레이어 위치에 따라 적절한 이미지 키와 크기 설정
+      if (player.name === "East" || player.name === "West") {
+        imgWidth = 150; // 동서 플레이어는 세로로 긴 이미지
+        imgHeight = 200;
+      } else if (player.name === "North" || player.name === "South") {
+      } else if (player.name === "North") {
+        sitdownImgKey = "SITDOWN_NORTH";
+        imgWidth = 200; // 남북 플레이어는 가로로 긴 이미지
+        imgHeight = 150;
+      } else if (player.name === "West") {
+        sitdownImgKey = "SITDOWN_WEST";
+        imgWidth = 150;
+        imgHeight = 200;
+      } else if (player.name === "South") {
+        sitdownImgKey = "SITDOWN_SOUTH";
+        imgWidth = 200;
+        imgHeight = 150;
+      }
+      const sitdownImg = sitdownImages[sitdownCharImages[player.charIndex]]; // Use player's chosen charIndex
+      if (sitdownImg && sitdownImg.complete && sitdownImg.naturalWidth > 0) {
+        ctx.drawImage(
+          sitdownImg,
+          player.x - imgWidth / 2,
+          player.y - imgHeight / 2,
+          imgWidth,
+          imgHeight,
+        );
+      }
+    });
+  }
   // 딜링 중이거나 이동 중인 카드가 있을 때만 그림 (끝나면 사라짐)
   if (dealingState.isDealing || dealingState.movingCard) {
     drawCardDeck(centerX, tableY - 40);
@@ -1000,8 +1065,15 @@ function updateDealing() {
         btnPlay.disabled = true;
       }
 
-      // 딜링이 끝난 후 AI 턴이면 행동 시작
-      if (gameState.turnIndex !== 3) {
+      // 딜링이 끝난 후 AI 턴이거나 멀티플레이에서 내 턴이 아니면 AI 로직 시작
+      // 멀티플레이에서는 호스트만 AI 턴을 처리
+      if (
+        isMultiplayerGame &&
+        multiplayerGameManager &&
+        multiplayerGameManager.isMyTurn &&
+        players[gameState.turnIndex].isAI
+      ) {
+        // Host handles AI turns
         processAiTurn();
       }
     }
@@ -1745,7 +1817,7 @@ canvas.addEventListener("click", (e) => {
   if (gameState.phase !== "PLAYING") return;
   if (gameState.turnIndex !== 3) return; // 플레이어 턴이 아니면 무시
 
-  const rect = canvas.getBoundingClientRect();
+  const rect = canvas.getBoundingClientRect(); // This is for local click detection
   // 캔버스 스케일링 비율 계산 (화면에 보이는 크기 vs 실제 캔버스 크기)
   const scaleX = canvas.width / rect.width;
   const scaleY = canvas.height / rect.height;
@@ -1901,6 +1973,10 @@ function submitCards(playerIndex, cardIndices) {
 }
 
 function nextTurn() {
+  // In multiplayer, next turn is determined by the manager based on Firestore state
+  if (isMultiplayerGame && multiplayerGameManager) {
+    return;
+  }
   let nextIndex = gameState.turnIndex;
   let loopCount = 0;
   do {
@@ -1930,7 +2006,7 @@ function nextTurn() {
 
 function processAiTurn() {
   const aiIndex = gameState.turnIndex;
-  const aiPlayer = players[aiIndex];
+  const aiPlayer = players[aiIndex]; // This is the local player object
 
   // 고민하는 시간 랜덤 설정 (1초 ~ 3초)
   // 고민하는 시간 랜덤 설정 (2초 ~ 4초) - 템포 조절
@@ -1962,7 +2038,11 @@ function processAiTurn() {
         showBubble(
           aiIndex,
           phrases[Math.floor(Math.random() * phrases.length)],
-        );
+        ); // This is a local UI effect
+        if (isMultiplayerGame && multiplayerGameManager) {
+          // If multiplayer, AI challenge should update Firestore
+          multiplayerGameManager.challenge(aiIndex);
+        }
         console.log(`${aiPlayer.name} challenges!`);
         challenge();
         return;
@@ -2175,6 +2255,12 @@ function processRouletteQueue() {
 
 // 단일 대상 룰렛 (기존 함수 유지)
 function triggerRussianRoulette(victim, onComplete = null) {
+  // In multiplayer, this function is called by the manager to trigger local animation
+  // The actual roulette outcome is determined and updated in Firestore by the manager
+  if (isMultiplayerGame && multiplayerGameManager) {
+    // In multiplayer, this function is called by the manager to trigger local animation
+    // The actual roulette outcome is determined and updated in Firestore by the manager
+  }
   gameState.phase = "ROULETTE";
   animations.length = 0; // 진행 중인 카드 애니메이션 제거
   playBGM("roulette"); // 룰렛 BGM으로 전환
@@ -2330,6 +2416,12 @@ function triggerRussianRoulette(victim, onComplete = null) {
 
 // 다수 대상 동시 룰렛 (데빌 카드용)
 function triggerSimultaneousRoulette(victims) {
+  // In multiplayer, this function is called by the manager to trigger local animation
+  // The actual roulette outcome is determined and updated in Firestore by the manager
+  if (isMultiplayerGame && multiplayerGameManager) {
+    // In multiplayer, this function is called by the manager to trigger local animation
+    // The actual roulette outcome is determined and updated in Firestore by the manager
+  }
   gameState.phase = "ROULETTE";
   animations.length = 0;
   playBGM("roulette");
@@ -2505,7 +2597,7 @@ function startRound() {
   }
 
   // 덱 재생성 (20% 확률로 데빌 카드 포함)
-  cardTypes = createDeck();
+  cardTypes = createDeck(); // Local deck for dealing animation
 
   // 데빌 카드 존재 여부 확인 및 알림
   let hasDevil = false;
@@ -2546,7 +2638,7 @@ function startRound() {
   dealingState.totalCards = survivors.length * 5;
 
   // 새 랭크 설정
-  const ranks = ["K", "Q", "A"];
+  const ranks = ["K", "Q", "A"]; // Local rank for display
   gameState.currentRank = ranks[Math.floor(Math.random() * ranks.length)];
   updateTargetDisplay();
 
@@ -2646,6 +2738,13 @@ function updateGameStatus() {
   }
 }
 
+// Helper for MultiplayerGameManager to return to lobby
+function returnToLobby() {
+  lobbyScreen.classList.add("hidden");
+  multiMenuScreen.classList.remove("hidden");
+  document.getElementById("start-screen").classList.remove("hidden");
+}
+
 function showGameOver(isWin) {
   const screen = document.getElementById("game-over-screen");
   const title = document.getElementById("game-over-title");
@@ -2688,7 +2787,10 @@ document.getElementById("btn-start").addEventListener("click", () => {
   }
 
   playSound("select");
-  startRound(); // 게임 시작 시에도 라운드 초기화 로직(데빌 카드 체크 등)을 실행하도록 변경
+  // For single player, start a round directly
+  if (!isMultiplayerGame) {
+    startRound();
+  }
 });
 
 // 게임 방법 버튼 이벤트
@@ -3095,7 +3197,7 @@ let myNickname = "Player";
 let unsubscribeChat = null;
 let unsubscribeRoom = null;
 let isCreatingRoom = false;
-let isMultiplayerGame = false;
+let amIHost = false; // Track if I am the host
 
 // 멀티플레이 버튼 클릭 시
 if (btnMulti) {
@@ -3190,6 +3292,7 @@ if (btnGameStartMulti) {
     if (!db || !currentRoomId) return;
 
     try {
+      // Host is the only one who can start the game
       const roomRef = window.fs.doc(db, "liar_rooms", currentRoomId);
       const roomSnap = await window.fs.getDoc(roomRef);
       const roomData = roomSnap.data();
@@ -3284,6 +3387,7 @@ if (btnJoinConfirm) {
         const initialPlayer = {
           nickname: myNickname,
           charIndex: 0,
+          isAI: false,
           isHost: true,
         };
 
@@ -3298,6 +3402,7 @@ if (btnJoinConfirm) {
         lobbyScreen.classList.remove("hidden");
         displayRoomCode.textContent = roomCode;
         addSystemMessage("방이 생성되었습니다.");
+        amIHost = true; // Set host status
 
         setupChatListener(roomCode);
         setupRoomListener(roomCode);
@@ -3331,6 +3436,7 @@ if (btnJoinConfirm) {
         const newPlayer = {
           nickname: myNickname,
           charIndex: newCharIndex,
+          isAI: false,
           isHost: false,
         };
 
@@ -3342,6 +3448,7 @@ if (btnJoinConfirm) {
         // 입장 메시지 전송
         await sendChatMessage(`${myNickname}님이 입장하셨습니다.`, true);
 
+        amIHost = false; // Not the host
         // 채팅 리스너 연결
         setupChatListener(currentRoomId);
 
@@ -3443,10 +3550,11 @@ const charImages = [
 ];
 
 const charVideos = [
-  "male.mp4",
-  "female.mp4",
-  "black_male.mp4",
-  "asian_female.mp4",
+  // These are the videos for the lobby character selection
+  "male.mp4", // 0
+  "female.mp4", // 1
+  "black_male.mp4", // 2
+  "asian_female.mp4", // 3
 ];
 const charNames = ["Male", "Female", "Black Male", "Asian Female"];
 
@@ -3457,7 +3565,8 @@ function setupRoomListener(roomId) {
     window.fs.doc(db, "liar_rooms", roomId),
     (doc) => {
       const data = doc.data();
-      if (data && data.players) {
+      if (data && data.players && data.status === "waiting") {
+        // Only render lobby slots if still in waiting phase
         renderLobbySlots(data.players);
 
         // 게임 시작 신호 감지
@@ -3476,7 +3585,8 @@ function renderLobbySlots(playersData) {
   container.innerHTML = ""; // 초기화
 
   // 방장인지 확인하여 시작 버튼 활성화
-  const amIHost = playersData.some(
+  amIHost = playersData.some(
+    // Update global amIHost variable
     (p) => p.nickname === myNickname && p.isHost,
   );
   if (btnGameStartMulti) btnGameStartMulti.disabled = !amIHost;
@@ -3527,20 +3637,33 @@ function renderLobbySlots(playersData) {
 
     slot.innerHTML = `
       <div class="slot-char-area">
-        <img src="./character/${charImg}" alt="${charName}" class="${imgClass}" style="${showVideo ? "display:none" : "display:block"}">
-        <video src="./character/${charVideo}" class="char-video" style="${showVideo ? "display:block" : "display:none"}" muted playsinline></video>
+        <img src="./character/${charImg}" alt="${charName}" class="${imgClass}" style="display:block;"> <!-- Always show image initially -->
+        <video src="./character/${charVideo}" class="char-video" style="display:none;" muted playsinline></video> <!-- Hide video initially -->
       </div>
       <div class="slot-name" style="${isMe ? "color: #d4af37;" : ""}">${nameText}</div>
       ${btnHtml}
     `;
     container.appendChild(slot);
 
-    // 비디오 이벤트 리스너 등록
-    if (showVideo) {
+    // Video playback logic
+    if (isMe && !playedVideos.has(i)) {
+      // Only attempt to play video for my selected character if not played yet
       const videoEl = slot.querySelector("video");
       const imgEl = slot.querySelector("img");
       if (videoEl) {
-        videoEl.play().catch((e) => console.log("Video play failed:", e));
+        imgEl.style.display = "none"; // Hide image when attempting video play
+        videoEl.style.display = "block"; // Show video
+        videoEl
+          .play()
+          .then(() => {
+            // Video started successfully
+          })
+          .catch((e) => {
+            console.log("Video play failed, showing image instead:", e);
+            videoEl.style.display = "none"; // Hide video if play failed
+            imgEl.style.display = "block"; // Show image
+            playedVideos.add(i); // Mark as attempted, don't try again
+          });
         videoEl.onended = () => {
           videoEl.style.display = "none";
           imgEl.style.display = "block";
@@ -3581,6 +3704,75 @@ window.selectChar = async function (newCharIndex) {
   }
 };
 
+// Callbacks for MultiplayerGameManager to interact with liars-roulette.js
+const gameCallbacks = {
+  updatePlayers: (playersData) => {
+    // Update the global players array in liars-roulette.js
+    players.forEach((p, idx) => {
+      const data = playersData[idx];
+      if (data) {
+        p.displayName = data.nickname;
+        p.isAI = data.isAI;
+        p.isDead = data.isDead;
+        p.charIndex = data.charIndex;
+        p.hand = data.hand; // Update hand from Firestore
+      }
+    });
+  },
+  updateGameState: (data) => {
+    Object.assign(gameState, data); // Merge incoming game state
+  },
+  setMyTurn: (isMyTurn) => {
+    // Enable/disable player UI buttons
+    document.getElementById("btn-play").disabled = !isMyTurn;
+    document.getElementById("btn-liar").disabled = !isMyTurn;
+  },
+  renderGame: (gameData) => {
+    /* The draw loop already handles this */
+  },
+  showGameMessage: showMessage,
+  playSound: playSound,
+  isDealing: () => dealingState.isDealing,
+  startDealing: () => {
+    dealingState.isDealing = true;
+  }, // Trigger local dealing animation
+  canChallenge: canChallenge,
+  getRandomRank: getRandomRank,
+  createDeck: createDeck, // Host needs to create deck
+  triggerRoulette: (victimIndices) => {
+    // This will be called by manager to trigger local roulette animation
+    // The manager will then call handleRouletteCompletion after animation
+    // For now, let's just trigger the single roulette function
+    if (victimIndices.length === 1) {
+      triggerRussianRoulette(players[victimIndices[0]], () => {
+        multiplayerGameManager.handleRouletteCompletion(
+          victimIndices[0],
+          players[victimIndices[0]].isDead,
+        );
+      });
+    } else if (victimIndices.length > 1) {
+      triggerSimultaneousRoulette(
+        victimIndices.map((idx) => players[idx]),
+        () => {
+          // This needs more complex handling for multiple victims
+          // For simplicity, let's assume the manager will handle each completion
+          // Or, the manager will just update the state to "playing" or "game_over"
+        },
+      );
+    }
+  },
+  showGameOverScreen: (winnerNickname) => {
+    // Determine if I won or lost
+    const isWin = winnerNickname === myNickname;
+    showGameOver(isWin);
+  },
+  returnToLobby: () => {
+    lobbyScreen.classList.add("hidden");
+    multiMenuScreen.classList.remove("hidden");
+    document.getElementById("start-screen").classList.remove("hidden");
+  },
+};
+
 // 멀티플레이 시작 시퀀스 (카운트다운 -> 게임 진입)
 function startMultiplayerSequence(roomPlayers) {
   isMultiplayerGame = true;
@@ -3610,6 +3802,7 @@ function startMultiplayerSequence(roomPlayers) {
   const mapping = [3, 2, 1, 0]; // East, North, West, South 순서에 맞는 오프셋
 
   // 카운트다운 동안 로비 화면이 보이도록 보장하고, 게임 HUD는 숨김
+  // This is now handled by the manager's init and subsequent updates
   lobbyScreen.classList.remove("hidden");
   document.getElementById("game-hud").classList.add("hidden");
 
@@ -3619,6 +3812,13 @@ function startMultiplayerSequence(roomPlayers) {
 
     players[i].displayName = roomPlayer.nickname;
     players[i].isAI = !!roomPlayer.isAI;
+    players[i].charIndex = roomPlayer.charIndex; // 선택된 캐릭터 인덱스 저장
+    players[i].isDead = false; // Reset dead status for new game
+    players[i].hand = []; // Reset hand for new game
+  }
+
+  if (multiplayerGameManager) {
+    multiplayerGameManager.stop(); // Stop any previous game listener
     // 캐릭터 이미지 등 추가 속성 설정 가능
   }
 
@@ -3633,11 +3833,24 @@ function startMultiplayerSequence(roomPlayers) {
     if (count > 0) {
       countdownOverlay.textContent = count;
       playSound("select");
-    } else {
-      clearInterval(timer);
+    } else if (count === 0) {
       countdownOverlay.textContent = "START!";
       playSound("drama");
+    } else {
+      clearInterval(timer);
       setTimeout(() => {
+        // Initialize multiplayer game manager
+        multiplayerGameManager = new MultiplayerGameManager(
+          db,
+          currentRoomId,
+          myNickname,
+          gameCallbacks,
+        );
+        multiplayerGameManager.init();
+        if (amIHost) {
+          // Only host initializes the game state in Firestore
+          multiplayerGameManager.hostStartGame(roomPlayers);
+        }
         lobbyScreen.classList.add("hidden"); // Hide lobby after countdown
         document.getElementById("game-hud").classList.remove("hidden"); // Show HUD after countdown
         countdownOverlay.classList.add("hidden");
