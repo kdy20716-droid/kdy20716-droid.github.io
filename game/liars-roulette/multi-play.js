@@ -99,7 +99,7 @@ class MultiplayerGameManager {
 
   // --- Player Actions (called from liars-roulette.js UI) ---
 
-  async submitCards(playerIndex, cardIndices, cardTypes) {
+  async submitCards(playerIndex, cardIndices) {
     if (!this.isMyTurn) {
       this.gameCallbacks.showGameMessage("당신의 턴이 아닙니다.", 100);
       return;
@@ -146,7 +146,30 @@ class MultiplayerGameManager {
         gameData.lastPlayedBatch = {
           playerIndex,
           cards: cardsToPlay.map((c) => c.type),
-        }; // Store only types for simplicity
+        };
+
+        // Check for "last one playing cards" condition
+        // If the current player has no cards left, and all *other* living players also have no cards,
+        // then the current player is the loser (as they couldn't challenge).
+        if (newPlayerHand.length === 0) {
+          const livingPlayers = gameData.players.filter((p) => !p.isDead);
+          const othersWithCards = livingPlayers.filter(
+            (p, idx) => idx !== playerIndex && p.hand.length > 0,
+          );
+
+          if (othersWithCards.length === 0) {
+            // This player is the last one to play cards, and all others also have no cards.
+            // This player loses.
+            gameData.phase = "RESOLVING"; // Set phase to resolving to trigger roulette
+            gameData.loserIndex = playerIndex;
+            gameData.isLie = false; // Not a lie, just a consequence of the rule
+            gameData.challengerIndex = -1; // No challenger, just a game rule
+            gameData.submitterIndex = playerIndex; // The player who submitted is the loser
+            gameData.lastPlayedBatch = null; // Clear batch
+            transaction.update(this.roomRef, gameData);
+            return; // Exit transaction, roulette will be triggered by handleGameUpdate
+          }
+        }
 
         // Determine next turn
         let nextTurnIndex = gameData.turnIndex;

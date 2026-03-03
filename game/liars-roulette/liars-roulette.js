@@ -53,6 +53,7 @@ const players = [
     hand: [],
     spacing: 15,
     isDead: false,
+    isAI: true,
   },
   {
     name: "North",
@@ -63,6 +64,7 @@ const players = [
     hand: [],
     spacing: 15,
     isDead: false,
+    isAI: true,
   },
   {
     name: "West",
@@ -73,6 +75,7 @@ const players = [
     hand: [],
     spacing: 15,
     isDead: false,
+    isAI: true,
   },
   {
     name: "South",
@@ -83,34 +86,39 @@ const players = [
     hand: [],
     spacing: 15,
     isDead: false,
+    isAI: false,
   },
 ];
 
 // 카드 덱 생성 및 셔플
 function createDeck() {
-  const types = [
+  const baseTypes = [
     ...Array(6).fill("K"), // King
     ...Array(6).fill("Q"), // Queen
     ...Array(6).fill("A"), // Ace
   ];
 
+  let finalDeck;
+
+  // 20% 확률로 데빌 카드(2장), 아니면 조커 카드(2장) 추가 (동시 존재 불가)
   if (Math.random() < 0.2) {
-    types.push("D", "D");
-    console.log("Devil cards added to deck!");
+    finalDeck = [...baseTypes, "D", "D"];
+    console.log("Devil cards added to deck! (No Jokers)");
   } else {
-    types.push("J", "J");
-    console.log("Joker cards added to deck.");
+    finalDeck = [...baseTypes, "J", "J"];
+    console.log("Joker cards added to deck. (No Devils)");
   }
   // Fisher-Yates Shuffle
-  for (let i = types.length - 1; i > 0; i--) {
+  for (let i = finalDeck.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [types[i], types[j]] = [types[j], types[i]];
+    [finalDeck[i], finalDeck[j]] = [finalDeck[j], finalDeck[i]];
   }
-  return types;
+  return finalDeck;
 }
 
 let cardTypes = [];
 let isMultiplayerGame = false;
+let amIHost = false; // Track if I am the host
 
 // 카드 이미지 로드 (HTML에 있는 img 태그 가져오기)
 const cardImages = {};
@@ -1047,7 +1055,9 @@ function updateDealing() {
       playSound("deal");
     } else {
       dealingState.isDealing = false;
-      gameState.phase = "PLAYING";
+      if (!isMultiplayerGame) {
+        gameState.phase = "PLAYING";
+      }
 
       document.getElementById("game-hud").classList.remove("hidden");
       updateTargetDisplay();
@@ -1065,13 +1075,10 @@ function updateDealing() {
         btnPlay.disabled = true;
       }
 
-      // 딜링이 끝난 후 AI 턴이거나 멀티플레이에서 내 턴이 아니면 AI 로직 시작
-      // 멀티플레이에서는 호스트만 AI 턴을 처리
+      // 딜링이 끝난 후 AI 턴 처리
       if (
-        isMultiplayerGame &&
-        multiplayerGameManager &&
-        multiplayerGameManager.isMyTurn &&
-        players[gameState.turnIndex].isAI
+        (isMultiplayerGame && amIHost && players[gameState.turnIndex].isAI) ||
+        (!isMultiplayerGame && players[gameState.turnIndex].isAI)
       ) {
         // Host handles AI turns
         processAiTurn();
@@ -1817,7 +1824,7 @@ canvas.addEventListener("click", (e) => {
   if (gameState.phase !== "PLAYING") return;
   if (gameState.turnIndex !== 3) return; // 플레이어 턴이 아니면 무시
 
-  const rect = canvas.getBoundingClientRect(); // This is for local click detection
+  const rect = canvas.getBoundingClientRect();
   // 캔버스 스케일링 비율 계산 (화면에 보이는 크기 vs 실제 캔버스 크기)
   const scaleX = canvas.width / rect.width;
   const scaleY = canvas.height / rect.height;
@@ -1866,6 +1873,11 @@ canvas.addEventListener("click", (e) => {
 function submitCards(playerIndex, cardIndices) {
   const player = players[playerIndex];
   const cardsToPlay = [];
+
+  if (isMultiplayerGame && multiplayerGameManager) {
+    multiplayerGameManager.submitCards(playerIndex, cardIndices);
+    return;
+  }
 
   // 인덱스 역순 정렬 (splice 시 인덱스 밀림 방지)
   cardIndices.sort((a, b) => b - a);
@@ -2006,11 +2018,10 @@ function nextTurn() {
 
 function processAiTurn() {
   const aiIndex = gameState.turnIndex;
-  const aiPlayer = players[aiIndex]; // This is the local player object
-
+  const aiPlayer = players[aiIndex];
   // 고민하는 시간 랜덤 설정 (1초 ~ 3초)
   // 고민하는 시간 랜덤 설정 (2초 ~ 4초) - 템포 조절
-  const thinkingTime = Math.random() * 2000 + 2000;
+  const thinkingTime = Math.random() * 1000 + 1000;
 
   addTimeout(() => {
     // 상대방이 카드를 냈을 때 반응 (50% 확률)
@@ -2038,7 +2049,7 @@ function processAiTurn() {
         showBubble(
           aiIndex,
           phrases[Math.floor(Math.random() * phrases.length)],
-        ); // This is a local UI effect
+        );
         if (isMultiplayerGame && multiplayerGameManager) {
           // If multiplayer, AI challenge should update Firestore
           multiplayerGameManager.challenge(aiIndex);
@@ -2147,6 +2158,11 @@ function processAiTurn() {
 function challenge() {
   // 중복 클릭 방지: 이미 처리 중이거나 다른 단계라면 무시
   if (gameState.phase !== "PLAYING") return;
+
+  if (isMultiplayerGame && multiplayerGameManager) {
+    multiplayerGameManager.challenge(multiplayerGameManager.myPlayerIndex);
+    return;
+  }
 
   const btnLiar = document.getElementById("btn-liar");
   if (btnLiar) btnLiar.classList.add("hidden");
@@ -2572,6 +2588,8 @@ function checkWinCondition() {
 }
 
 function startRound() {
+  if (isMultiplayerGame) return;
+
   clearAllTimeouts(); // 게임 시작/재시작 시 예약된 모든 연출 취소
 
   // 팝업 타이머 초기화 (이전 팝업이 남아있다면 제거)
@@ -2638,7 +2656,7 @@ function startRound() {
   dealingState.totalCards = survivors.length * 5;
 
   // 새 랭크 설정
-  const ranks = ["K", "Q", "A"]; // Local rank for display
+  const ranks = ["K", "Q", "A"];
   gameState.currentRank = ranks[Math.floor(Math.random() * ranks.length)];
   updateTargetDisplay();
 
@@ -2738,6 +2756,51 @@ function updateGameStatus() {
   }
 }
 
+// New function to handle dealing animation setup for multiplayer
+function setupMultiplayerDealingAnimation() {
+  clearAllTimeouts();
+
+  document.getElementById("game-hud").classList.remove("hidden");
+  const btnLiar = document.getElementById("btn-liar");
+  if (btnLiar) btnLiar.classList.add("hidden");
+
+  if (popupTimeout) {
+    clearTimeout(popupTimeout);
+    popupTimeout = null;
+    const popup = document.getElementById("target-popup");
+    if (popup) popup.classList.add("hidden");
+  }
+
+  gameState.tableCards = [];
+  gameState.lastPlayedBatch = null;
+  gameState.lighting = "NORMAL";
+  gameState.turnCount = 0;
+  playBGM("main");
+
+  players.forEach((p) => {
+    p.hand = [];
+    p.spacing = 15;
+  });
+
+  dealingState.isDealing = true;
+  dealingState.dealtCount = 0;
+  dealingState.movingCard = null;
+
+  const survivors = players.filter((p) => !p.isDead);
+  dealingState.totalCards = survivors.length * 5;
+
+  if (gameState.deck && gameState.deck.includes("D")) {
+    playSound("devil");
+    gameState.lighting = "RED_FLASH";
+    gameState.lightingTimer = 120;
+    showDevilPopup();
+    triggerDevilCardAnimation();
+  }
+  gameState.phase = "DEALING";
+  updateTargetDisplay();
+  updateGameStatus();
+}
+
 // Helper for MultiplayerGameManager to return to lobby
 function returnToLobby() {
   lobbyScreen.classList.add("hidden");
@@ -2774,6 +2837,24 @@ function showGameOver(isWin) {
     title.textContent = "사망했습니다";
     title.style.color = "#c62828";
   }
+}
+
+function triggerChallengeResolutionUI(challengerIndex, submitterIndex, isLie) {
+  const challenger = players[challengerIndex];
+  const submitter = players[submitterIndex];
+
+  slamState.active = true;
+  slamState.playerIndex = challengerIndex;
+  slamState.progress = 0;
+
+  if (gameState.lastPlayedBatch && gameState.lastPlayedBatch.cards) {
+    gameState.lastPlayedBatch.cards.forEach((card) => {
+      card.faceUp = true;
+    });
+  }
+
+  playSound("drama");
+  showMessage(isLie ? "거짓말!" : "진실!", 100);
 }
 
 // --- DOM 이벤트 리스너 등록 ---
@@ -3197,7 +3278,6 @@ let myNickname = "Player";
 let unsubscribeChat = null;
 let unsubscribeRoom = null;
 let isCreatingRoom = false;
-let amIHost = false; // Track if I am the host
 
 // 멀티플레이 버튼 클릭 시
 if (btnMulti) {
@@ -3550,6 +3630,10 @@ const charImages = [
 ];
 
 const charVideos = [
+  "male.mp4",
+  "female.mp4",
+  "black_male.mp4",
+  "asian_female.mp4",
   // These are the videos for the lobby character selection
   "male.mp4", // 0
   "female.mp4", // 1
@@ -3637,32 +3721,31 @@ function renderLobbySlots(playersData) {
 
     slot.innerHTML = `
       <div class="slot-char-area">
-        <img src="./character/${charImg}" alt="${charName}" class="${imgClass}" style="display:block;"> <!-- Always show image initially -->
-        <video src="./character/${charVideo}" class="char-video" style="display:none;" muted playsinline></video> <!-- Hide video initially -->
+        <img src="./character/${charImg}" alt="${charName}" class="${imgClass}" style="display:block;">
+        <video src="./character/${charVideo}" class="char-video" style="display:none;" muted playsinline></video>
       </div>
       <div class="slot-name" style="${isMe ? "color: #d4af37;" : ""}">${nameText}</div>
       ${btnHtml}
     `;
     container.appendChild(slot);
 
-    // Video playback logic
-    if (isMe && !playedVideos.has(i)) {
-      // Only attempt to play video for my selected character if not played yet
+    // 비디오 이벤트 리스너 등록
+    if (isMe && showVideo) {
       const videoEl = slot.querySelector("video");
       const imgEl = slot.querySelector("img");
       if (videoEl) {
-        imgEl.style.display = "none"; // Hide image when attempting video play
-        videoEl.style.display = "block"; // Show video
+        imgEl.style.display = "none";
+        videoEl.style.display = "block";
         videoEl
           .play()
           .then(() => {
             // Video started successfully
           })
           .catch((e) => {
-            console.log("Video play failed, showing image instead:", e);
-            videoEl.style.display = "none"; // Hide video if play failed
-            imgEl.style.display = "block"; // Show image
-            playedVideos.add(i); // Mark as attempted, don't try again
+            console.log("비디오 재생 실패, 이미지로 대체:", e);
+            videoEl.style.display = "none";
+            imgEl.style.display = "block";
+            playedVideos.add(i);
           });
         videoEl.onended = () => {
           videoEl.style.display = "none";
@@ -3704,6 +3787,15 @@ window.selectChar = async function (newCharIndex) {
   }
 };
 
+function canChallenge() {
+  return gameState.lastPlayedBatch !== null;
+}
+
+function getRandomRank() {
+  const ranks = ["K", "Q", "A"];
+  return ranks[Math.floor(Math.random() * ranks.length)];
+}
+
 // Callbacks for MultiplayerGameManager to interact with liars-roulette.js
 const gameCallbacks = {
   updatePlayers: (playersData) => {
@@ -3734,7 +3826,7 @@ const gameCallbacks = {
   playSound: playSound,
   isDealing: () => dealingState.isDealing,
   startDealing: () => {
-    dealingState.isDealing = true;
+    setupMultiplayerDealingAnimation();
   }, // Trigger local dealing animation
   canChallenge: canChallenge,
   getRandomRank: getRandomRank,
@@ -3770,6 +3862,9 @@ const gameCallbacks = {
     lobbyScreen.classList.add("hidden");
     multiMenuScreen.classList.remove("hidden");
     document.getElementById("start-screen").classList.remove("hidden");
+  },
+  triggerChallengeResolutionUI: (challengerIndex, submitterIndex, isLie) => {
+    triggerChallengeResolutionUI(challengerIndex, submitterIndex, isLie);
   },
 };
 
@@ -3854,7 +3949,7 @@ function startMultiplayerSequence(roomPlayers) {
         lobbyScreen.classList.add("hidden"); // Hide lobby after countdown
         document.getElementById("game-hud").classList.remove("hidden"); // Show HUD after countdown
         countdownOverlay.classList.add("hidden");
-        startRound(); // 게임 라운드 시작
+        // startRound(); // Removed: Manager handles state
       }, 1000);
     }
   }, 1000);
