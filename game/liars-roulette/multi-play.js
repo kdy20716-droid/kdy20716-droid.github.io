@@ -81,6 +81,10 @@ class MultiplayerGameManager {
       } else if (gameData.phase === "PLAYING") {
         // Handle turn-based actions
         this.gameCallbacks.updateGameStatus(); // Update status text
+        // Check if it's an AI turn and I am the host
+        if (this.gameCallbacks.checkAiTurn) {
+          this.gameCallbacks.checkAiTurn();
+        }
       } else if (gameData.phase === "RESOLVING") {
         // Challenge resolution
         // This part might need more specific callbacks if liars-roulette.js needs to show specific animations
@@ -320,6 +324,55 @@ class MultiplayerGameManager {
     }
   }
 
+  // Handle multiple roulette completions (e.g. Devil card)
+  async handleBatchRouletteCompletion(results) {
+    try {
+      await runTransaction(this.db, async (transaction) => {
+        const roomDoc = await transaction.get(this.roomRef);
+        if (!roomDoc.exists()) throw "Room does not exist.";
+        const gameData = roomDoc.data();
+
+        if (gameData.phase !== "ROULETTE") return;
+
+        // Apply deaths
+        results.forEach((res) => {
+          if (res.isDead) {
+            gameData.players[res.index].isDead = true;
+          }
+        });
+
+        // Clear victims
+        gameData.victimIndices = [];
+        gameData.rouletteType = null;
+
+        // Check win condition
+        const survivors = gameData.players.filter((p) => !p.isDead);
+        if (survivors.length <= 1) {
+          gameData.status = "game_over";
+          gameData.winner =
+            survivors.length === 1 ? survivors[0].nickname : "No one";
+        } else {
+          // Start new round
+          gameData.phase = "DEALING";
+          gameData.tableCards = [];
+          gameData.lastPlayedBatch = null;
+          gameData.turnCount = 0;
+          gameData.currentRank = this.gameCallbacks.getRandomRank();
+          gameData.deck = this.gameCallbacks.createDeck();
+          // Reset hands for living players
+          gameData.players = gameData.players.map((p) => ({
+            ...p,
+            hand: p.isDead ? p.hand : [],
+          }));
+        }
+
+        transaction.update(this.roomRef, gameData);
+      });
+    } catch (e) {
+      console.error("Failed to process batch roulette completion:", e);
+    }
+  }
+
   // Host-only function to start the game (after lobby countdown)
   async hostStartGame(initialPlayers) {
     try {
@@ -409,6 +462,66 @@ class MultiplayerGameManager {
     } catch (e) {
       console.error("Failed to start new round by host:", e);
       this.gameCallbacks.showGameMessage("새 라운드 시작 실패: " + e, 200);
+    }
+  }
+
+  // Host-only function to update game phase (e.g. DEALING -> PLAYING)
+  async hostUpdatePhase(newPhase) {
+    try {
+      await updateDoc(this.roomRef, { phase: newPhase });
+    } catch (e) {
+      console.error("Failed to update phase:", e);
+    }
+  }
+
+  // Player leaving the game (switch to AI or remove)
+  async leaveGame() {
+    if (!this.roomId) return;
+    try {
+      await runTransaction(this.db, async (transaction) => {
+        const roomDoc = await transaction.get(this.roomRef);
+        if (!roomDoc.exists()) return;
+        const data = roomDoc.data();
+        const players = data.players || [];
+        const myIndex = players.findIndex(
+          (p) => p.nickname === this.myNickname,
+        );
+
+        if (myIndex === -1) return;
+
+        if (data.status === "playing") {
+          // Game in progress: Switch to AI
+          players[myIndex].isAI = true;
+
+          // If I was host, migrate host to the first human player
+          if (players[myIndex].isHost) {
+            players[myIndex].isHost = false;
+            const newHost = players.find(
+              (p) => !p.isAI && p.nickname !== this.myNickname,
+            );
+            if (newHost) {
+              newHost.isHost = true;
+            }
+          }
+          transaction.update(this.roomRef, { players: players });
+        } else {
+          // Waiting: Remove player
+          const newPlayers = players.filter(
+            (p) => p.nickname !== this.myNickname,
+          );
+          // If I was host, migrate
+          if (players[myIndex].isHost && newPlayers.length > 0) {
+            newPlayers[0].isHost = true;
+          }
+          if (newPlayers.length === 0) {
+            transaction.delete(this.roomRef); // Delete room if empty
+          } else {
+            transaction.update(this.roomRef, { players: newPlayers });
+          }
+        }
+      });
+    } catch (e) {
+      console.error("Error leaving game:", e);
     }
   }
 }

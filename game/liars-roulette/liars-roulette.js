@@ -54,6 +54,10 @@ const players = [
     spacing: 15,
     isDead: false,
     isAI: true,
+    revolver: {
+      currentChamber: 0,
+      bulletPosition: Math.floor(Math.random() * 6),
+    },
   },
   {
     name: "North",
@@ -65,6 +69,10 @@ const players = [
     spacing: 15,
     isDead: false,
     isAI: true,
+    revolver: {
+      currentChamber: 0,
+      bulletPosition: Math.floor(Math.random() * 6),
+    },
   },
   {
     name: "West",
@@ -76,6 +84,10 @@ const players = [
     spacing: 15,
     isDead: false,
     isAI: true,
+    revolver: {
+      currentChamber: 0,
+      bulletPosition: Math.floor(Math.random() * 6),
+    },
   },
   {
     name: "South",
@@ -87,6 +99,10 @@ const players = [
     spacing: 15,
     isDead: false,
     isAI: false,
+    revolver: {
+      currentChamber: 0,
+      bulletPosition: Math.floor(Math.random() * 6),
+    },
   },
 ];
 
@@ -467,6 +483,15 @@ function showBubble(playerIndex, text) {
   if (bubble) {
     updateBubblePosition(playerIndex);
     bubble.textContent = text;
+
+    // 이모티콘인지 확인하여 스타일 적용 (큰 글씨)
+    const emojis = ["💥", "😄", "😡", "😢", "😛"];
+    if (emojis.includes(text)) {
+      bubble.classList.add("emoji-mode");
+    } else {
+      bubble.classList.remove("emoji-mode");
+    }
+
     bubble.classList.add("show");
     setTimeout(() => {
       bubble.classList.remove("show");
@@ -531,13 +556,6 @@ function playBGM(type) {
     }
   }
 }
-
-// 러시안 룰렛 상태
-const revolver = {
-  chambers: 6,
-  currentChamber: 0,
-  bulletPosition: Math.floor(Math.random() * 6),
-};
 
 // 게임 규칙 상태
 const gameState = {
@@ -880,13 +898,17 @@ function draw() {
       }
       const sitdownImg = sitdownImages[sitdownCharImages[player.charIndex]]; // Use player's chosen charIndex
       if (sitdownImg && sitdownImg.complete && sitdownImg.naturalWidth > 0) {
+        ctx.save();
+        ctx.translate(player.x, player.y);
+        ctx.rotate(player.angle + Math.PI); // 이미지 하단이 테이블을 향하도록 180도 회전 보정
         ctx.drawImage(
           sitdownImg,
-          player.x - imgWidth / 2,
-          player.y - imgHeight / 2,
+          -imgWidth / 2,
+          -imgHeight / 2,
           imgWidth,
           imgHeight,
         );
+        ctx.restore();
       }
     });
   }
@@ -897,6 +919,28 @@ function draw() {
 
   // 5.5 리볼버 그리기 (각 플레이어 앞)
   drawPlayerRevolvers();
+
+  // 5.6 리볼버 카운트 표시 (각 플레이어 옆)
+  players.forEach((player) => {
+    ctx.save();
+    ctx.translate(player.x, player.y);
+    ctx.rotate(player.angle);
+    // 리볼버 위치(130, -150) 근처에 텍스트 표시
+    ctx.translate(130, -110);
+    ctx.rotate(-player.angle); // 텍스트는 정방향으로 표시
+
+    if (player.isDead) {
+      ctx.fillStyle = "#555555";
+    } else if (player.revolver.currentChamber === 5) {
+      ctx.fillStyle = "#ff0000"; // 5/6일 때 빨간색으로 긴장감 조성
+    } else {
+      ctx.fillStyle = "#ffffff";
+    }
+    ctx.font = "bold 20px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(`${player.revolver.currentChamber}/6`, 0, 0);
+    ctx.restore();
+  });
 
   // 6. 플레이어 손패 그리기
   if (gameState.phase !== "ROULETTE") {
@@ -1057,6 +1101,15 @@ function updateDealing() {
       dealingState.isDealing = false;
       if (!isMultiplayerGame) {
         gameState.phase = "PLAYING";
+        // 싱글플레이: AI 턴이면 바로 시작
+        if (players[gameState.turnIndex].isAI) {
+          processAiTurn();
+        }
+      } else {
+        // 멀티플레이: 호스트가 서버 상태를 PLAYING으로 변경
+        if (amIHost && multiplayerGameManager) {
+          multiplayerGameManager.hostUpdatePhase("PLAYING");
+        }
       }
 
       document.getElementById("game-hud").classList.remove("hidden");
@@ -1074,15 +1127,6 @@ function updateDealing() {
         btnPlay.textContent = "완료";
         btnPlay.disabled = true;
       }
-
-      // 딜링이 끝난 후 AI 턴 처리
-      if (
-        (isMultiplayerGame && amIHost && players[gameState.turnIndex].isAI) ||
-        (!isMultiplayerGame && players[gameState.turnIndex].isAI)
-      ) {
-        // Host handles AI turns
-        processAiTurn();
-      }
     }
   }
 
@@ -1093,7 +1137,10 @@ function updateDealing() {
 
     if (mc.progress >= 1) {
       // 도착 완료
-      const cardType = cardTypes[dealingState.dealtCount];
+      const cardType =
+        isMultiplayerGame && gameState.deck
+          ? gameState.deck[dealingState.dealtCount]
+          : cardTypes[dealingState.dealtCount];
       players[mc.playerIndex].hand.push({
         type: cardType,
         faceUp: false,
@@ -1874,6 +1921,7 @@ function submitCards(playerIndex, cardIndices) {
   const player = players[playerIndex];
   const cardsToPlay = [];
 
+  isAiThinking = false; // Reset AI thinking flag
   if (isMultiplayerGame && multiplayerGameManager) {
     multiplayerGameManager.submitCards(playerIndex, cardIndices);
     return;
@@ -2017,6 +2065,9 @@ function nextTurn() {
 }
 
 function processAiTurn() {
+  if (isAiThinking) return; // Prevent double triggering
+  isAiThinking = true;
+
   const aiIndex = gameState.turnIndex;
   const aiPlayer = players[aiIndex];
   // 고민하는 시간 랜덤 설정 (1초 ~ 3초)
@@ -2159,6 +2210,7 @@ function challenge() {
   // 중복 클릭 방지: 이미 처리 중이거나 다른 단계라면 무시
   if (gameState.phase !== "PLAYING") return;
 
+  isAiThinking = false; // Reset AI thinking flag
   if (isMultiplayerGame && multiplayerGameManager) {
     multiplayerGameManager.challenge(multiplayerGameManager.myPlayerIndex);
     return;
@@ -2188,6 +2240,7 @@ function challenge() {
   // 주먹 내리치기 애니메이션 시작
   slamState.active = true;
   slamState.playerIndex = gameState.turnIndex;
+  isAiThinking = false; // Reset AI thinking flag just in case
   slamState.progress = 0;
 
   lastBatch.cards.forEach((card) => {
@@ -2316,8 +2369,9 @@ function triggerRussianRoulette(victim, onComplete = null) {
 
   addTimeout(() => {
     // 발사 로직 (1/6 확률, 실제로는 챔버가 돌아감)
-    const isBang = revolver.currentChamber === revolver.bulletPosition;
-    revolver.currentChamber = (revolver.currentChamber + 1) % revolver.chambers;
+    const isBang =
+      victim.revolver.currentChamber === victim.revolver.bulletPosition;
+    victim.revolver.currentChamber = (victim.revolver.currentChamber + 1) % 6;
 
     if (isBang) {
       showMessage("탕! (죽음)", 150);
@@ -2431,7 +2485,7 @@ function triggerRussianRoulette(victim, onComplete = null) {
 }
 
 // 다수 대상 동시 룰렛 (데빌 카드용)
-function triggerSimultaneousRoulette(victims) {
+function triggerSimultaneousRoulette(victims, onComplete = null) {
   // In multiplayer, this function is called by the manager to trigger local animation
   // The actual roulette outcome is determined and updated in Firestore by the manager
   if (isMultiplayerGame && multiplayerGameManager) {
@@ -2471,16 +2525,18 @@ function triggerSimultaneousRoulette(victims) {
   addTimeout(() => {
     let anyDeath = false;
     const deadVictims = [];
+    const results = []; // Store results for multiplayer callback
 
     victims.forEach((victim) => {
       // 각자 확률 계산 (독립 시행)
-      // 주의: revolver 객체는 하나지만 여기서는 각자 쏘는 것으로 연출하므로
-      // 실제로는 각자의 운명을 따로 계산해야 함.
-      // 게임의 재미를 위해 revolver 상태를 공유하지 않고 랜덤 확률(1/6)로 처리하거나
-      // revolver를 돌려가며 쏜다고 가정. 여기서는 단순하게 1/6 확률 독립 시행으로 처리.
-      const bulletPos = Math.floor(Math.random() * 6);
-      const currentChamber = Math.floor(Math.random() * 6);
-      const isBang = bulletPos === currentChamber;
+      const isBang =
+        victim.revolver.currentChamber === victim.revolver.bulletPosition;
+      victim.revolver.currentChamber = (victim.revolver.currentChamber + 1) % 6;
+
+      results.push({
+        index: players.indexOf(victim),
+        isDead: isBang,
+      });
 
       if (isBang) {
         anyDeath = true;
@@ -2519,7 +2575,11 @@ function triggerSimultaneousRoulette(victims) {
     }
 
     addTimeout(() => {
-      checkWinCondition();
+      if (onComplete) {
+        onComplete(results);
+      } else {
+        checkWinCondition();
+      }
     }, 2000);
   }, 10000);
 }
@@ -2806,6 +2866,7 @@ function returnToLobby() {
   lobbyScreen.classList.add("hidden");
   multiMenuScreen.classList.remove("hidden");
   document.getElementById("start-screen").classList.remove("hidden");
+  document.getElementById("ingame-chat").classList.add("hidden");
 }
 
 function showGameOver(isWin) {
@@ -3344,6 +3405,11 @@ if (btnBackMenu) {
 // 대기실 나가기
 if (btnBackLobby) {
   btnBackLobby.addEventListener("click", () => {
+    if (multiplayerGameManager) {
+      multiplayerGameManager.leaveGame(); // Notify server (switch to AI)
+      multiplayerGameManager.stop();
+      multiplayerGameManager = null;
+    }
     if (unsubscribeChat) unsubscribeChat(); // 채팅 리스너 해제
     if (unsubscribeRoom) unsubscribeRoom(); // 방 정보 리스너 해제
     lobbyScreen.classList.add("hidden");
@@ -3353,6 +3419,13 @@ if (btnBackLobby) {
     chatMessages.innerHTML = "";
   });
 }
+
+// 브라우저 종료/새로고침 시 나가기 처리
+window.addEventListener("beforeunload", () => {
+  if (multiplayerGameManager) {
+    multiplayerGameManager.leaveGame();
+  }
+});
 
 // 방 만들기
 if (btnCreateRoom) {
@@ -3377,7 +3450,7 @@ if (btnGameStartMulti) {
       const roomSnap = await window.fs.getDoc(roomRef);
       const roomData = roomSnap.data();
 
-      let currentPlayers = [...roomData.players];
+      let currentPlayers = [...(roomData.players || [])];
 
       // 인원이 부족하면 AI로 채우기
       const usedChars = currentPlayers.map((p) => p.charIndex);
@@ -3500,9 +3573,52 @@ if (btnJoinConfirm) {
         const roomRef = window.fs.doc(db, "liar_rooms", currentRoomId);
         const roomSnap = await window.fs.getDoc(roomRef);
         const roomData = roomSnap.data();
+        const currentPlayers = roomData.players || [];
+
+        // Check for rejoin (Game in progress)
+        if (roomData.status === "playing") {
+          const existingPlayerIndex = currentPlayers.findIndex(
+            (p) => p.nickname === myNickname,
+          );
+
+          if (existingPlayerIndex !== -1) {
+            // Rejoin logic
+            const player = currentPlayers[existingPlayerIndex];
+            player.isAI = false; // Turn off AI
+
+            // Check if there is an active host, if not claim it
+            const activeHost = currentPlayers.find((p) => p.isHost && !p.isAI);
+            if (!activeHost) {
+              currentPlayers.forEach((p) => (p.isHost = false));
+              player.isHost = true;
+              amIHost = true;
+            } else {
+              amIHost = player.isHost;
+            }
+
+            await window.fs.updateDoc(roomRef, { players: currentPlayers });
+
+            // Setup UI for game immediately
+            multiMenuScreen.classList.add("hidden");
+            lobbyScreen.classList.add("hidden");
+            document.getElementById("game-hud").classList.remove("hidden");
+            document.getElementById("ingame-chat").classList.remove("hidden");
+
+            // Init manager
+            multiplayerGameManager = new MultiplayerGameManager(
+              db,
+              currentRoomId,
+              myNickname,
+              gameCallbacks,
+            );
+            multiplayerGameManager.init();
+            isMultiplayerGame = true;
+            setupChatListener(currentRoomId);
+            return;
+          }
+        }
 
         // 현재 플레이어 수 확인 및 캐릭터 인덱스 할당 (중복 방지)
-        const currentPlayers = roomData.players || [];
         if (currentPlayers.length >= 4) {
           alert("방이 꽉 찼습니다.");
           return;
@@ -3581,6 +3697,16 @@ function setupChatListener(roomId) {
       if (change.type === "added") {
         const msg = change.doc.data();
         addMessageToUI(msg.sender, msg.text);
+
+        // [추가] 플레이어 메시지인 경우 말풍선 표시
+        if (msg.sender !== "System") {
+          const playerIndex = players.findIndex(
+            (p) => p.displayName === msg.sender,
+          );
+          if (playerIndex !== -1) {
+            showBubble(playerIndex, msg.text);
+          }
+        }
       }
     });
   });
@@ -3610,6 +3736,38 @@ if (btnSendChat) {
     if (text) {
       sendChatMessage(text);
       chatInput.value = "";
+    }
+  });
+}
+
+// --- 이모티콘 UI 핸들링 ---
+const btnEmoji = document.getElementById("btn-emoji");
+const emojiPicker = document.getElementById("emoji-picker");
+
+if (btnEmoji && emojiPicker) {
+  btnEmoji.addEventListener("click", (e) => {
+    e.stopPropagation(); // 버블링 방지
+    emojiPicker.classList.toggle("hidden");
+  });
+
+  // 이모티콘 버튼 클릭 이벤트
+  document.querySelectorAll(".emoji-item").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const text = btn.textContent.trim();
+      emojiPicker.classList.add("hidden");
+
+      if (isMultiplayerGame) {
+        sendChatMessage(text); // 멀티플레이: 채팅으로 전송 (수신 시 말풍선 뜸)
+      } else {
+        showBubble(3, text); // 싱글플레이: 내 캐릭터(South, index 3)에 즉시 표시
+      }
+    });
+  });
+
+  // 외부 클릭 시 이모티콘 창 닫기
+  document.addEventListener("click", (e) => {
+    if (!emojiPicker.contains(e.target) && e.target !== btnEmoji) {
+      emojiPicker.classList.add("hidden");
     }
   });
 }
@@ -3649,9 +3807,11 @@ function setupRoomListener(roomId) {
     window.fs.doc(db, "liar_rooms", roomId),
     (doc) => {
       const data = doc.data();
-      if (data && data.players && data.status === "waiting") {
-        // Only render lobby slots if still in waiting phase
-        renderLobbySlots(data.players);
+      if (data && data.players) {
+        if (data.status === "waiting") {
+          // Only render lobby slots if still in waiting phase
+          renderLobbySlots(data.players);
+        }
 
         // 게임 시작 신호 감지
         if (data.status === "starting" && !isMultiplayerGame) {
@@ -3769,17 +3929,38 @@ window.selectChar = async function (newCharIndex) {
       const roomDoc = await transaction.get(roomRef);
       if (!roomDoc.exists()) throw "방이 존재하지 않습니다.";
 
-      const players = roomDoc.data().players;
-      const myIndex = players.findIndex((p) => p.nickname === myNickname);
-      if (myIndex === -1) throw "플레이어 정보를 찾을 수 없습니다.";
+      const currentPlayers = roomDoc.data().players || [];
 
-      // 이미 선택된 캐릭터인지 확인
-      const isTaken = players.some((p) => p.charIndex === newCharIndex);
-      if (isTaken) throw "이미 선택된 캐릭터입니다.";
+      // 다른 플레이어가 이미 선택한 캐릭터인지 확인
+      const isTakenByOther = currentPlayers.some(
+        (p) => p.charIndex === newCharIndex && p.nickname !== myNickname,
+      );
+      if (isTakenByOther) {
+        throw "이미 다른 플레이어가 선택한 캐릭터입니다.";
+      }
 
-      // 캐릭터 변경
-      players[myIndex].charIndex = newCharIndex;
-      transaction.update(roomRef, { players: players });
+      // 나의 기존 플레이어 데이터를 찾아 isHost 같은 속성 보존
+      const myOldPlayerObject = currentPlayers.find(
+        (p) => p.nickname === myNickname,
+      );
+
+      // 나를 제외한 다른 플레이어 목록을 필터링 (중복된 내 정보 제거)
+      const otherPlayers = currentPlayers.filter(
+        (p) => p.nickname !== myNickname,
+      );
+
+      // 나의 새로운 플레이어 정보 생성
+      const me = {
+        ...(myOldPlayerObject || {}), // isHost 같은 기존 속성 유지
+        nickname: myNickname,
+        charIndex: newCharIndex,
+        isAI: false, // AI가 아님을 명시
+      };
+
+      // 다른 플레이어와 나의 새로운 정보를 합쳐 최종 플레이어 목록 생성
+      const newPlayers = [...otherPlayers, me];
+
+      transaction.update(roomRef, { players: newPlayers });
     });
   } catch (e) {
     console.error("캐릭터 선택 실패:", e);
@@ -3796,18 +3977,38 @@ function getRandomRank() {
   return ranks[Math.floor(Math.random() * ranks.length)];
 }
 
+let isAiThinking = false;
+
 // Callbacks for MultiplayerGameManager to interact with liars-roulette.js
 const gameCallbacks = {
   updatePlayers: (playersData) => {
+    // 내 닉네임을 기준으로 상대적 위치 계산 (startMultiplayerSequence와 동일한 로직)
+    const myIndex = playersData.findIndex((p) => p.nickname === myNickname);
+    const baseIndex = myIndex === -1 ? 0 : myIndex;
+    const mapping = [3, 2, 1, 0]; // East, North, West, South 순서에 맞는 오프셋
+
     // Update the global players array in liars-roulette.js
-    players.forEach((p, idx) => {
-      const data = playersData[idx];
+    players.forEach((p, i) => {
+      const dataIndex = (baseIndex + mapping[i]) % 4;
+      const data = playersData[dataIndex];
       if (data) {
         p.displayName = data.nickname;
         p.isAI = data.isAI;
         p.isDead = data.isDead;
         p.charIndex = data.charIndex;
         p.hand = data.hand; // Update hand from Firestore
+        p.hand = data.hand || []; // Update hand from Firestore
+        // Ensure revolver state exists if not present
+        if (!p.revolver) {
+          p.revolver = {
+            currentChamber: 0,
+            bulletPosition: Math.floor(Math.random() * 6),
+          };
+        }
+        // Sync host status dynamically (in case host left and migrated)
+        if (data.nickname === myNickname) {
+          amIHost = data.isHost;
+        }
       }
     });
   },
@@ -3831,6 +4032,14 @@ const gameCallbacks = {
   canChallenge: canChallenge,
   getRandomRank: getRandomRank,
   createDeck: createDeck, // Host needs to create deck
+  checkAiTurn: () => {
+    if (isMultiplayerGame && amIHost && gameState.phase === "PLAYING") {
+      const currentPlayer = players[gameState.turnIndex];
+      if (currentPlayer && currentPlayer.isAI) {
+        processAiTurn();
+      }
+    }
+  },
   triggerRoulette: (victimIndices) => {
     // This will be called by manager to trigger local roulette animation
     // The manager will then call handleRouletteCompletion after animation
@@ -3845,10 +4054,9 @@ const gameCallbacks = {
     } else if (victimIndices.length > 1) {
       triggerSimultaneousRoulette(
         victimIndices.map((idx) => players[idx]),
-        () => {
-          // This needs more complex handling for multiple victims
-          // For simplicity, let's assume the manager will handle each completion
-          // Or, the manager will just update the state to "playing" or "game_over"
+        (results) => {
+          // Handle batch completion
+          multiplayerGameManager.handleBatchRouletteCompletion(results);
         },
       );
     }
@@ -3871,8 +4079,14 @@ const gameCallbacks = {
 // 멀티플레이 시작 시퀀스 (카운트다운 -> 게임 진입)
 function startMultiplayerSequence(roomPlayers) {
   isMultiplayerGame = true;
+
+  // [FIX] 싱글플레이 딜링 상태와 충돌하지 않도록 초기화
+  dealingState.isDealing = false;
+  dealingState.movingCard = null;
+
   lobbyScreen.classList.add("hidden");
   document.getElementById("game-hud").classList.remove("hidden");
+  document.getElementById("ingame-chat").classList.remove("hidden");
 
   // 플레이어 매핑 (나를 South(3) 위치로 고정하고 나머지를 회전)
   // roomPlayers 순서: [P1, P2, P3, P4]
