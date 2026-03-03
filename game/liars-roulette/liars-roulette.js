@@ -1923,7 +1923,10 @@ function submitCards(playerIndex, cardIndices) {
 
   isAiThinking = false; // Reset AI thinking flag
   if (isMultiplayerGame && multiplayerGameManager) {
-    multiplayerGameManager.submitCards(playerIndex, cardIndices);
+    const serverIndex = players[playerIndex].serverIndex;
+    if (serverIndex !== undefined) {
+      multiplayerGameManager.submitCards(serverIndex, cardIndices);
+    }
     return;
   }
 
@@ -2103,7 +2106,11 @@ function processAiTurn() {
         );
         if (isMultiplayerGame && multiplayerGameManager) {
           // If multiplayer, AI challenge should update Firestore
-          multiplayerGameManager.challenge(aiIndex);
+          const serverIndex = players[aiIndex].serverIndex;
+          if (serverIndex !== undefined) {
+            multiplayerGameManager.challenge(serverIndex);
+          }
+          return;
         }
         console.log(`${aiPlayer.name} challenges!`);
         challenge();
@@ -3740,6 +3747,26 @@ if (btnSendChat) {
   });
 }
 
+// --- 인게임 채팅 기능 추가 ---
+const btnIngameSend = document.getElementById("btn-ingame-send");
+const ingameInput = document.getElementById("ingame-input");
+
+if (btnIngameSend) {
+  btnIngameSend.addEventListener("click", () => {
+    const text = ingameInput.value.trim();
+    if (text) {
+      sendChatMessage(text);
+      ingameInput.value = "";
+    }
+  });
+}
+
+if (ingameInput) {
+  ingameInput.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") btnIngameSend.click();
+  });
+}
+
 // --- 이모티콘 UI 핸들링 ---
 const btnEmoji = document.getElementById("btn-emoji");
 const emojiPicker = document.getElementById("emoji-picker");
@@ -3992,6 +4019,7 @@ const gameCallbacks = {
       const dataIndex = (baseIndex + mapping[i]) % 4;
       const data = playersData[dataIndex];
       if (data) {
+        p.serverIndex = dataIndex; // Store server index for mapping
         p.displayName = data.nickname;
         p.isAI = data.isAI;
         p.isDead = data.isDead;
@@ -4071,8 +4099,22 @@ const gameCallbacks = {
     multiMenuScreen.classList.remove("hidden");
     document.getElementById("start-screen").classList.remove("hidden");
   },
-  triggerChallengeResolutionUI: (challengerIndex, submitterIndex, isLie) => {
-    triggerChallengeResolutionUI(challengerIndex, submitterIndex, isLie);
+  triggerChallengeResolutionUI: (
+    challengerServerIndex,
+    submitterServerIndex,
+    isLie,
+  ) => {
+    // Convert server indices to local indices
+    const challengerIndex = players.findIndex(
+      (p) => p.serverIndex === challengerServerIndex,
+    );
+    const submitterIndex = players.findIndex(
+      (p) => p.serverIndex === submitterServerIndex,
+    );
+
+    if (challengerIndex !== -1 && submitterIndex !== -1) {
+      triggerChallengeResolutionUI(challengerIndex, submitterIndex, isLie);
+    }
   },
 };
 
@@ -4124,6 +4166,7 @@ function startMultiplayerSequence(roomPlayers) {
     players[i].charIndex = roomPlayer.charIndex; // 선택된 캐릭터 인덱스 저장
     players[i].isDead = false; // Reset dead status for new game
     players[i].hand = []; // Reset hand for new game
+    players[i].serverIndex = roomPlayerIndex; // Store server index
   }
 
   if (multiplayerGameManager) {

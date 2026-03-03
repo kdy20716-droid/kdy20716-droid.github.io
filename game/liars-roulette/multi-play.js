@@ -89,6 +89,11 @@ class MultiplayerGameManager {
         // Challenge resolution
         // This part might need more specific callbacks if liars-roulette.js needs to show specific animations
         // For now, the general game state update should suffice for rendering
+        this.gameCallbacks.triggerChallengeResolutionUI(
+          gameData.challengerIndex,
+          gameData.submitterIndex,
+          gameData.isLie,
+        );
       } else if (gameData.phase === "ROULETTE") {
         // Roulette animation
         if (gameData.victimIndices && gameData.victimIndices.length > 0) {
