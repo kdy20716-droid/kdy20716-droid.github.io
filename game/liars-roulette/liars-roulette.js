@@ -888,19 +888,19 @@ function draw() {
         if (player.name === "East") {
           // 오른쪽 플레이어
           scale = 1.5;
-          offsetY = -60;
+          offsetY = -110;
         } else if (player.name === "West") {
           // 왼쪽 플레이어
           scale = 1.5;
-          offsetY = -60;
+          offsetY = -110;
         } else if (player.name === "South") {
           // 아래쪽 플레이어 (나)
           scale = 1.5;
-          offsetY = -60;
+          offsetY = -55;
         } else if (player.name === "North") {
           // 위쪽 플레이어
           scale = 1.5;
-          offsetY = -60;
+          offsetY = -50;
         }
         // ----------------------------------
 
