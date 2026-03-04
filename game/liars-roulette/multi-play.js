@@ -21,6 +21,8 @@ class MultiplayerGameManager {
     this.localPlayers = []; // Local copy of players array, including charIndex
     this.myPlayerIndex = -1; // My position in the game (0-3)
     this.isMyTurn = false;
+    this.lastTurnCount = -1; // Track turn count to detect card plays
+    this.lastPhase = null; // Track last phase to trigger transitions once
   }
 
   // Initialize game state listener
@@ -56,60 +58,110 @@ class MultiplayerGameManager {
 
   // Handle incoming game state from Firestore
   handleGameUpdate(gameData) {
-    // Update local players array and myPlayerIndex
-    this.localPlayers = gameData.players;
-    this.myPlayerIndex = this.localPlayers.findIndex(
-      (p) => p.nickname === this.myNickname,
-    );
+    try {
+      // Update local players array and myPlayerIndex
+      this.localPlayers = gameData.players || [];
+      this.myPlayerIndex = this.localPlayers.findIndex(
+        (p) => p.nickname === this.myNickname,
+      );
+      const amIHost = this.localPlayers[this.myPlayerIndex]?.isHost;
 
-    // Update game state in liars-roulette.js
-    this.gameCallbacks.updatePlayers(gameData.players); // Update players array in liars-roulette.js
-    this.gameCallbacks.updateGameState(gameData); // Update core gameState object
+      // Update game state in liars-roulette.js
+      this.gameCallbacks.updatePlayers(gameData.players); // Update players array in liars-roulette.js
+      this.gameCallbacks.updateGameState(gameData); // Update core gameState object
 
-    // Check if it's my turn
-    this.isMyTurn = gameData.turnIndex === this.myPlayerIndex;
-    this.gameCallbacks.setMyTurn(this.isMyTurn); // Enable/disable UI elements
-
-    // Render game elements based on new state
-    // this.gameCallbacks.renderGame(gameData); // The draw loop already handles this
-
-    // Specific actions based on game phase
-    if (gameData.status === "playing") {
-      if (gameData.phase === "DEALING" && !this.gameCallbacks.isDealing()) {
-        // If dealing hasn't started locally, initiate it
-        this.gameCallbacks.startDealing();
-      } else if (gameData.phase === "PLAYING") {
-        // Handle turn-based actions
-        this.gameCallbacks.updateGameStatus(); // Update status text
-        // Check if it's an AI turn and I am the host
-        if (this.gameCallbacks.checkAiTurn) {
-          this.gameCallbacks.checkAiTurn();
-        }
-      } else if (gameData.phase === "RESOLVING") {
-        // Challenge resolution
-        // This part might need more specific callbacks if liars-roulette.js needs to show specific animations
-        // For now, the general game state update should suffice for rendering
-        this.gameCallbacks.triggerChallengeResolutionUI(
-          gameData.challengerIndex,
-          gameData.submitterIndex,
-          gameData.isLie,
-        );
-      } else if (gameData.phase === "ROULETTE") {
-        // Roulette animation
-        if (gameData.victimIndices && gameData.victimIndices.length > 0) {
-          this.gameCallbacks.triggerRoulette(gameData.victimIndices);
+      // Detect card play (turn count increased)
+      if (this.lastTurnCount !== -1 && gameData.turnCount > this.lastTurnCount) {
+        if (gameData.lastPlayedBatch) {
+          this.gameCallbacks.handleCardPlay(gameData.lastPlayedBatch);
         }
       }
-    } else if (gameData.status === "game_over") {
-      this.gameCallbacks.showGameOverScreen(gameData.winner);
-      this.stop(); // Game ended, stop listening
+      this.lastTurnCount = gameData.turnCount;
+
+      // Check if it's my turn
+      this.isMyTurn = gameData.turnIndex === this.myPlayerIndex;
+      this.gameCallbacks.setMyTurn(this.isMyTurn); // Enable/disable UI elements
+
+      // Specific actions based on game phase
+      if (gameData.status === "playing") {
+        // Only trigger phase transition logic if phase changed
+        if (gameData.phase !== this.lastPhase) {
+          if (gameData.phase === "DEALING" && !this.gameCallbacks.isDealing()) {
+            this.gameCallbacks.startDealing();
+          } else if (gameData.phase === "RESOLVING") {
+            if (gameData.challengerIndex === -1 && gameData.submitterIndex !== -1) {
+              // Last player failed case
+              const loserName = this.localPlayers[gameData.submitterIndex].nickname;
+              this.gameCallbacks.showGameMessage(`${loserName}이(가) 카드를 모두 털지 못했습니다!`, 150);
+            } else {
+              this.gameCallbacks.triggerChallengeResolutionUI(
+                gameData.challengerIndex,
+                gameData.submitterIndex,
+                gameData.isLie,
+              );
+            }
+
+            // Host triggers transition to ROULETTE after delay
+            if (amIHost) {
+              setTimeout(() => {
+                this.hostProceedToRoulette(gameData.loserIndex);
+              }, 3000);
+            }
+          } else if (gameData.phase === "ROULETTE") {
+            if (gameData.victimIndices && gameData.victimIndices.length > 0) {
+              this.gameCallbacks.triggerRoulette(gameData.victimIndices);
+            }
+          }
+        }
+
+        // Continuous updates
+        if (gameData.phase === "PLAYING") {
+          this.gameCallbacks.updateGameStatus(); // Update status text
+          // Check if it's an AI turn and I am the host
+          if (this.gameCallbacks.checkAiTurn) {
+            this.gameCallbacks.checkAiTurn();
+          }
+        }
+      } else if (gameData.status === "game_over") {
+        this.gameCallbacks.showGameOverScreen(gameData.winner);
+        this.stop(); // Game ended, stop listening
+      }
+      this.lastPhase = gameData.phase;
+    } catch (e) {
+      console.error("Error in handleGameUpdate:", e);
+    }
+  }
+
+  async hostProceedToRoulette(loserIndex) {
+    try {
+      await runTransaction(this.db, async (transaction) => {
+        const roomDoc = await transaction.get(this.roomRef);
+        if (!roomDoc.exists()) throw "Room does not exist.";
+        const gameData = roomDoc.data();
+
+        if (gameData.phase !== "RESOLVING") return;
+
+        gameData.phase = "ROULETTE";
+        // If victimIndices is not set (normal challenge), set it using loserIndex
+        if (!gameData.victimIndices || gameData.victimIndices.length === 0) {
+          gameData.victimIndices = [loserIndex];
+        }
+
+        transaction.update(this.roomRef, gameData);
+      });
+    } catch (e) {
+      console.error("Failed to proceed to roulette:", e);
     }
   }
 
   // --- Player Actions (called from liars-roulette.js UI) ---
 
   async submitCards(playerIndex, cardIndices) {
-    if (!this.isMyTurn) {
+    const isMe = playerIndex === this.myPlayerIndex;
+    const isAi = this.localPlayers[playerIndex]?.isAI;
+    const amIHost = this.localPlayers[this.myPlayerIndex]?.isHost;
+
+    if (!isMe && !(isAi && amIHost)) {
       this.gameCallbacks.showGameMessage("당신의 턴이 아닙니다.", 100);
       return;
     }
@@ -161,9 +213,8 @@ class MultiplayerGameManager {
         // If the current player has no cards left, and all *other* living players also have no cards,
         // then the current player is the loser (as they couldn't challenge).
         if (newPlayerHand.length === 0) {
-          const livingPlayers = gameData.players.filter((p) => !p.isDead);
-          const othersWithCards = livingPlayers.filter(
-            (p, idx) => idx !== playerIndex && p.hand.length > 0,
+          const othersWithCards = gameData.players.filter(
+            (p, idx) => !p.isDead && idx !== playerIndex && p.hand.length > 0,
           );
 
           if (othersWithCards.length === 0) {
@@ -188,8 +239,7 @@ class MultiplayerGameManager {
           loopCount++;
         } while (
           (gameData.players[nextTurnIndex].isDead ||
-            (gameData.players[nextTurnIndex].hand.length === 0 &&
-              gameData.players[nextTurnIndex].isAI)) && // AI can't play if no cards
+            (gameData.phase === "PLAYING" && gameData.players[nextTurnIndex].hand.length === 0)) &&
           loopCount < 5
         );
         gameData.turnIndex = nextTurnIndex;
@@ -207,7 +257,11 @@ class MultiplayerGameManager {
   }
 
   async challenge(challengerIndex) {
-    if (!this.isMyTurn) {
+    const isMe = challengerIndex === this.myPlayerIndex;
+    const isAi = this.localPlayers[challengerIndex]?.isAI;
+    const amIHost = this.localPlayers[this.myPlayerIndex]?.isHost;
+
+    if (!isMe && !(isAi && amIHost)) {
       this.gameCallbacks.showGameMessage("당신의 턴이 아닙니다.", 100);
       return;
     }
@@ -389,25 +443,37 @@ class MultiplayerGameManager {
         if (gameData.status !== "starting")
           throw "Game is not in starting phase.";
 
+        // Deal cards
+        const deck = this.gameCallbacks.createDeck();
+        const playersWithHand = initialPlayers.map((p, i) => {
+          const hand = [];
+          for (let j = 0; j < 5; j++) {
+            // Round-robin dealing: Card 0 to P0, Card 1 to P1...
+            hand.push({ type: deck[j * 4 + i], faceUp: false });
+          }
+          return {
+            nickname: p.nickname,
+            charIndex: p.charIndex,
+            isAI: p.isAI || false,
+            isHost: p.isHost || false,
+            isDead: false,
+            hand: hand,
+          };
+        });
+
         // Initialize game state
         const initialGameState = {
           status: "playing",
           phase: "DEALING", // Start with dealing phase
-          turnIndex: 3, // South player starts (my player)
+          turnIndex: 0, // Host (index 0) starts
           currentRank: this.gameCallbacks.getRandomRank(),
           tableCards: [],
           lastPlayedBatch: null,
           turnCount: 0,
           victimIndices: [],
           rouletteType: null,
-          deck: this.gameCallbacks.createDeck(), // Generate initial deck
-          players: initialPlayers.map((p) => ({
-            nickname: p.nickname,
-            charIndex: p.charIndex,
-            isAI: p.isAI || false,
-            isDead: false,
-            hand: [], // Hands will be dealt by liars-roulette.js
-          })),
+          deck: deck, // Generate initial deck
+          players: playersWithHand,
         };
         transaction.update(this.roomRef, initialGameState);
       });
@@ -441,6 +507,22 @@ class MultiplayerGameManager {
           loopCount++;
         } while (currentData.players[nextTurnIndex].isDead && loopCount < 5);
 
+        const deck = this.gameCallbacks.createDeck();
+        const livingCount = livingPlayers.length;
+        const hands = new Array(currentData.players.length)
+          .fill(null)
+          .map(() => []);
+
+        // Deal cards to living players (Round-robin)
+        const livingIndices = currentData.players
+          .map((p, i) => i)
+          .filter((i) => !currentData.players[i].isDead);
+
+        for (let c = 0; c < livingCount * 5; c++) {
+          const targetServerIndex = livingIndices[c % livingCount];
+          hands[targetServerIndex].push({ type: deck[c], faceUp: false });
+        }
+
         const newGameState = {
           ...currentData, // Keep existing player data (isDead status)
           status: "playing",
@@ -452,14 +534,13 @@ class MultiplayerGameManager {
           turnCount: 0,
           victimIndices: [],
           rouletteType: null,
-          deck: this.gameCallbacks.createDeck(), // Generate new deck
-          // Player hands will be reset and dealt by liars-roulette.js
+          deck: deck, // Generate new deck
+          // Reset hands for living players
+          players: currentData.players.map((p, i) => ({
+            ...p,
+            hand: p.isDead ? p.hand : hands[i],
+          })),
         };
-        // Reset hands for living players
-        newGameState.players = newGameState.players.map((p) => ({
-          ...p,
-          hand: p.isDead ? p.hand : [], // Keep dead players' hands as is, reset living players' hands
-        }));
 
         transaction.update(this.roomRef, newGameState);
       });

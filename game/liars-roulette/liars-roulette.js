@@ -945,6 +945,9 @@ function draw() {
   // 6. 플레이어 손패 그리기
   if (gameState.phase !== "ROULETTE") {
     players.forEach((player) => {
+      // 멀티플레이 딜링 중에는 카드를 숨김 (애니메이션과 중복 방지)
+      if (isMultiplayerGame && dealingState.isDealing) return;
+
       const selectedCount = player.hand.filter((c) => c.isSelected).length;
       const isMaxSelected = selectedCount >= 3;
 
@@ -1075,10 +1078,15 @@ function updateDealing() {
   // 이동 중인 카드가 없다면 새 카드를 발사
   if (!dealingState.movingCard) {
     if (dealingState.dealtCount < dealingState.totalCards) {
-      // 살아있는 플레이어에게만 배분
-      const survivors = players.filter((p) => !p.isDead);
-      const targetPlayer =
-        survivors[dealingState.dealtCount % survivors.length];
+      let targetPlayer;
+      if (isMultiplayerGame) {
+        // 멀티플레이: 서버 인덱스 기준으로 라운드 로빈
+        const serverIndex = dealingState.dealtCount % 4;
+        targetPlayer = players.find((p) => p.serverIndex === serverIndex);
+      } else {
+        const survivors = players.filter((p) => !p.isDead);
+        targetPlayer = survivors[dealingState.dealtCount % survivors.length];
+      }
       const playerIndex = players.indexOf(targetPlayer); // 실제 플레이어 배열의 인덱스 찾기
 
       dealingState.movingCard = {
@@ -1141,13 +1149,16 @@ function updateDealing() {
         isMultiplayerGame && gameState.deck
           ? gameState.deck[dealingState.dealtCount]
           : cardTypes[dealingState.dealtCount];
-      players[mc.playerIndex].hand.push({
-        type: cardType,
-        faceUp: false,
-        isFlipping: false,
-        flipProgress: 0,
-        isSelected: false, // 선택 상태 추가
-      }); // 핸드에 카드 추가
+
+      if (!isMultiplayerGame) {
+        players[mc.playerIndex].hand.push({
+          type: cardType,
+          faceUp: false,
+          isFlipping: false,
+          flipProgress: 0,
+          isSelected: false, // 선택 상태 추가
+        }); // 핸드에 카드 추가
+      }
       dealingState.dealtCount++;
       dealingState.movingCard = null;
 
@@ -2814,6 +2825,9 @@ function updateGameStatus() {
   if (!statusEl) return;
   statusEl.classList.remove("hidden"); // 상태 업데이트 시 다시 보이게 함
 
+  const currentPlayer = players[gameState.turnIndex];
+  if (!currentPlayer) return; // Safety check
+
   if (gameState.turnIndex === 3) {
     statusEl.textContent = "플레이어 1은 카드를 내주세요";
     statusEl.style.color = "#ffffff"; // White
@@ -4024,8 +4038,32 @@ const gameCallbacks = {
         p.isAI = data.isAI;
         p.isDead = data.isDead;
         p.charIndex = data.charIndex;
-        p.hand = data.hand; // Update hand from Firestore
-        p.hand = data.hand || []; // Update hand from Firestore
+
+        // Merge hand
+        const newHandData = data.hand || [];
+        // If it's me (South / index 3), preserve local state
+        if (i === 3) {
+          // Check if hand changed to avoid resetting selection on every tick
+          const currentTypes = p.hand.map((c) => c.type).join(",");
+          const newTypes = newHandData.map((c) => c.type).join(",");
+
+          if (currentTypes !== newTypes) {
+            p.hand = newHandData.map((c) => ({
+              ...c,
+              faceUp: true, // My cards are visible to me
+              isSelected: false,
+              isFlipping: false,
+              flipProgress: 0,
+            }));
+          }
+        } else {
+          p.hand = newHandData.map((c) => ({
+            ...c,
+            faceUp: c.faceUp || false,
+            isSelected: false,
+          }));
+        }
+
         // Ensure revolver state exists if not present
         if (!p.revolver) {
           p.revolver = {
@@ -4041,7 +4079,52 @@ const gameCallbacks = {
     });
   },
   updateGameState: (data) => {
-    Object.assign(gameState, data); // Merge incoming game state
+    const newData = { ...data };
+    // Map server turnIndex to local turnIndex
+    if (newData.turnIndex !== undefined) {
+      const localTurn = players.findIndex((p) => p.serverIndex === newData.turnIndex);
+      if (localTurn !== -1) newData.turnIndex = localTurn;
+    }
+
+    // Preserve table card positions and set defaults for new cards
+    if (newData.tableCards) {
+      // Determine target position for new cards based on lastPlayedBatch
+      let targetBaseX = centerX;
+      let targetBaseY = tableY;
+      let targetBaseAngle = 0;
+
+      if (newData.lastPlayedBatch) {
+        const serverPlayerIndex = newData.lastPlayedBatch.playerIndex;
+        const localPlayerIndex = players.findIndex(p => p.serverIndex === serverPlayerIndex);
+        
+        if (localPlayerIndex !== -1) {
+           if (localPlayerIndex === 0) { // East
+             targetBaseX = centerX + 200; targetBaseY = tableY; targetBaseAngle = -Math.PI / 2;
+           } else if (localPlayerIndex === 1) { // North
+             targetBaseX = centerX; targetBaseY = tableY - 120; targetBaseAngle = Math.PI;
+           } else if (localPlayerIndex === 2) { // West
+             targetBaseX = centerX - 200; targetBaseY = tableY; targetBaseAngle = Math.PI / 2;
+           } else if (localPlayerIndex === 3) { // South
+             targetBaseX = centerX; targetBaseY = tableY + 120; targetBaseAngle = 0;
+           }
+        }
+      }
+
+      newData.tableCards = newData.tableCards.map((card, i) => {
+        const existing = gameState.tableCards && gameState.tableCards[i];
+        if (existing) {
+          return { ...card, x: existing.x, y: existing.y, angle: existing.angle };
+        }
+        // New card from server
+        return {
+          ...card,
+          x: targetBaseX + (Math.random() - 0.5) * 30,
+          y: targetBaseY + (Math.random() - 0.5) * 30,
+          angle: targetBaseAngle + (Math.random() - 0.5) * 0.4
+        };
+      });
+    }
+    Object.assign(gameState, newData); // Merge incoming game state
   },
   setMyTurn: (isMyTurn) => {
     // Enable/disable player UI buttons
@@ -4054,6 +4137,7 @@ const gameCallbacks = {
   showGameMessage: showMessage,
   playSound: playSound,
   isDealing: () => dealingState.isDealing,
+  updateGameStatus: updateGameStatus,
   startDealing: () => {
     setupMultiplayerDealingAnimation();
   }, // Trigger local dealing animation
@@ -4115,6 +4199,50 @@ const gameCallbacks = {
     if (challengerIndex !== -1 && submitterIndex !== -1) {
       triggerChallengeResolutionUI(challengerIndex, submitterIndex, isLie);
     }
+  },
+  handleCardPlay: (batch) => {
+    if (!batch || !batch.cards) return;
+    const localPlayerIndex = players.findIndex(p => p.serverIndex === batch.playerIndex);
+    if (localPlayerIndex === -1) return;
+
+    const player = players[localPlayerIndex];
+    playSound("card");
+
+    // Target position logic (similar to submitCards)
+    let targetBaseX = centerX;
+    let targetBaseY = tableY;
+    let targetBaseAngle = 0;
+
+    if (localPlayerIndex === 0) { // East
+      targetBaseX = centerX + 200; targetBaseY = tableY; targetBaseAngle = -Math.PI / 2;
+    } else if (localPlayerIndex === 1) { // North
+      targetBaseX = centerX; targetBaseY = tableY - 120; targetBaseAngle = Math.PI;
+    } else if (localPlayerIndex === 2) { // West
+      targetBaseX = centerX - 200; targetBaseY = tableY; targetBaseAngle = Math.PI / 2;
+    } else if (localPlayerIndex === 3) { // South
+      targetBaseX = centerX; targetBaseY = tableY + 120; targetBaseAngle = 0;
+    }
+
+    // Animate ghost cards for visual feedback
+    batch.cards.forEach(cardType => {
+      const targetX = targetBaseX + (Math.random() - 0.5) * 30;
+      const targetY = targetBaseY + (Math.random() - 0.5) * 30;
+      const targetAngle = targetBaseAngle + (Math.random() - 0.5) * 0.4;
+
+      animations.push({
+        startX: player.x,
+        startY: player.y,
+        targetX: targetX,
+        targetY: targetY,
+        startAngle: player.angle,
+        targetAngle: targetAngle,
+        progress: 0,
+        speed: 0.15,
+        playerIndex: localPlayerIndex,
+        cardType: cardType,
+        onComplete: () => {} // Actual table cards are updated via updateGameState
+      });
+    });
   },
 };
 
