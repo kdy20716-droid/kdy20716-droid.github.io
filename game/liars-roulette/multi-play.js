@@ -119,7 +119,14 @@ class MultiplayerGameManager {
             }
           } else if (gameData.phase === "ROULETTE") {
             if (gameData.victimIndices && gameData.victimIndices.length > 0) {
-              this.gameCallbacks.triggerRoulette(gameData.victimIndices);
+              if (gameData.rouletteType === "devil") {
+                this.gameCallbacks.triggerDevilEffects();
+                setTimeout(() => {
+                  this.gameCallbacks.triggerRoulette(gameData.victimIndices);
+                }, 2000);
+              } else {
+                this.gameCallbacks.triggerRoulette(gameData.victimIndices);
+              }
             }
           }
         }
@@ -328,8 +335,10 @@ class MultiplayerGameManager {
         if (hasDevil) {
           // Devil card effect: all players except submitter go to roulette
           const victims = gameData.players
-            .filter((p, idx) => idx !== submitterIndex && !p.isDead)
-            .map((p, idx) => idx);
+            .map((p, idx) => idx)
+            .filter(
+              (idx) => idx !== submitterIndex && !gameData.players[idx].isDead,
+            );
           gameData.phase = "ROULETTE";
           gameData.victimIndices = victims;
           gameData.rouletteType = "devil"; // Custom type for devil card

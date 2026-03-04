@@ -4372,6 +4372,18 @@ const gameCallbacks = {
       }
     }
   },
+  triggerDevilEffects: () => {
+    playSound("drama");
+    playSound("devil");
+    showMessage("데빌 카드 발동!", 200);
+    gameState.shakeTimer = 60;
+
+    // 배경음악 볼륨 줄이기 (긴장감 조성)
+    const mainBgm = document.getElementById("bgm-main");
+    if (mainBgm) {
+      mainBgm.volume = mainBgm.volume * 0.2;
+    }
+  },
   triggerRoulette: (victimServerIndices) => {
     // Map server indices to local players
     const targets = victimServerIndices
