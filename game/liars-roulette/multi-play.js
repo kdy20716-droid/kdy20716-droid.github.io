@@ -303,6 +303,12 @@ class MultiplayerGameManager {
         const submitterIndex = gameData.lastPlayedBatch.playerIndex;
         const currentRank = gameData.currentRank;
 
+        // Determine if it was a lie
+        const isLie = lastPlayedCards.some(
+          (cardType) =>
+            cardType !== currentRank && cardType !== "J" && cardType !== "D",
+        );
+
         // Check for Devil card
         const hasDevil = lastPlayedCards.some((cardType) => cardType === "D");
 
@@ -320,12 +326,10 @@ class MultiplayerGameManager {
         }
 
         if (hasDevil) {
-          // [수정] 데빌 카드 효과: 제출자를 제외한 모든 생존자가 룰렛 대상이 되도록 수정
+          // Devil card effect: all players except submitter go to roulette
           const victims = gameData.players
-            .map((p, idx) => idx) // 1. 모든 플레이어의 원래 인덱스를 가져옴 [0, 1, 2, 3]
-            .filter(
-              (idx) => idx !== submitterIndex && !gameData.players[idx].isDead,
-            ); // 2. 제출자와 사망자를 제외하고 필터링
+            .filter((p, idx) => idx !== submitterIndex && !p.isDead)
+            .map((p, idx) => idx);
           gameData.phase = "ROULETTE";
           gameData.victimIndices = victims;
           gameData.rouletteType = "devil"; // Custom type for devil card
@@ -333,11 +337,6 @@ class MultiplayerGameManager {
           transaction.update(this.roomRef, gameData);
           return;
         }
-
-        // [수정] 데빌 카드가 아닐 경우에만 일반 거짓말 판정 (더 명확한 로직)
-        const isLie = lastPlayedCards.some(
-          (cardType) => cardType !== currentRank && cardType !== "J",
-        );
 
         // Normal challenge resolution
         let loserIndex;
