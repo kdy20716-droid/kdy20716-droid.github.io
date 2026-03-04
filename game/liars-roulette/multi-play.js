@@ -233,16 +233,20 @@ class MultiplayerGameManager {
         const submitterIndex = gameData.lastPlayedBatch.playerIndex;
         const currentRank = gameData.currentRank;
 
-        // 1. 데빌 카드 효과를 먼저 체크 (싱글플레이 로직과 동일하게)
+        // [수정] 1. 데빌 카드 효과를 먼저 체크하고 처리
         const hasDevil = lastPlayedCards.some((cardType) => cardType === "D");
 
         if (hasDevil) {
-          // 데빌 카드 발동: 제출자를 제외한 모든 생존자가 룰렛 대상
-          const victims = gameData.players
-            .map((p, idx) => idx)
-            .filter(
-              (idx) => idx !== submitterIndex && !gameData.players[idx].isDead,
-            );
+          // Devil card effect: all players except submitter go to roulette
+          const victims = [];
+          for (let i = 0; i < gameData.players.length; i++) {
+            if (i === submitterIndex) {
+              continue; // 제출자 제외
+            }
+            if (!gameData.players[i].isDead) {
+              victims.push(i); // 살아있는 플레이어만 추가
+            }
+          }
 
           gameData.phase = "ROULETTE";
           gameData.victimIndices = victims;
@@ -252,7 +256,7 @@ class MultiplayerGameManager {
           return; // 데빌 카드 처리 후 종료
         }
 
-        // 2. 데빌 카드가 아닐 경우에만 일반 거짓말 판정
+        // [수정] 2. 데빌 카드가 아닐 경우에만 일반 거짓말 판정
         const isLie = lastPlayedCards.some(
           (cardType) => cardType !== currentRank && cardType !== "J",
         );
