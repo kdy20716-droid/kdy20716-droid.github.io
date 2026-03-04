@@ -3087,9 +3087,10 @@ function resizeGame() {
   // 1. 화면 비율에 맞춰 캔버스 너비 동적 계산 (최소 1024px 유지)
   // 가로가 긴 모바일 화면에서 여백 없이 꽉 채우기 위함
   let newCanvasWidth = (winW / winH) * baseHeight;
-  // 여백을 제외한 가용 공간 비율을 사용
-  let newCanvasWidth1 = (availW / availH) * baseHeight;
-  if (newCanvasWidth < 1024) newCanvasWidth = 1024;
+
+  // [수정] 플레이어 위치(±600)를 고려하여 최소 너비 1400px 보장, 최대 1920px 제한
+  if (newCanvasWidth < 1400) newCanvasWidth = 1400;
+  if (newCanvasWidth > 1920) newCanvasWidth = 1920;
 
   // 2. 캔버스 및 컨테이너 크기 업데이트
   canvas.width = newCanvasWidth;
@@ -4319,6 +4320,17 @@ const gameCallbacks = {
     const btnLiar = document.getElementById("btn-liar");
 
     if (btnPlay) btnPlay.disabled = !isMyTurn;
+    if (btnPlay) {
+      if (isMyTurn) {
+        // 내 턴일 때, 카드 선택 여부에 따라 완료 버튼 상태 결정
+        const player = players[3]; // '나'는 항상 players[3]
+        const hasSelection = player.hand.some((c) => c.isSelected);
+        btnPlay.disabled = !hasSelection;
+      } else {
+        // 내 턴이 아니면 무조건 비활성화
+        btnPlay.disabled = true;
+      }
+    }
     if (btnLiar) btnLiar.disabled = !isMyTurn;
 
     if (btnLiar) {
@@ -4381,19 +4393,23 @@ const gameCallbacks = {
 
     if (targets.length === 1) {
       triggerRussianRoulette(targets[0], () => {
-        multiplayerGameManager.handleRouletteCompletion(
-          victimServerIndices[0],
-          targets[0].isDead, // isDead is updated locally by triggerRussianRoulette
-        );
+        if (amIHost) {
+          multiplayerGameManager.handleRouletteCompletion(
+            victimServerIndices[0],
+            targets[0].isDead, // isDead is updated locally by triggerRussianRoulette
+          );
+        }
       });
     } else if (targets.length > 1) {
       triggerSimultaneousRoulette(targets, (results) => {
-        // Map local results back to server indices
-        const serverResults = results.map((r) => ({
-          index: players[r.index].serverIndex,
-          isDead: r.isDead,
-        }));
-        multiplayerGameManager.handleBatchRouletteCompletion(serverResults);
+        if (amIHost) {
+          // Map local results back to server indices
+          const serverResults = results.map((r) => ({
+            index: players[r.index].serverIndex,
+            isDead: r.isDead,
+          }));
+          multiplayerGameManager.handleBatchRouletteCompletion(serverResults);
+        }
       });
     }
   },
