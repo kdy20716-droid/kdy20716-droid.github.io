@@ -1683,7 +1683,19 @@ function drawPlayerRevolvers() {
           velocity: 0,
           rotation: 0,
           rotVelocity: 0,
+          opacity: 1.0,
         };
+      }
+
+      // 투명도 초기화 (다른 곳에서 리셋된 경우 대비)
+      if (typeof player.revolverDrop.opacity === "undefined") {
+        player.revolverDrop.opacity = 1.0;
+      }
+
+      // 완전히 투명해지면 그리지 않음
+      if (player.revolverDrop.opacity <= 0) {
+        ctx.restore();
+        return;
       }
 
       // Physics update
@@ -1697,12 +1709,23 @@ function drawPlayerRevolvers() {
         player.revolverDrop.dist = maxDrop;
         player.revolverDrop.velocity *= -0.3; // Bounce
         player.revolverDrop.rotVelocity *= 0.8;
+
+        // 바닥에 닿으면 빠르게 투명해짐 (약 1초 후 소멸)
+        player.revolverDrop.opacity -= 0.015;
+      } else {
+        // 떨어지는 동안 서서히 투명해짐
+        player.revolverDrop.opacity -= 0.002;
       }
+
+      if (player.revolverDrop.opacity < 0) player.revolverDrop.opacity = 0;
 
       // Apply drop offset (Global Y+ direction)
       currentX += player.revolverDrop.dist * Math.sin(player.angle);
       currentY += player.revolverDrop.dist * Math.cos(player.angle);
       currentRotation += player.revolverDrop.rotation;
+
+      // 투명도 적용
+      ctx.globalAlpha = player.revolverDrop.opacity;
     }
 
     ctx.translate(currentX, currentY);
