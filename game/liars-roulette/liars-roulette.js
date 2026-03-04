@@ -63,7 +63,7 @@ const players = [
     name: "North",
     displayName: "플레이어 3",
     x: centerX,
-    y: tableY - 280,
+    y: tableY - 340,
     angle: Math.PI,
     hand: [],
     spacing: 15,
@@ -93,7 +93,7 @@ const players = [
     name: "South",
     displayName: "플레이어 1",
     x: centerX,
-    y: tableY + 280,
+    y: tableY + 340,
     angle: 0,
     hand: [],
     spacing: 15,
@@ -805,7 +805,7 @@ function draw() {
     50,
     centerX,
     tableY,
-    400,
+    380,
   );
   gradient.addColorStop(0, "#8d6e63"); // 중앙: 밝은 나무색 (스팟라이트)
   gradient.addColorStop(0.8, "#4e342e"); // 중간: 진한 나무색
@@ -813,14 +813,14 @@ function draw() {
 
   ctx.fillStyle = gradient;
   ctx.beginPath();
-  ctx.ellipse(centerX, tableY, 400, 220, 0, 0, Math.PI * 2);
+  ctx.ellipse(centerX, tableY, 380, 220, 0, 0, Math.PI * 2);
   ctx.fill();
 
   // 3.5 피자국 그리기 (테이블 상판에 클리핑 & 합성)
   ctx.save();
   // 테이블 영역으로 클리핑 (테이블 밖으로 나가지 않게)
   ctx.beginPath();
-  ctx.ellipse(centerX, tableY, 400, 220, 0, 0, Math.PI * 2);
+  ctx.ellipse(centerX, tableY, 380, 220, 0, 0, Math.PI * 2);
   ctx.clip();
 
   // 나무 질감에 스며든 느낌 (Multiply 블렌딩)
@@ -874,39 +874,50 @@ function draw() {
     players.forEach((player) => {
       if (player.isDead) return; // 죽은 플레이어는 이미지 표시 안 함
 
-      let sitdownImgKey;
-      let imgWidth = 180; // 기본 너비
-      let imgHeight = 180; // 기본 높이
-
-      // 플레이어 위치에 따라 적절한 이미지 키와 크기 설정
-      if (player.name === "East" || player.name === "West") {
-        imgWidth = 150; // 동서 플레이어는 세로로 긴 이미지
-        imgHeight = 200;
-      } else if (player.name === "North" || player.name === "South") {
-      } else if (player.name === "North") {
-        sitdownImgKey = "SITDOWN_NORTH";
-        imgWidth = 200; // 남북 플레이어는 가로로 긴 이미지
-        imgHeight = 150;
-      } else if (player.name === "West") {
-        sitdownImgKey = "SITDOWN_WEST";
-        imgWidth = 150;
-        imgHeight = 200;
-      } else if (player.name === "South") {
-        sitdownImgKey = "SITDOWN_SOUTH";
-        imgWidth = 200;
-        imgHeight = 150;
-      }
       const sitdownImg = sitdownImages[sitdownCharImages[player.charIndex]]; // Use player's chosen charIndex
       if (sitdownImg && sitdownImg.complete && sitdownImg.naturalWidth > 0) {
         ctx.save();
         ctx.translate(player.x, player.y);
         ctx.rotate(player.angle + Math.PI); // 이미지 하단이 테이블을 향하도록 180도 회전 보정
+
+        // --- [캐릭터별 크기 및 위치 설정] ---
+        // 각 방향별로 scale(크기)과 offsetY(테이블과의 거리)를 수정하세요.
+        let scale = 1.5; // 기본 크기
+        let offsetY = -60; // 기본 거리 (음수일수록 테이블에서 멀어짐)
+
+        if (player.name === "East") {
+          // 오른쪽 플레이어
+          scale = 1.5;
+          offsetY = -60;
+        } else if (player.name === "West") {
+          // 왼쪽 플레이어
+          scale = 1.5;
+          offsetY = -60;
+        } else if (player.name === "South") {
+          // 아래쪽 플레이어 (나)
+          scale = 1.5;
+          offsetY = -60;
+        } else if (player.name === "North") {
+          // 위쪽 플레이어
+          scale = 1.5;
+          offsetY = -60;
+        }
+        // ----------------------------------
+
+        // 원본 비율 유지 및 크기 확대
+        const ratio = sitdownImg.naturalWidth / sitdownImg.naturalHeight;
+        let drawWidth = 200 * scale;
+        let drawHeight = drawWidth / ratio;
+
+        // 테이블과 겹치지 않도록 이미지 위치만 뒤로 이동 (리볼버 위치 고정)
+        ctx.translate(0, offsetY);
+
         ctx.drawImage(
           sitdownImg,
-          -imgWidth / 2,
-          -imgHeight / 2,
-          imgWidth,
-          imgHeight,
+          -drawWidth / 2,
+          -drawHeight / 2,
+          drawWidth,
+          drawHeight,
         );
         ctx.restore();
       }
@@ -3160,11 +3171,11 @@ function updateLayout() {
     players[0].x = centerX + 430;
     players[0].y = tableY; // East
     players[1].x = centerX;
-    players[1].y = tableY - 280; // North
+    players[1].y = tableY - 340; // North
     players[2].x = centerX - 430;
     players[2].y = tableY; // West
     players[3].x = centerX;
-    players[3].y = tableY + 280; // South
+    players[3].y = tableY + 340; // South
   }
 
   for (let i = 0; i < players.length; i++) {
