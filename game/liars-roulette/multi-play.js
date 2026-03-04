@@ -121,6 +121,11 @@ class MultiplayerGameManager {
           if (this.gameCallbacks.checkAiTurn) {
             this.gameCallbacks.checkAiTurn();
           }
+        } else if (gameData.phase === "DEALING") {
+           // If dealing is stuck or finished, ensure we move to playing if host
+           if (amIHost && !this.gameCallbacks.isDealing()) {
+              // This might be redundant if updateDealing handles it, but good for safety
+           }
         }
       } else if (gameData.status === "game_over") {
         this.gameCallbacks.showGameOverScreen(gameData.winner);
@@ -235,7 +240,7 @@ class MultiplayerGameManager {
         let nextTurnIndex = gameData.turnIndex;
         let loopCount = 0;
         do {
-          nextTurnIndex = (nextTurnIndex - 1 + 4) % 4; // Counter-clockwise
+          nextTurnIndex = (nextTurnIndex + 1) % 4; // Clockwise (0->1->2->3)
           loopCount++;
         } while (
           (gameData.players[nextTurnIndex].isDead ||
@@ -358,6 +363,9 @@ class MultiplayerGameManager {
         if (gameData.phase !== "ROULETTE") return; // Already moved on or error
 
         const currentVictims = gameData.victimIndices;
+        // Safety check: if victims are empty, stop to prevent crash
+        if (!currentVictims || currentVictims.length === 0) return;
+
         const processedVictim = currentVictims.shift(); // Remove the one just processed
 
         // Update revolver state (advance chamber)
@@ -387,7 +395,7 @@ class MultiplayerGameManager {
             let nextTurnIndex = gameData.turnIndex;
             let loopCount = 0;
             do {
-              nextTurnIndex = (nextTurnIndex - 1 + 4) % 4;
+              nextTurnIndex = (nextTurnIndex + 1) % 4;
               loopCount++;
             } while (gameData.players[nextTurnIndex].isDead && loopCount < 5);
 
@@ -463,16 +471,36 @@ class MultiplayerGameManager {
             survivors.length === 1 ? survivors[0].nickname : "No one";
         } else {
           // Start new round
+          // 1. Find next turn (skip dead players)
+          let nextTurnIndex = gameData.turnIndex;
+          let loopCount = 0;
+          do {
+            nextTurnIndex = (nextTurnIndex + 1) % 4;
+            loopCount++;
+          } while (gameData.players[nextTurnIndex].isDead && loopCount < 5);
+
+          // 2. Deal new cards
+          const deck = this.gameCallbacks.createDeck();
+          const livingCount = survivors.length;
+          const hands = new Array(4).fill(null).map(() => []);
+          const livingIndices = gameData.players.map((p, i) => i).filter(i => !gameData.players[i].isDead);
+
+          for (let c = 0; c < livingCount * 5; c++) {
+            const targetServerIndex = livingIndices[c % livingCount];
+            hands[targetServerIndex].push({ type: deck[c], faceUp: false });
+          }
+
           gameData.phase = "DEALING";
+          gameData.turnIndex = nextTurnIndex;
           gameData.tableCards = [];
           gameData.lastPlayedBatch = null;
           gameData.turnCount = 0;
           gameData.currentRank = this.gameCallbacks.getRandomRank();
-          gameData.deck = this.gameCallbacks.createDeck();
+          gameData.deck = deck;
           // Reset hands for living players
-          gameData.players = gameData.players.map((p) => ({
+          gameData.players = gameData.players.map((p, i) => ({
             ...p,
-            hand: p.isDead ? p.hand : [],
+            hand: p.isDead ? p.hand : hands[i],
           }));
         }
 
@@ -558,7 +586,7 @@ class MultiplayerGameManager {
         let nextTurnIndex = currentData.turnIndex;
         let loopCount = 0;
         do {
-          nextTurnIndex = (nextTurnIndex - 1 + 4) % 4; // Counter-clockwise
+          nextTurnIndex = (nextTurnIndex + 1) % 4; // Clockwise
           loopCount++;
         } while (currentData.players[nextTurnIndex].isDead && loopCount < 5);
 
@@ -641,9 +669,7 @@ class MultiplayerGameManager {
           // If I was host, migrate host to the first human player
           if (players[myIndex].isHost) {
             players[myIndex].isHost = false;
-            const newHost = players.find(
-              (p) => !p.isAI && p.nickname !== this.myNickname,
-            );
+            const newHost = players.find((p) => !p.isAI);
             if (newHost) {
               newHost.isHost = true;
             }

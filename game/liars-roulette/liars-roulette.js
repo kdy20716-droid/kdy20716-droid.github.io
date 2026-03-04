@@ -1081,8 +1081,9 @@ function updateDealing() {
       let targetPlayer;
       if (isMultiplayerGame) {
         // 멀티플레이: 서버 인덱스 기준으로 라운드 로빈
-        const serverIndex = dealingState.dealtCount % 4;
-        targetPlayer = players.find((p) => p.serverIndex === serverIndex);
+        // 살아있는 플레이어만 대상으로 함 (서버 로직과 동기화)
+        const survivors = players.filter(p => !p.isDead).sort((a, b) => a.serverIndex - b.serverIndex);
+        targetPlayer = survivors[dealingState.dealtCount % survivors.length];
       } else {
         const survivors = players.filter((p) => !p.isDead);
         targetPlayer = survivors[dealingState.dealtCount % survivors.length];
@@ -1134,6 +1135,11 @@ function updateDealing() {
       if (btnPlay) {
         btnPlay.textContent = "완료";
         btnPlay.disabled = true;
+      }
+
+      // 멀티플레이 시 딜링 애니메이션 종료 후 현재 턴 상태에 따라 버튼 표시 갱신
+      if (isMultiplayerGame && multiplayerGameManager) {
+        gameCallbacks.setMyTurn(multiplayerGameManager.isMyTurn);
       }
     }
   }
@@ -1932,7 +1938,6 @@ function submitCards(playerIndex, cardIndices) {
   const player = players[playerIndex];
   const cardsToPlay = [];
 
-  isAiThinking = false; // Reset AI thinking flag
   if (isMultiplayerGame && multiplayerGameManager) {
     const serverIndex = players[playerIndex].serverIndex;
     if (serverIndex !== undefined) {
@@ -2054,7 +2059,7 @@ function nextTurn() {
   let nextIndex = gameState.turnIndex;
   let loopCount = 0;
   do {
-    nextIndex = (nextIndex - 1 + 4) % 4; // 반시계 방향
+    nextIndex = (nextIndex + 1) % 4; // 시계 방향 (0->1->2->3)
     loopCount++;
   } while (
     (players[nextIndex].isDead ||
@@ -2063,6 +2068,7 @@ function nextTurn() {
     loopCount < 5
   );
   gameState.turnIndex = nextIndex;
+  isAiThinking = false; // Reset AI thinking flag when turn changes
   updateGameStatus();
 
   // 내 턴이 돌아왔을 때 Liar 버튼 표시 여부 확인
@@ -2228,7 +2234,6 @@ function challenge() {
   // 중복 클릭 방지: 이미 처리 중이거나 다른 단계라면 무시
   if (gameState.phase !== "PLAYING") return;
 
-  isAiThinking = false; // Reset AI thinking flag
   if (isMultiplayerGame && multiplayerGameManager) {
     multiplayerGameManager.challenge(multiplayerGameManager.myPlayerIndex);
     return;
@@ -3339,6 +3344,7 @@ const btnCreateRoom = document.getElementById("btn-create-room");
 const btnGameStartMulti = document.getElementById("btn-game-start-multi");
 const btnJoinCheck = document.getElementById("btn-join-check");
 const btnBackMenu = document.getElementById("btn-back-menu");
+const btnAddAi = document.getElementById("btn-add-ai");
 const btnBackLobby = document.getElementById("btn-back-lobby");
 const roomInput = document.getElementById("room-code-input");
 const multiStatus = document.getElementById("multi-status");
@@ -3502,6 +3508,43 @@ if (btnGameStartMulti) {
   });
 }
 
+// AI 추가 버튼 (방장 전용)
+if (btnAddAi) {
+  btnAddAi.addEventListener("click", async () => {
+    if (!db || !currentRoomId) return;
+
+    try {
+      const roomRef = window.fs.doc(db, "liar_rooms", currentRoomId);
+      await window.fs.runTransaction(db, async (transaction) => {
+        const roomDoc = await transaction.get(roomRef);
+        if (!roomDoc.exists()) throw "방이 존재하지 않습니다.";
+
+        const roomData = roomDoc.data();
+        const currentPlayers = roomData.players || [];
+
+        if (currentPlayers.length >= 4) throw "방이 꽉 찼습니다.";
+
+        // 사용되지 않은 캐릭터 인덱스 찾기
+        const usedChars = currentPlayers.map((p) => p.charIndex);
+        let newCharIndex = 0;
+        while (usedChars.includes(newCharIndex)) newCharIndex++;
+
+        const newBot = {
+          nickname: `Bot ${Math.floor(Math.random() * 1000)}`,
+          charIndex: newCharIndex,
+          isHost: false,
+          isAI: true,
+        };
+
+        transaction.update(roomRef, { players: [...currentPlayers, newBot] });
+      });
+    } catch (e) {
+      console.error("AI 추가 실패:", e);
+      alert("AI 추가 실패: " + e);
+    }
+  });
+}
+
 // 방 참가 확인 (코드 입력 후)
 if (btnJoinCheck) {
   btnJoinCheck.addEventListener("click", async () => {
@@ -3525,8 +3568,11 @@ if (btnJoinCheck) {
 
       const roomData = roomSnap.data();
       if (roomData.players && roomData.players.length >= 4) {
-        multiStatus.textContent = "이미 꽉 찬 방입니다.";
-        return;
+        // 게임 중이라면 재참가 가능성 열어둠
+        if (roomData.status !== "playing") {
+          multiStatus.textContent = "이미 꽉 찬 방입니다.";
+          return;
+        }
       }
 
       // 방이 존재하면 닉네임 입력 모달 띄우기
@@ -3875,7 +3921,11 @@ function renderLobbySlots(playersData) {
     (p) => p.nickname === myNickname && p.isHost,
   );
   if (btnGameStartMulti) btnGameStartMulti.disabled = !amIHost;
-
+  
+  // 기존 전역 AI 추가 버튼 숨김 (슬롯별 버튼으로 대체)
+  if (btnAddAi) {
+    btnAddAi.style.display = "none";
+  }
   // 4개의 캐릭터 슬롯 생성 (고정)
   for (let i = 0; i < 4; i++) {
     const charName = charNames[i];
@@ -3920,6 +3970,19 @@ function renderLobbySlots(playersData) {
       btnHtml = `<button class="btn-select" onclick="selectChar(${i})">선택</button>`;
     }
 
+    // AI 추가/제거 버튼 (방장 전용)
+    let aiBtnHtml = "";
+    if (amIHost) {
+      if (!isTaken) {
+        aiBtnHtml = `<button class="btn-select" style="margin-top: 5px; font-size: 12px; padding: 5px; background-color: #424242; border-color: #616161;" onclick="addAiToSlot(${i})">+ AI</button>`;
+      } else if (owner && owner.isAI) {
+        aiBtnHtml = `<button class="btn-select danger" style="margin-top: 5px; font-size: 12px; padding: 5px;" onclick="removeAiFromSlot(${i})">- AI</button>`;
+      } else {
+        // 레이아웃 유지를 위한 빈 공간
+        aiBtnHtml = `<div style="height: 29px; margin-top: 5px;"></div>`;
+      }
+    }
+
     slot.innerHTML = `
       <div class="slot-char-area">
         <img src="./character/${charImg}" alt="${charName}" class="${imgClass}" style="display:block;">
@@ -3927,6 +3990,7 @@ function renderLobbySlots(playersData) {
       </div>
       <div class="slot-name" style="${isMe ? "color: #d4af37;" : ""}">${nameText}</div>
       ${btnHtml}
+      ${aiBtnHtml}
     `;
     container.appendChild(slot);
 
@@ -3957,6 +4021,65 @@ function renderLobbySlots(playersData) {
     }
   }
 }
+
+// 슬롯별 AI 추가 함수
+window.addAiToSlot = async function (charIndex) {
+  if (!db || !currentRoomId) return;
+
+  const roomRef = window.fs.doc(db, "liar_rooms", currentRoomId);
+
+  try {
+    await window.fs.runTransaction(db, async (transaction) => {
+      const roomDoc = await transaction.get(roomRef);
+      if (!roomDoc.exists()) throw "방이 존재하지 않습니다.";
+
+      const currentPlayers = roomDoc.data().players || [];
+
+      if (currentPlayers.length >= 4) throw "방이 꽉 찼습니다.";
+      if (currentPlayers.some((p) => p.charIndex === charIndex))
+        throw "이미 선택된 슬롯입니다.";
+
+      const newBot = {
+        nickname: `Bot ${Math.floor(Math.random() * 1000)}`,
+        charIndex: charIndex,
+        isHost: false,
+        isAI: true,
+      };
+
+      transaction.update(roomRef, { players: [...currentPlayers, newBot] });
+    });
+  } catch (e) {
+    console.error("AI 추가 실패:", e);
+    alert("AI 추가 실패: " + e);
+  }
+};
+
+// 슬롯별 AI 제거 함수
+window.removeAiFromSlot = async function (charIndex) {
+  if (!db || !currentRoomId) return;
+
+  const roomRef = window.fs.doc(db, "liar_rooms", currentRoomId);
+
+  try {
+    await window.fs.runTransaction(db, async (transaction) => {
+      const roomDoc = await transaction.get(roomRef);
+      if (!roomDoc.exists()) throw "방이 존재하지 않습니다.";
+
+      const currentPlayers = roomDoc.data().players || [];
+      const targetIndex = currentPlayers.findIndex(
+        (p) => p.charIndex === charIndex && p.isAI,
+      );
+
+      if (targetIndex === -1) throw "삭제할 AI가 없습니다.";
+
+      const newPlayers = currentPlayers.filter((_, i) => i !== targetIndex);
+      transaction.update(roomRef, { players: newPlayers });
+    });
+  } catch (e) {
+    console.error("AI 삭제 실패:", e);
+    alert("AI 삭제 실패: " + e);
+  }
+};
 
 // 전역 함수로 등록 (HTML onclick에서 접근 가능하도록)
 window.selectChar = async function (newCharIndex) {
@@ -4026,7 +4149,7 @@ const gameCallbacks = {
     // 내 닉네임을 기준으로 상대적 위치 계산 (startMultiplayerSequence와 동일한 로직)
     const myIndex = playersData.findIndex((p) => p.nickname === myNickname);
     const baseIndex = myIndex === -1 ? 0 : myIndex;
-    const mapping = [3, 2, 1, 0]; // East, North, West, South 순서에 맞는 오프셋
+    const mapping = [1, 2, 3, 0]; // East(1), North(2), West(3), South(0) - P1->P2->P3->P4 배치
 
     // Update the global players array in liars-roulette.js
     players.forEach((p, i) => {
@@ -4036,6 +4159,17 @@ const gameCallbacks = {
         p.serverIndex = dataIndex; // Store server index for mapping
         p.displayName = data.nickname;
         p.isAI = data.isAI;
+
+        // Detect death transition to spawn blood splatter (Sync visual effect)
+        if (!p.isDead && data.isDead) {
+          // Player just died according to server
+          const dx = centerX - p.x;
+          const dy = tableY - p.y;
+          const splatterCenterX = p.x + dx * 0.15;
+          const splatterCenterY = p.y + dy * 0.15;
+          createBloodSplatter(splatterCenterX, splatterCenterY);
+        }
+
         p.isDead = data.isDead;
         p.charIndex = data.charIndex;
 
@@ -4090,6 +4224,11 @@ const gameCallbacks = {
       if (localTurn !== -1) newData.turnIndex = localTurn;
     }
 
+    // Reset AI thinking flag if turn changed
+    if (newData.turnIndex !== undefined && newData.turnIndex !== gameState.turnIndex) {
+      isAiThinking = false;
+    }
+
     // Map server victimIndices to local victimIndices
     if (newData.victimIndices) {
       newData.victimIndices = newData.victimIndices
@@ -4139,8 +4278,33 @@ const gameCallbacks = {
   },
   setMyTurn: (isMyTurn) => {
     // Enable/disable player UI buttons
-    document.getElementById("btn-play").disabled = !isMyTurn;
-    document.getElementById("btn-liar").disabled = !isMyTurn;
+    const btnPlay = document.getElementById("btn-play");
+    const btnLiar = document.getElementById("btn-liar");
+
+    if (btnPlay) btnPlay.disabled = !isMyTurn;
+    if (btnLiar) btnLiar.disabled = !isMyTurn;
+
+    if (btnLiar) {
+      // Show Liar button if it's my turn AND there's a previous play to challenge
+      let showLiar = false;
+      if (isMyTurn && gameState.lastPlayedBatch) {
+        let myServerIndex = players[3].serverIndex;
+        // Use authoritative index from manager if available
+        if (isMultiplayerGame && multiplayerGameManager && multiplayerGameManager.myPlayerIndex !== -1) {
+            myServerIndex = multiplayerGameManager.myPlayerIndex;
+        }
+
+        if (gameState.lastPlayedBatch.playerIndex !== myServerIndex) {
+          showLiar = true;
+        }
+      }
+
+      if (showLiar) {
+        btnLiar.classList.remove("hidden");
+      } else {
+        btnLiar.classList.add("hidden");
+      }
+    }
   },
   renderGame: (gameData) => {
     /* The draw loop already handles this */
@@ -4158,7 +4322,7 @@ const gameCallbacks = {
   checkAiTurn: () => {
     if (isMultiplayerGame && amIHost && gameState.phase === "PLAYING") {
       const currentPlayer = players[gameState.turnIndex];
-      if (currentPlayer && currentPlayer.isAI) {
+      if (currentPlayer && (currentPlayer.isAI || !currentPlayer.displayName) && !currentPlayer.isDead) {
         processAiTurn();
       }
     }
@@ -4275,6 +4439,9 @@ function startMultiplayerSequence(roomPlayers) {
   lobbyScreen.classList.add("hidden");
   document.getElementById("game-hud").classList.remove("hidden");
   document.getElementById("ingame-chat").classList.remove("hidden");
+  
+  // 인게임 방 코드 표시
+  document.getElementById("ingame-room-code").textContent = currentRoomId;
 
   // 플레이어 매핑 (나를 South(3) 위치로 고정하고 나머지를 회전)
   // roomPlayers 순서: [P1, P2, P3, P4]
@@ -4296,7 +4463,7 @@ function startMultiplayerSequence(roomPlayers) {
   // West(2) <- room[(baseIndex + 1) % 4]
   // South(3) <- room[baseIndex]
 
-  const mapping = [3, 2, 1, 0]; // East, North, West, South 순서에 맞는 오프셋
+  const mapping = [1, 2, 3, 0]; // East(1), North(2), West(3), South(0)
 
   // 카운트다운 동안 로비 화면이 보이도록 보장하고, 게임 HUD는 숨김
   // This is now handled by the manager's init and subsequent updates
