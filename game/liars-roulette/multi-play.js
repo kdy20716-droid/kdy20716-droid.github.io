@@ -449,7 +449,7 @@ class MultiplayerGameManager {
             gameData.deck = deck;
             gameData.players = gameData.players.map((p, i) => ({
               ...p,
-              hand: p.isDead ? p.hand : hands[i],
+              hand: p.isDead ? [] : hands[i], // Dead players get empty hands
               // Keep revolver state
             }));
           }
@@ -530,7 +530,7 @@ class MultiplayerGameManager {
           // Reset hands for living players
           gameData.players = gameData.players.map((p, i) => ({
             ...p,
-            hand: p.isDead ? p.hand : hands[i],
+            hand: p.isDead ? [] : hands[i],
           }));
         }
 
@@ -651,7 +651,7 @@ class MultiplayerGameManager {
           // Reset hands for living players
           players: currentData.players.map((p, i) => ({
             ...p,
-            hand: p.isDead ? p.hand : hands[i],
+            hand: p.isDead ? [] : hands[i],
             revolver: p.isDead
               ? p.revolver
               : {

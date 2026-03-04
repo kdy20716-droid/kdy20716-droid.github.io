@@ -4318,7 +4318,17 @@ const gameCallbacks = {
     const btnPlay = document.getElementById("btn-play");
     const btnLiar = document.getElementById("btn-liar");
 
-    if (btnPlay) btnPlay.disabled = !isMyTurn;
+    if (btnPlay) {
+      if (isMyTurn) {
+        // 내 턴일 때, 카드 선택 여부에 따라 완료 버튼 상태 결정
+        const player = players[3]; // '나'는 항상 players[3]
+        const hasSelection = player.hand.some((c) => c.isSelected);
+        btnPlay.disabled = !hasSelection;
+      } else {
+        // 내 턴이 아니면 무조건 비활성화
+        btnPlay.disabled = true;
+      }
+    }
     if (btnLiar) btnLiar.disabled = !isMyTurn;
 
     if (btnLiar) {
