@@ -983,9 +983,6 @@ function draw() {
         ctx.restore();
       }
 
-      // 사망한 플레이어의 패는 그리지 않음 (관전 모드)
-      if (player.isDead) return;
-
       player.hand.forEach((card, index) => {
         // 카드를 겹쳐서 배치
         const offsetX = (index - (player.hand.length - 1) / 2) * player.spacing;
@@ -1181,15 +1178,6 @@ function updateDealing() {
           isSelected: false, // 선택 상태 추가
         }); // 핸드에 카드 추가
       }
-      // [수정] 멀티플레이 여부와 상관없이 애니메이션 완료 시 로컬 핸드에 카드 추가
-      players[mc.playerIndex].hand.push({
-        type: cardType || "K", // 안전장치: 타입이 없으면 K로 설정
-        faceUp: false,
-        isFlipping: false,
-        flipProgress: 0,
-        isSelected: false, // 선택 상태 추가
-      }); // 핸드에 카드 추가
-
       dealingState.dealtCount++;
       dealingState.movingCard = null;
 
@@ -1649,8 +1637,7 @@ function drawPlayerRevolvers() {
     // 룰렛 단계이고 피해자인 경우: 자기 자신을 향해 조준
     if (
       gameState.phase === "ROULETTE" &&
-      gameState.victimIndices.includes(index) &&
-      !player.isDead
+      gameState.victimIndices.includes(index)
     ) {
       // 목표 위치 (머리/중심 쪽)
       const aimX = 60;
@@ -1682,59 +1669,6 @@ function drawPlayerRevolvers() {
         currentX += (Math.random() - 0.5) * 3;
         currentY += (Math.random() - 0.5) * 3;
       }
-    }
-
-    // 사망 시 리볼버 떨어뜨리기
-    if (player.isDead) {
-      if (!player.revolverDrop) {
-        player.revolverDrop = {
-          dist: 0,
-          velocity: 0,
-          rotation: 0,
-          rotVelocity: 0,
-          opacity: 1.0,
-        };
-      }
-
-      // 투명도 초기화 (다른 곳에서 리셋된 경우 대비)
-      if (typeof player.revolverDrop.opacity === "undefined") {
-        player.revolverDrop.opacity = 1.0;
-      }
-
-      // 완전히 투명해지면 그리지 않음
-      if (player.revolverDrop.opacity <= 0) {
-        ctx.restore();
-        return;
-      }
-
-      // Physics update
-      player.revolverDrop.velocity += 0.5; // Gravity
-      player.revolverDrop.dist += player.revolverDrop.velocity;
-      player.revolverDrop.rotation += player.revolverDrop.rotVelocity;
-
-      // Floor collision
-      const maxDrop = 400;
-      if (player.revolverDrop.dist > maxDrop) {
-        player.revolverDrop.dist = maxDrop;
-        player.revolverDrop.velocity *= -0.3; // Bounce
-        player.revolverDrop.rotVelocity *= 0.8;
-
-        // 바닥에 닿으면 빠르게 투명해짐 (약 1초 후 소멸)
-        player.revolverDrop.opacity -= 0.015;
-      } else {
-        // 떨어지는 동안 서서히 투명해짐
-        player.revolverDrop.opacity -= 0.002;
-      }
-
-      if (player.revolverDrop.opacity < 0) player.revolverDrop.opacity = 0;
-
-      // Apply drop offset (Global Y+ direction)
-      currentX += player.revolverDrop.dist * Math.sin(player.angle);
-      currentY += player.revolverDrop.dist * Math.cos(player.angle);
-      currentRotation += player.revolverDrop.rotation;
-
-      // 투명도 적용
-      ctx.globalAlpha = player.revolverDrop.opacity;
     }
 
     ctx.translate(currentX, currentY);
@@ -2483,14 +2417,6 @@ function triggerRussianRoulette(victim, onComplete = null) {
       gameState.lightingTimer = 60;
       victim.isDead = true;
 
-      // 리볼버 떨어뜨리기 애니메이션 초기화
-      victim.revolverDrop = {
-        dist: 0,
-        velocity: -5, // 위로 살짝 튀어올랐다 떨어짐
-        rotation: 0,
-        rotVelocity: (Math.random() - 0.5) * 0.5,
-      };
-
       // 피자국 생성 (테이블 위)
       // 플레이어 위치에서 테이블 중앙 쪽으로 약간 이동한 지점을 피자국 중심으로 설정 (테이블에 묻도록)
       const dx = centerX - victim.x;
@@ -2652,14 +2578,6 @@ function triggerSimultaneousRoulette(victims, onComplete = null) {
         anyDeath = true;
         victim.isDead = true;
         deadVictims.push(victim);
-
-        // 리볼버 떨어뜨리기 애니메이션 초기화
-        victim.revolverDrop = {
-          dist: 0,
-          velocity: -5,
-          rotation: 0,
-          rotVelocity: (Math.random() - 0.5) * 0.5,
-        };
 
         // 피자국 생성 로직 (각 피해자 위치)
         const dx = centerX - victim.x;
@@ -3169,10 +3087,9 @@ function resizeGame() {
   // 1. 화면 비율에 맞춰 캔버스 너비 동적 계산 (최소 1024px 유지)
   // 가로가 긴 모바일 화면에서 여백 없이 꽉 채우기 위함
   let newCanvasWidth = (winW / winH) * baseHeight;
-
-  // [수정] 플레이어 위치(±600)를 고려하여 최소 너비 1400px 보장, 최대 1920px 제한
-  if (newCanvasWidth < 1400) newCanvasWidth = 1400;
-  if (newCanvasWidth > 1920) newCanvasWidth = 1920;
+  // 여백을 제외한 가용 공간 비율을 사용
+  let newCanvasWidth1 = (availW / availH) * baseHeight;
+  if (newCanvasWidth < 1024) newCanvasWidth = 1024;
 
   // 2. 캔버스 및 컨테이너 크기 업데이트
   canvas.width = newCanvasWidth;
@@ -4264,14 +4181,6 @@ const gameCallbacks = {
           const splatterCenterX = p.x + dx * 0.15;
           const splatterCenterY = p.y + dy * 0.15;
           createBloodSplatter(splatterCenterX, splatterCenterY);
-
-          // 리볼버 떨어뜨리기 애니메이션 초기화
-          p.revolverDrop = {
-            dist: 0,
-            velocity: -5,
-            rotation: 0,
-            rotVelocity: (Math.random() - 0.5) * 0.5,
-          };
         }
 
         p.isDead = data.isDead;
@@ -4279,31 +4188,27 @@ const gameCallbacks = {
 
         // Merge hand
         const newHandData = data.hand || [];
+        // If it's me (South / index 3), preserve local state
+        if (i === 3) {
+          // Check if hand changed to avoid resetting selection on every tick
+          const currentTypes = p.hand.map((c) => c.type).join(",");
+          const newTypes = newHandData.map((c) => c.type).join(",");
 
-        // [수정] 딜링 애니메이션 중에는 서버 핸드 데이터로 덮어쓰지 않음 (로컬 애니메이션이 채움)
-        if (!dealingState.isDealing) {
-          // If it's me (South / index 3), preserve local state
-          if (i === 3) {
-            // Check if hand changed to avoid resetting selection on every tick
-            const currentTypes = p.hand.map((c) => c.type).join(",");
-            const newTypes = newHandData.map((c) => c.type).join(",");
-
-            if (currentTypes !== newTypes) {
-              p.hand = newHandData.map((c) => ({
-                ...c,
-                faceUp: true, // My cards are visible to me
-                isSelected: false,
-                isFlipping: false,
-                flipProgress: 0,
-              }));
-            }
-          } else {
+          if (currentTypes !== newTypes) {
             p.hand = newHandData.map((c) => ({
               ...c,
-              faceUp: c.faceUp || false,
+              faceUp: true, // My cards are visible to me
               isSelected: false,
+              isFlipping: false,
+              flipProgress: 0,
             }));
           }
+        } else {
+          p.hand = newHandData.map((c) => ({
+            ...c,
+            faceUp: c.faceUp || false,
+            isSelected: false,
+          }));
         }
 
         // Ensure revolver state exists if not present
@@ -4414,17 +4319,6 @@ const gameCallbacks = {
     const btnLiar = document.getElementById("btn-liar");
 
     if (btnPlay) btnPlay.disabled = !isMyTurn;
-    if (btnPlay) {
-      if (isMyTurn) {
-        // 내 턴일 때, 카드 선택 여부에 따라 완료 버튼 상태 결정
-        const player = players[3]; // '나'는 항상 players[3]
-        const hasSelection = player.hand.some((c) => c.isSelected);
-        btnPlay.disabled = !hasSelection;
-      } else {
-        // 내 턴이 아니면 무조건 비활성화
-        btnPlay.disabled = true;
-      }
-    }
     if (btnLiar) btnLiar.disabled = !isMyTurn;
 
     if (btnLiar) {
@@ -4487,23 +4381,19 @@ const gameCallbacks = {
 
     if (targets.length === 1) {
       triggerRussianRoulette(targets[0], () => {
-        if (amIHost) {
-          multiplayerGameManager.handleRouletteCompletion(
-            victimServerIndices[0],
-            targets[0].isDead, // isDead is updated locally by triggerRussianRoulette
-          );
-        }
+        multiplayerGameManager.handleRouletteCompletion(
+          victimServerIndices[0],
+          targets[0].isDead, // isDead is updated locally by triggerRussianRoulette
+        );
       });
     } else if (targets.length > 1) {
       triggerSimultaneousRoulette(targets, (results) => {
-        if (amIHost) {
-          // Map local results back to server indices
-          const serverResults = results.map((r) => ({
-            index: players[r.index].serverIndex,
-            isDead: r.isDead,
-          }));
-          multiplayerGameManager.handleBatchRouletteCompletion(serverResults);
-        }
+        // Map local results back to server indices
+        const serverResults = results.map((r) => ({
+          index: players[r.index].serverIndex,
+          isDead: r.isDead,
+        }));
+        multiplayerGameManager.handleBatchRouletteCompletion(serverResults);
       });
     }
   },
@@ -4645,7 +4535,6 @@ function startMultiplayerSequence(roomPlayers) {
     players[i].charIndex = roomPlayer.charIndex; // 선택된 캐릭터 인덱스 저장
     players[i].isDead = false; // Reset dead status for new game
     players[i].hand = []; // Reset hand for new game
-    players[i].revolverDrop = null; // Reset drop animation
     players[i].serverIndex = roomPlayerIndex; // Store server index
   }
 
