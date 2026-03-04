@@ -19,7 +19,7 @@
           <h1 class="title">Liars-Roulette</h1>
           <button id="btn-start" class="btn primary">게임 시작</button>
           <button id="btn-multi" class="btn success" style="margin-top: 20px">
-            멀티플레이 (Beta)
+            멀티플레이
           </button>
           <button id="btn-howto" class="btn secondary" style="margin-top: 20px">
             게임 방법
@@ -55,7 +55,11 @@
                 <button id="btn-game-start-multi" class="btn primary" disabled>
                   게임 시작
                 </button>
-                <button id="btn-add-ai" class="btn secondary" style="display: none;">
+                <button
+                  id="btn-add-ai"
+                  class="btn secondary"
+                  style="display: none"
+                >
                   AI 추가
                 </button>
                 <button id="btn-back-lobby" class="btn danger">나가기</button>
@@ -290,8 +294,18 @@
 
         <!-- 인게임 채팅 -->
         <div id="ingame-chat" class="hidden">
-          <div id="ingame-room-info" style="padding: 10px; background: rgba(0,0,0,0.5); color: #d4af37; font-weight: bold; text-align: center; border-bottom: 1px solid #555;">
-             Room: <span id="ingame-room-code">----</span>
+          <div
+            id="ingame-room-info"
+            style="
+              padding: 10px;
+              background: rgba(0, 0, 0, 0.5);
+              color: #d4af37;
+              font-weight: bold;
+              text-align: center;
+              border-bottom: 1px solid #555;
+            "
+          >
+            Room: <span id="ingame-room-code">----</span>
           </div>
           <div id="ingame-messages"></div>
           <div class="chat-controls">
