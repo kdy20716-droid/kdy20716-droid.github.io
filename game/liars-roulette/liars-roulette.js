@@ -1181,6 +1181,15 @@ function updateDealing() {
           isSelected: false, // 선택 상태 추가
         }); // 핸드에 카드 추가
       }
+      // [수정] 멀티플레이 여부와 상관없이 애니메이션 완료 시 로컬 핸드에 카드 추가
+      players[mc.playerIndex].hand.push({
+        type: cardType || "K", // 안전장치: 타입이 없으면 K로 설정
+        faceUp: false,
+        isFlipping: false,
+        flipProgress: 0,
+        isSelected: false, // 선택 상태 추가
+      }); // 핸드에 카드 추가
+
       dealingState.dealtCount++;
       dealingState.movingCard = null;
 
@@ -4270,27 +4279,31 @@ const gameCallbacks = {
 
         // Merge hand
         const newHandData = data.hand || [];
-        // If it's me (South / index 3), preserve local state
-        if (i === 3) {
-          // Check if hand changed to avoid resetting selection on every tick
-          const currentTypes = p.hand.map((c) => c.type).join(",");
-          const newTypes = newHandData.map((c) => c.type).join(",");
 
-          if (currentTypes !== newTypes) {
+        // [수정] 딜링 애니메이션 중에는 서버 핸드 데이터로 덮어쓰지 않음 (로컬 애니메이션이 채움)
+        if (!dealingState.isDealing) {
+          // If it's me (South / index 3), preserve local state
+          if (i === 3) {
+            // Check if hand changed to avoid resetting selection on every tick
+            const currentTypes = p.hand.map((c) => c.type).join(",");
+            const newTypes = newHandData.map((c) => c.type).join(",");
+
+            if (currentTypes !== newTypes) {
+              p.hand = newHandData.map((c) => ({
+                ...c,
+                faceUp: true, // My cards are visible to me
+                isSelected: false,
+                isFlipping: false,
+                flipProgress: 0,
+              }));
+            }
+          } else {
             p.hand = newHandData.map((c) => ({
               ...c,
-              faceUp: true, // My cards are visible to me
+              faceUp: c.faceUp || false,
               isSelected: false,
-              isFlipping: false,
-              flipProgress: 0,
             }));
           }
-        } else {
-          p.hand = newHandData.map((c) => ({
-            ...c,
-            faceUp: c.faceUp || false,
-            isSelected: false,
-          }));
         }
 
         // Ensure revolver state exists if not present

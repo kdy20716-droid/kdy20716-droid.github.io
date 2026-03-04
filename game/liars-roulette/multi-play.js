@@ -234,19 +234,17 @@ class MultiplayerGameManager {
         const currentRank = gameData.currentRank;
 
         // [수정] 1. 데빌 카드 효과를 먼저 체크하고 처리
+        // 1. 데빌 카드 효과를 먼저 체크 (싱글플레이 로직과 동일하게)
         const hasDevil = lastPlayedCards.some((cardType) => cardType === "D");
 
         if (hasDevil) {
           // Devil card effect: all players except submitter go to roulette
-          const victims = [];
-          for (let i = 0; i < gameData.players.length; i++) {
-            if (i === submitterIndex) {
-              continue; // 제출자 제외
-            }
-            if (!gameData.players[i].isDead) {
-              victims.push(i); // 살아있는 플레이어만 추가
-            }
-          }
+          // 데빌 카드 발동: 제출자를 제외한 모든 생존자가 룰렛 대상
+          const victims = gameData.players
+            .map((p, idx) => idx)
+            .filter(
+              (idx) => idx !== submitterIndex && !gameData.players[idx].isDead,
+            );
 
           gameData.phase = "ROULETTE";
           gameData.victimIndices = victims;
@@ -257,6 +255,7 @@ class MultiplayerGameManager {
         }
 
         // [수정] 2. 데빌 카드가 아닐 경우에만 일반 거짓말 판정
+        // 2. 데빌 카드가 아닐 경우에만 일반 거짓말 판정
         const isLie = lastPlayedCards.some(
           (cardType) => cardType !== currentRank && cardType !== "J",
         );
@@ -440,21 +439,13 @@ class MultiplayerGameManager {
         const initialGameState = {
           status: "playing",
           phase: "DEALING", // Start with dealing phase
-          turnIndex: 3, // South player starts (my player)
+          turnIndex: 0, // [수정] 방장(Host, index 0)부터 게임 시작
           currentRank: this.gameCallbacks.getRandomRank(),
           tableCards: [],
           lastPlayedBatch: null,
           turnCount: 0,
           victimIndices: [],
           rouletteType: null,
-          deck: this.gameCallbacks.createDeck(), // Generate initial deck
-          players: initialPlayers.map((p) => ({
-            nickname: p.nickname,
-            charIndex: p.charIndex,
-            isAI: p.isAI || false,
-            isDead: false,
-            hand: [], // Hands will be dealt by liars-roulette.js
-          })),
           deck: deck,
           players: playersWithHands,
         };
@@ -521,16 +512,9 @@ class MultiplayerGameManager {
           turnCount: 0,
           victimIndices: [],
           rouletteType: null,
-          deck: this.gameCallbacks.createDeck(), // Generate new deck
-          // Player hands will be reset and dealt by liars-roulette.js
           deck: deck,
           players: nextPlayers,
         };
-        // Reset hands for living players
-        newGameState.players = newGameState.players.map((p) => ({
-          ...p,
-          hand: p.isDead ? p.hand : [], // Keep dead players' hands as is, reset living players' hands
-        }));
 
         transaction.update(this.roomRef, newGameState);
       });
