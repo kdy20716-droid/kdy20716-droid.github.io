@@ -983,6 +983,9 @@ function draw() {
         ctx.restore();
       }
 
+      // 사망한 플레이어의 패는 그리지 않음 (관전 모드)
+      if (player.isDead) return;
+
       player.hand.forEach((card, index) => {
         // 카드를 겹쳐서 배치
         const offsetX = (index - (player.hand.length - 1) / 2) * player.spacing;
@@ -1637,7 +1640,8 @@ function drawPlayerRevolvers() {
     // 룰렛 단계이고 피해자인 경우: 자기 자신을 향해 조준
     if (
       gameState.phase === "ROULETTE" &&
-      gameState.victimIndices.includes(index)
+      gameState.victimIndices.includes(index) &&
+      !player.isDead
     ) {
       // 목표 위치 (머리/중심 쪽)
       const aimX = 60;
@@ -1669,6 +1673,36 @@ function drawPlayerRevolvers() {
         currentX += (Math.random() - 0.5) * 3;
         currentY += (Math.random() - 0.5) * 3;
       }
+    }
+
+    // 사망 시 리볼버 떨어뜨리기
+    if (player.isDead) {
+      if (!player.revolverDrop) {
+        player.revolverDrop = {
+          dist: 0,
+          velocity: 0,
+          rotation: 0,
+          rotVelocity: 0,
+        };
+      }
+
+      // Physics update
+      player.revolverDrop.velocity += 0.5; // Gravity
+      player.revolverDrop.dist += player.revolverDrop.velocity;
+      player.revolverDrop.rotation += player.revolverDrop.rotVelocity;
+
+      // Floor collision
+      const maxDrop = 400;
+      if (player.revolverDrop.dist > maxDrop) {
+        player.revolverDrop.dist = maxDrop;
+        player.revolverDrop.velocity *= -0.3; // Bounce
+        player.revolverDrop.rotVelocity *= 0.8;
+      }
+
+      // Apply drop offset (Global Y+ direction)
+      currentX += player.revolverDrop.dist * Math.sin(player.angle);
+      currentY += player.revolverDrop.dist * Math.cos(player.angle);
+      currentRotation += player.revolverDrop.rotation;
     }
 
     ctx.translate(currentX, currentY);
@@ -2417,6 +2451,14 @@ function triggerRussianRoulette(victim, onComplete = null) {
       gameState.lightingTimer = 60;
       victim.isDead = true;
 
+      // 리볼버 떨어뜨리기 애니메이션 초기화
+      victim.revolverDrop = {
+        dist: 0,
+        velocity: -5, // 위로 살짝 튀어올랐다 떨어짐
+        rotation: 0,
+        rotVelocity: (Math.random() - 0.5) * 0.5,
+      };
+
       // 피자국 생성 (테이블 위)
       // 플레이어 위치에서 테이블 중앙 쪽으로 약간 이동한 지점을 피자국 중심으로 설정 (테이블에 묻도록)
       const dx = centerX - victim.x;
@@ -2578,6 +2620,14 @@ function triggerSimultaneousRoulette(victims, onComplete = null) {
         anyDeath = true;
         victim.isDead = true;
         deadVictims.push(victim);
+
+        // 리볼버 떨어뜨리기 애니메이션 초기화
+        victim.revolverDrop = {
+          dist: 0,
+          velocity: -5,
+          rotation: 0,
+          rotVelocity: (Math.random() - 0.5) * 0.5,
+        };
 
         // 피자국 생성 로직 (각 피해자 위치)
         const dx = centerX - victim.x;
@@ -4182,6 +4232,14 @@ const gameCallbacks = {
           const splatterCenterX = p.x + dx * 0.15;
           const splatterCenterY = p.y + dy * 0.15;
           createBloodSplatter(splatterCenterX, splatterCenterY);
+
+          // 리볼버 떨어뜨리기 애니메이션 초기화
+          p.revolverDrop = {
+            dist: 0,
+            velocity: -5,
+            rotation: 0,
+            rotVelocity: (Math.random() - 0.5) * 0.5,
+          };
         }
 
         p.isDead = data.isDead;
@@ -4551,6 +4609,7 @@ function startMultiplayerSequence(roomPlayers) {
     players[i].charIndex = roomPlayer.charIndex; // 선택된 캐릭터 인덱스 저장
     players[i].isDead = false; // Reset dead status for new game
     players[i].hand = []; // Reset hand for new game
+    players[i].revolverDrop = null; // Reset drop animation
     players[i].serverIndex = roomPlayerIndex; // Store server index
   }
 
