@@ -1082,7 +1082,9 @@ function updateDealing() {
       if (isMultiplayerGame) {
         // 멀티플레이: 서버 인덱스 기준으로 라운드 로빈
         // 살아있는 플레이어만 대상으로 함 (서버 로직과 동기화)
-        const survivors = players.filter(p => !p.isDead).sort((a, b) => a.serverIndex - b.serverIndex);
+        const survivors = players
+          .filter((p) => !p.isDead)
+          .sort((a, b) => a.serverIndex - b.serverIndex);
         targetPlayer = survivors[dealingState.dealtCount % survivors.length];
       } else {
         const survivors = players.filter((p) => !p.isDead);
@@ -2834,10 +2836,10 @@ function updateGameStatus() {
   if (!currentPlayer) return; // Safety check
 
   if (gameState.turnIndex === 3) {
-    statusEl.textContent = "플레이어 1은 카드를 내주세요";
+    statusEl.textContent = `${currentPlayer.displayName}님, 카드를 내주세요.`;
     statusEl.style.color = "#ffffff"; // White
   } else {
-    statusEl.textContent = `${players[gameState.turnIndex].displayName}가 선택 중입니다...`;
+    statusEl.textContent = `${currentPlayer.displayName}님이 선택 중입니다...`;
     statusEl.style.color = "#ffffff";
   }
 }
@@ -3921,7 +3923,7 @@ function renderLobbySlots(playersData) {
     (p) => p.nickname === myNickname && p.isHost,
   );
   if (btnGameStartMulti) btnGameStartMulti.disabled = !amIHost;
-  
+
   // 기존 전역 AI 추가 버튼 숨김 (슬롯별 버튼으로 대체)
   if (btnAddAi) {
     btnAddAi.style.display = "none";
@@ -4220,20 +4222,25 @@ const gameCallbacks = {
     const newData = { ...data };
     // Map server turnIndex to local turnIndex
     if (newData.turnIndex !== undefined) {
-      const localTurn = players.findIndex((p) => p.serverIndex === newData.turnIndex);
+      const localTurn = players.findIndex(
+        (p) => p.serverIndex === newData.turnIndex,
+      );
       if (localTurn !== -1) newData.turnIndex = localTurn;
     }
 
     // Reset AI thinking flag if turn changed
-    if (newData.turnIndex !== undefined && newData.turnIndex !== gameState.turnIndex) {
+    if (
+      newData.turnIndex !== undefined &&
+      newData.turnIndex !== gameState.turnIndex
+    ) {
       isAiThinking = false;
     }
 
     // Map server victimIndices to local victimIndices
     if (newData.victimIndices) {
       newData.victimIndices = newData.victimIndices
-        .map(sIdx => players.findIndex(p => p.serverIndex === sIdx))
-        .filter(idx => idx !== -1);
+        .map((sIdx) => players.findIndex((p) => p.serverIndex === sIdx))
+        .filter((idx) => idx !== -1);
     }
 
     // Preserve table card positions and set defaults for new cards
@@ -4245,32 +4252,51 @@ const gameCallbacks = {
 
       if (newData.lastPlayedBatch) {
         const serverPlayerIndex = newData.lastPlayedBatch.playerIndex;
-        const localPlayerIndex = players.findIndex(p => p.serverIndex === serverPlayerIndex);
-        
+        const localPlayerIndex = players.findIndex(
+          (p) => p.serverIndex === serverPlayerIndex,
+        );
+
         if (localPlayerIndex !== -1) {
-           if (localPlayerIndex === 0) { // East
-             targetBaseX = centerX + 200; targetBaseY = tableY; targetBaseAngle = -Math.PI / 2;
-           } else if (localPlayerIndex === 1) { // North
-             targetBaseX = centerX; targetBaseY = tableY - 120; targetBaseAngle = Math.PI;
-           } else if (localPlayerIndex === 2) { // West
-             targetBaseX = centerX - 200; targetBaseY = tableY; targetBaseAngle = Math.PI / 2;
-           } else if (localPlayerIndex === 3) { // South
-             targetBaseX = centerX; targetBaseY = tableY + 120; targetBaseAngle = 0;
-           }
+          if (localPlayerIndex === 0) {
+            // East
+            targetBaseX = centerX + 200;
+            targetBaseY = tableY;
+            targetBaseAngle = -Math.PI / 2;
+          } else if (localPlayerIndex === 1) {
+            // North
+            targetBaseX = centerX;
+            targetBaseY = tableY - 120;
+            targetBaseAngle = Math.PI;
+          } else if (localPlayerIndex === 2) {
+            // West
+            targetBaseX = centerX - 200;
+            targetBaseY = tableY;
+            targetBaseAngle = Math.PI / 2;
+          } else if (localPlayerIndex === 3) {
+            // South
+            targetBaseX = centerX;
+            targetBaseY = tableY + 120;
+            targetBaseAngle = 0;
+          }
         }
       }
 
       newData.tableCards = newData.tableCards.map((card, i) => {
         const existing = gameState.tableCards && gameState.tableCards[i];
         if (existing) {
-          return { ...card, x: existing.x, y: existing.y, angle: existing.angle };
+          return {
+            ...card,
+            x: existing.x,
+            y: existing.y,
+            angle: existing.angle,
+          };
         }
         // New card from server
         return {
           ...card,
           x: targetBaseX + (Math.random() - 0.5) * 30,
           y: targetBaseY + (Math.random() - 0.5) * 30,
-          angle: targetBaseAngle + (Math.random() - 0.5) * 0.4
+          angle: targetBaseAngle + (Math.random() - 0.5) * 0.4,
         };
       });
     }
@@ -4290,8 +4316,12 @@ const gameCallbacks = {
       if (isMyTurn && gameState.lastPlayedBatch) {
         let myServerIndex = players[3].serverIndex;
         // Use authoritative index from manager if available
-        if (isMultiplayerGame && multiplayerGameManager && multiplayerGameManager.myPlayerIndex !== -1) {
-            myServerIndex = multiplayerGameManager.myPlayerIndex;
+        if (
+          isMultiplayerGame &&
+          multiplayerGameManager &&
+          multiplayerGameManager.myPlayerIndex !== -1
+        ) {
+          myServerIndex = multiplayerGameManager.myPlayerIndex;
         }
 
         if (gameState.lastPlayedBatch.playerIndex !== myServerIndex) {
@@ -4322,7 +4352,11 @@ const gameCallbacks = {
   checkAiTurn: () => {
     if (isMultiplayerGame && amIHost && gameState.phase === "PLAYING") {
       const currentPlayer = players[gameState.turnIndex];
-      if (currentPlayer && (currentPlayer.isAI || !currentPlayer.displayName) && !currentPlayer.isDead) {
+      if (
+        currentPlayer &&
+        (currentPlayer.isAI || !currentPlayer.displayName) &&
+        !currentPlayer.isDead
+      ) {
         processAiTurn();
       }
     }
@@ -4330,9 +4364,9 @@ const gameCallbacks = {
   triggerRoulette: (victimServerIndices) => {
     // Map server indices to local players
     const targets = victimServerIndices
-      .filter(sIdx => typeof sIdx === 'number')
-      .map(sIdx => players.find(p => p.serverIndex === sIdx))
-      .filter(p => p);
+      .filter((sIdx) => typeof sIdx === "number")
+      .map((sIdx) => players.find((p) => p.serverIndex === sIdx))
+      .filter((p) => p);
 
     if (targets.length === 1) {
       triggerRussianRoulette(targets[0], () => {
@@ -4342,17 +4376,14 @@ const gameCallbacks = {
         );
       });
     } else if (targets.length > 1) {
-      triggerSimultaneousRoulette(
-        targets,
-        (results) => {
-          // Map local results back to server indices
-          const serverResults = results.map(r => ({
-            index: players[r.index].serverIndex,
-            isDead: r.isDead
-          }));
-          multiplayerGameManager.handleBatchRouletteCompletion(serverResults);
-        },
-      );
+      triggerSimultaneousRoulette(targets, (results) => {
+        // Map local results back to server indices
+        const serverResults = results.map((r) => ({
+          index: players[r.index].serverIndex,
+          isDead: r.isDead,
+        }));
+        multiplayerGameManager.handleBatchRouletteCompletion(serverResults);
+      });
     }
   },
   showGameOverScreen: (winnerNickname) => {
@@ -4384,7 +4415,9 @@ const gameCallbacks = {
   },
   handleCardPlay: (batch) => {
     if (!batch || !batch.cards) return;
-    const localPlayerIndex = players.findIndex(p => p.serverIndex === batch.playerIndex);
+    const localPlayerIndex = players.findIndex(
+      (p) => p.serverIndex === batch.playerIndex,
+    );
     if (localPlayerIndex === -1) return;
 
     const player = players[localPlayerIndex];
@@ -4395,18 +4428,30 @@ const gameCallbacks = {
     let targetBaseY = tableY;
     let targetBaseAngle = 0;
 
-    if (localPlayerIndex === 0) { // East
-      targetBaseX = centerX + 200; targetBaseY = tableY; targetBaseAngle = -Math.PI / 2;
-    } else if (localPlayerIndex === 1) { // North
-      targetBaseX = centerX; targetBaseY = tableY - 120; targetBaseAngle = Math.PI;
-    } else if (localPlayerIndex === 2) { // West
-      targetBaseX = centerX - 200; targetBaseY = tableY; targetBaseAngle = Math.PI / 2;
-    } else if (localPlayerIndex === 3) { // South
-      targetBaseX = centerX; targetBaseY = tableY + 120; targetBaseAngle = 0;
+    if (localPlayerIndex === 0) {
+      // East
+      targetBaseX = centerX + 200;
+      targetBaseY = tableY;
+      targetBaseAngle = -Math.PI / 2;
+    } else if (localPlayerIndex === 1) {
+      // North
+      targetBaseX = centerX;
+      targetBaseY = tableY - 120;
+      targetBaseAngle = Math.PI;
+    } else if (localPlayerIndex === 2) {
+      // West
+      targetBaseX = centerX - 200;
+      targetBaseY = tableY;
+      targetBaseAngle = Math.PI / 2;
+    } else if (localPlayerIndex === 3) {
+      // South
+      targetBaseX = centerX;
+      targetBaseY = tableY + 120;
+      targetBaseAngle = 0;
     }
 
     // Animate ghost cards for visual feedback
-    batch.cards.forEach(cardType => {
+    batch.cards.forEach((cardType) => {
       const targetX = targetBaseX + (Math.random() - 0.5) * 30;
       const targetY = targetBaseY + (Math.random() - 0.5) * 30;
       const targetAngle = targetBaseAngle + (Math.random() - 0.5) * 0.4;
@@ -4422,7 +4467,7 @@ const gameCallbacks = {
         speed: 0.15,
         playerIndex: localPlayerIndex,
         cardType: cardType,
-        onComplete: () => {} // Actual table cards are updated via updateGameState
+        onComplete: () => {}, // Actual table cards are updated via updateGameState
       });
     });
   },
@@ -4439,7 +4484,7 @@ function startMultiplayerSequence(roomPlayers) {
   lobbyScreen.classList.add("hidden");
   document.getElementById("game-hud").classList.remove("hidden");
   document.getElementById("ingame-chat").classList.remove("hidden");
-  
+
   // 인게임 방 코드 표시
   document.getElementById("ingame-room-code").textContent = currentRoomId;
 

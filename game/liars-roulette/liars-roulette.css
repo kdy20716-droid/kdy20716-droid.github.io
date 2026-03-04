@@ -386,7 +386,7 @@ body.fade-out {
 .lobby-container {
   display: flex;
   width: 80%; /* 부모 요소(lobby-screen)의 너비에 맞게 조정 */
-  height: 600px;
+  height: 750px;
   background: rgba(0, 0, 0, 0.8);
   border: 2px solid #555;
   border-radius: 20px;
