@@ -4071,6 +4071,10 @@ const gameCallbacks = {
             bulletPosition: Math.floor(Math.random() * 6),
           };
         }
+        // Sync revolver from server if available
+        if (data.revolver) {
+          p.revolver = data.revolver;
+        }
         // Sync host status dynamically (in case host left and migrated)
         if (data.nickname === myNickname) {
           amIHost = data.isHost;
@@ -4084,6 +4088,13 @@ const gameCallbacks = {
     if (newData.turnIndex !== undefined) {
       const localTurn = players.findIndex((p) => p.serverIndex === newData.turnIndex);
       if (localTurn !== -1) newData.turnIndex = localTurn;
+    }
+
+    // Map server victimIndices to local victimIndices
+    if (newData.victimIndices) {
+      newData.victimIndices = newData.victimIndices
+        .map(sIdx => players.findIndex(p => p.serverIndex === sIdx))
+        .filter(idx => idx !== -1);
     }
 
     // Preserve table card positions and set defaults for new cards
@@ -4152,23 +4163,30 @@ const gameCallbacks = {
       }
     }
   },
-  triggerRoulette: (victimIndices) => {
-    // This will be called by manager to trigger local roulette animation
-    // The manager will then call handleRouletteCompletion after animation
-    // For now, let's just trigger the single roulette function
-    if (victimIndices.length === 1) {
-      triggerRussianRoulette(players[victimIndices[0]], () => {
+  triggerRoulette: (victimServerIndices) => {
+    // Map server indices to local players
+    const targets = victimServerIndices
+      .filter(sIdx => typeof sIdx === 'number')
+      .map(sIdx => players.find(p => p.serverIndex === sIdx))
+      .filter(p => p);
+
+    if (targets.length === 1) {
+      triggerRussianRoulette(targets[0], () => {
         multiplayerGameManager.handleRouletteCompletion(
-          victimIndices[0],
-          players[victimIndices[0]].isDead,
+          victimServerIndices[0],
+          targets[0].isDead, // isDead is updated locally by triggerRussianRoulette
         );
       });
-    } else if (victimIndices.length > 1) {
+    } else if (targets.length > 1) {
       triggerSimultaneousRoulette(
-        victimIndices.map((idx) => players[idx]),
+        targets,
         (results) => {
-          // Handle batch completion
-          multiplayerGameManager.handleBatchRouletteCompletion(results);
+          // Map local results back to server indices
+          const serverResults = results.map(r => ({
+            index: players[r.index].serverIndex,
+            isDead: r.isDead
+          }));
+          multiplayerGameManager.handleBatchRouletteCompletion(serverResults);
         },
       );
     }

@@ -296,6 +296,15 @@ class MultiplayerGameManager {
         // Check for Devil card
         const hasDevil = lastPlayedCards.some((cardType) => cardType === "D");
 
+        // Reveal cards in tableCards
+        const lastBatchCount = lastPlayedCards.length;
+        const totalTableCards = gameData.tableCards.length;
+        for (let i = totalTableCards - lastBatchCount; i < totalTableCards; i++) {
+          if (i >= 0) {
+            gameData.tableCards[i].faceUp = true;
+          }
+        }
+
         if (hasDevil) {
           // Devil card effect: all players except submitter go to roulette
           const victims = gameData.players
@@ -335,7 +344,10 @@ class MultiplayerGameManager {
   }
 
   // This function would be called by liars-roulette.js after roulette animation completes locally
-  async handleRouletteCompletion(victimIndex, isBang) {
+  async handleRouletteCompletion(victimServerIndex, isBang) {
+    // Only Host updates the game state to avoid race conditions
+    if (!this.localPlayers[this.myPlayerIndex]?.isHost) return;
+
     try {
       await runTransaction(this.db, async (transaction) => {
         const roomDoc = await transaction.get(this.roomRef);
@@ -348,8 +360,14 @@ class MultiplayerGameManager {
         const currentVictims = gameData.victimIndices;
         const processedVictim = currentVictims.shift(); // Remove the one just processed
 
+        // Update revolver state (advance chamber)
+        const player = gameData.players[processedVictim];
+        if (player.revolver) {
+          player.revolver.currentChamber = (player.revolver.currentChamber + 1) % 6;
+        }
+
         if (isBang) {
-          gameData.players[processedVictim].isDead = true;
+          player.isDead = true;
         }
 
         // If there are more victims (e.g., Devil card), update and continue
@@ -365,16 +383,41 @@ class MultiplayerGameManager {
               survivors.length === 1 ? survivors[0].nickname : "No one";
           } else {
             // Start new round
-            gameData.phase = "DEALING"; // Will trigger startRound in liars-roulette.js
+            // 1. Find next turn (skip dead players)
+            let nextTurnIndex = gameData.turnIndex;
+            let loopCount = 0;
+            do {
+              nextTurnIndex = (nextTurnIndex - 1 + 4) % 4;
+              loopCount++;
+            } while (gameData.players[nextTurnIndex].isDead && loopCount < 5);
+
+            // 2. Deal new cards
+            const deck = this.gameCallbacks.createDeck();
+            const livingCount = survivors.length;
+            const hands = new Array(4).fill(null).map(() => []);
+            const livingIndices = gameData.players.map((p, i) => i).filter(i => !gameData.players[i].isDead);
+
+            for (let c = 0; c < livingCount * 5; c++) {
+              const targetServerIndex = livingIndices[c % livingCount];
+              hands[targetServerIndex].push({ type: deck[c], faceUp: false });
+            }
+
+            // 3. Update Game Data
+            gameData.phase = "DEALING";
+            gameData.turnIndex = nextTurnIndex;
+            gameData.currentRank = this.gameCallbacks.getRandomRank();
             gameData.tableCards = [];
             gameData.lastPlayedBatch = null;
             gameData.turnCount = 0;
-            gameData.currentRank = this.gameCallbacks.getRandomRank(); // Get new random rank
-            gameData.deck = this.gameCallbacks.createDeck(); // Create new deck
-            // Reset player hands (handled by liars-roulette.js startRound)
+            gameData.victimIndices = [];
+            gameData.rouletteType = null;
+            gameData.deck = deck;
+            gameData.players = gameData.players.map((p, i) => ({
+              ...p,
+              hand: p.isDead ? p.hand : hands[i],
+              // Keep revolver state
+            }));
           }
-          gameData.victimIndices = []; // Clear victims
-          gameData.rouletteType = null;
         }
         transaction.update(this.roomRef, gameData);
       });
@@ -385,6 +428,9 @@ class MultiplayerGameManager {
 
   // Handle multiple roulette completions (e.g. Devil card)
   async handleBatchRouletteCompletion(results) {
+    // Only Host updates the game state
+    if (!this.localPlayers[this.myPlayerIndex]?.isHost) return;
+
     try {
       await runTransaction(this.db, async (transaction) => {
         const roomDoc = await transaction.get(this.roomRef);
@@ -395,8 +441,13 @@ class MultiplayerGameManager {
 
         // Apply deaths
         results.forEach((res) => {
+          const player = gameData.players[res.index];
+          if (player.revolver) {
+             player.revolver.currentChamber = (player.revolver.currentChamber + 1) % 6;
+          }
+
           if (res.isDead) {
-            gameData.players[res.index].isDead = true;
+            player.isDead = true;
           }
         });
 
@@ -458,6 +509,10 @@ class MultiplayerGameManager {
             isHost: p.isHost || false,
             isDead: false,
             hand: hand,
+            revolver: {
+              currentChamber: 0,
+              bulletPosition: Math.floor(Math.random() * 6),
+            },
           };
         });
 
@@ -539,6 +594,10 @@ class MultiplayerGameManager {
           players: currentData.players.map((p, i) => ({
             ...p,
             hand: p.isDead ? p.hand : hands[i],
+            revolver: p.isDead ? p.revolver : {
+              currentChamber: 0,
+              bulletPosition: Math.floor(Math.random() * 6),
+            },
           })),
         };
 
