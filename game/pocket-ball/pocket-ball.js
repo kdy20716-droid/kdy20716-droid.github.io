@@ -18,6 +18,10 @@ const canvas = document.getElementById("game-canvas");
 const container = document.getElementById("game-container");
 canvas.style.touchAction = "none"; // 터치 제스처(스크롤 등) 방지
 
+// UI 레이어가 클릭 이벤트를 가로채지 않도록 설정 (마우스 입력 통과)
+const uiLayer = document.getElementById("ui-layer");
+if (uiLayer) uiLayer.style.pointerEvents = "none";
+
 // 게임 해상도 1:1 비율 설정
 const width = 800;
 const height = 800;
@@ -400,6 +404,7 @@ let messageTimeout = null; // 메시지 타이머
 let isGameEnded = false; // 게임 종료 여부
 const powerGaugeWrap = document.getElementById("power-gauge-wrap");
 const powerGaugeFill = document.getElementById("power-gauge-fill");
+if (powerGaugeWrap) powerGaugeWrap.style.pointerEvents = "none"; // 게이지 바가 클릭 가로채지 않게 설정
 
 // 입력 이벤트
 canvas.addEventListener("mousedown", handleInputStart);
@@ -414,12 +419,13 @@ function handleInputCancel(e) {
   if (isDragging) {
     isDragging = false;
     dragStart = null;
-    powerGaugeWrap.classList.add("hidden");
+    if (powerGaugeWrap) powerGaugeWrap.classList.add("hidden");
   }
 }
 
 function handleInputStart(e) {
   if (e.type === "touchstart") e.preventDefault(); // 모바일 터치 기본 동작 방지
+  if (e.type === "mousedown") e.preventDefault(); // 마우스 드래그 시 텍스트 선택 등 방지
   if (isGameEnded || !cueBall) return; // 게임 종료 또는 시작 전 클릭 방지
   if (isShooting || isMoving(cueBall)) return; // 샷 진행 중이거나 공이 움직이면 조작 불가
   if (isDragging) return; // 멀티터치 방지
@@ -449,8 +455,8 @@ function handleInputStart(e) {
     isDragging = true;
     dragStart = Vector.clone(cueBall.position);
     currentMousePos = pos;
-    powerGaugeWrap.classList.remove("hidden");
-    powerGaugeFill.style.width = "0%";
+    if (powerGaugeWrap) powerGaugeWrap.classList.remove("hidden");
+    if (powerGaugeFill) powerGaugeFill.style.width = "0%";
   }
 }
 
@@ -465,7 +471,7 @@ function handleInputMove(e) {
   const maxForce = 0.04;
   const forceMag = Vector.magnitude(forceVector) * 0.0002;
   const power = Math.min(forceMag, maxForce) / maxForce;
-  powerGaugeFill.style.width = `${power * 100}%`;
+  if (powerGaugeFill) powerGaugeFill.style.width = `${power * 100}%`;
 }
 
 function handleInputEnd(e) {
@@ -491,7 +497,7 @@ function handleInputEnd(e) {
   firstHitRecorded = false; // 첫 충돌 기록 초기화
   slowMotionTimer = 0; // 타이머 초기화
   dragStart = null;
-  powerGaugeWrap.classList.add("hidden");
+  if (powerGaugeWrap) powerGaugeWrap.classList.add("hidden");
 }
 
 function getMousePos(e) {
@@ -795,6 +801,7 @@ function showFloatingText(x, y, text) {
   el.textContent = text;
   el.style.left = x + "px";
   el.style.top = y + "px";
+  el.style.pointerEvents = "none"; // 텍스트가 클릭 방해하지 않도록 설정
   document.getElementById("ui-layer").appendChild(el);
   setTimeout(() => el.remove(), 800);
 }
@@ -977,6 +984,10 @@ function resizeGame() {
     window.innerWidth / width,
     window.innerHeight / height,
   );
+  container.style.position = "absolute"; // 위치 강제 설정
+  container.style.top = "50%";
+  container.style.left = "50%";
+  container.style.transformOrigin = "center center"; // 스케일링 기준점 명시
   container.style.transform = `translate(-50%, -50%) scale(${scale})`;
 }
 window.addEventListener("resize", resizeGame);
