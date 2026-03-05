@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3D Shooting Game</title>
+    <link rel="stylesheet" href="shooting.css" />
+    <!-- Import Map: Three.js 모듈 로딩을 위해 필수 -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="ui-layer">
+      <div id="crosshair"></div>
+      <div id="score-board">Score: 0</div>
+      <div id="round-board">Round: 1</div>
+      <div id="vaccine-board">Vaccines: 0/3</div>
+      <div id="ammo-board">Ammo: 60 / 240</div>
+      <div id="game-message"></div>
+      <div id="instructions">
+        <h1>Click to Start</h1>
+        <p>WASD: Move, SPACE: Jump, Click: Shoot</p>
+      </div>
+    </div>
+    <script type="module" src="shooting.js"></script>
+  </body>
+</html>
