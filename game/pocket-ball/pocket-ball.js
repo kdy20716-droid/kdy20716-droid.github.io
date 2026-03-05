@@ -451,13 +451,11 @@ function handleInputStart(e) {
   }
 
   const pos = getMousePos(e);
-  if (Vector.magnitude(Vector.sub(pos, cueBall.position)) < 100) { // 터치 인식 범위 확대
-    isDragging = true;
-    dragStart = Vector.clone(cueBall.position);
-    currentMousePos = pos;
-    if (powerGaugeWrap) powerGaugeWrap.classList.remove("hidden");
-    if (powerGaugeFill) powerGaugeFill.style.width = "0%";
-  }
+  isDragging = true;
+  dragStart = pos;
+  currentMousePos = pos;
+  if (powerGaugeWrap) powerGaugeWrap.classList.remove("hidden");
+  if (powerGaugeFill) powerGaugeFill.style.width = "0%";
 }
 
 function handleInputMove(e) {
@@ -512,8 +510,8 @@ function getMousePos(e) {
     clientY = e.clientY;
   }
 
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
+  const scaleX = width / rect.width;
+  const scaleY = height / rect.height;
   return {
     x: (clientX - rect.left) * scaleX,
     y: (clientY - rect.top) * scaleY,
@@ -652,21 +650,26 @@ function checkPockets() {
       ) {
         // 8번 공 처리 (즉시 승패 판정)
         if (ball.ballNumber === 8) {
+          World.remove(engine.world, ball);
+          balls.splice(i, 1);
+
+          let winner;
           if (foulThisTurn) {
             // 파울 상태에서 8번 공 넣음 -> 패배
-            endGame(currentPlayer === 1 ? 2 : 1);
+            winner = currentPlayer === 1 ? 2 : 1;
           } else {
             // 정상적인 상태에서 8번 공 넣음 -> 조건 확인
             if (currentPlayer === 1) {
               if (solidCount === 0)
-                endGame(1); // 승리
-              else endGame(2); // 패배 (아직 남은 공 있음)
+                winner = 1; // 승리
+              else winner = 2; // 패배 (아직 남은 공 있음)
             } else {
               if (stripeCount === 0)
-                endGame(2); // 승리
-              else endGame(1); // 패배
+                winner = 2; // 승리
+              else winner = 1; // 패배
             }
           }
+          setTimeout(() => endGame(winner), 1000);
           return; // 게임 종료
         }
 
@@ -841,8 +844,8 @@ Events.on(render, "afterRender", () => {
 
   // 큐대 및 가이드라인 그리기 (드래그 중일 때)
   if (isDragging && cueBall && currentMousePos) {
-    const dx = currentMousePos.x - cueBall.position.x;
-    const dy = currentMousePos.y - cueBall.position.y;
+    const dx = currentMousePos.x - dragStart.x;
+    const dy = currentMousePos.y - dragStart.y;
     const angle = Math.atan2(dy, dx);
     const dist = Math.sqrt(dx * dx + dy * dy);
 
