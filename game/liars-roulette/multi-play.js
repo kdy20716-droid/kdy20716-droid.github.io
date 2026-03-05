@@ -122,7 +122,10 @@ class MultiplayerGameManager {
               if (gameData.rouletteType === "devil") {
                 this.gameCallbacks.triggerDevilEffects();
                 setTimeout(() => {
-                  this.gameCallbacks.triggerRoulette(gameData.victimIndices);
+                  // 여전히 ROULETTE 페이즈인지 확인 후 실행 (중복/취소 방지)
+                  if (this.lastPhase === "ROULETTE") {
+                    this.gameCallbacks.triggerRoulette(gameData.victimIndices);
+                  }
                 }, 2000);
               } else {
                 this.gameCallbacks.triggerRoulette(gameData.victimIndices);

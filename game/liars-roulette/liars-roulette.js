@@ -680,6 +680,31 @@ function draw() {
         ctx.fill();
       }
 
+      // [추가] 데빌 카드 효과 강화: 전체 화면 붉은색 오버레이 및 비네트
+      if (gameState.lightingTimer > 60) {
+        // 데빌 카드 효과(120프레임)일 때만 적용
+        const devilIntensity = (gameState.lightingTimer - 60) / 60; // 1 -> 0
+
+        // 전체 화면에 붉은색 오버레이 (깜빡이는 효과)
+        const overlayAlpha = Math.sin(Date.now() * 0.05) * 0.1 + 0.1; // 0.0 ~ 0.2
+        ctx.fillStyle = `rgba(180, 0, 0, ${overlayAlpha * devilIntensity})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // 비네트 효과 (가장자리 어둡게)
+        const vignetteGradient = ctx.createRadialGradient(
+          centerX,
+          centerY,
+          canvas.width * 0.3,
+          centerX,
+          centerY,
+          canvas.width * 0.8,
+        );
+        vignetteGradient.addColorStop(0, "rgba(0,0,0,0)");
+        vignetteGradient.addColorStop(1, `rgba(0,0,0,${0.8 * devilIntensity})`);
+        ctx.fillStyle = vignetteGradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
       // 초기 5프레임 동안 강력한 화이트 플래시 (총구 화염 느낌)
       // 데빌 카드 연출(120프레임)일 때는 생략하고, 총격(60프레임)일 때만 표시
       if (gameState.lightingTimer > 55 && gameState.lightingTimer <= 60) {
@@ -1655,6 +1680,7 @@ function drawPlayerRevolvers() {
       const elapsed = Date.now() - gameState.rouletteStartTime;
       const duration = 5000;
       let progress = Math.min(elapsed / duration, 1);
+      progress = Math.max(0, progress); // [수정] 음수 방지 (대기 상태 유지)
 
       // Easing (Cubic Ease Out) - 부드럽게 도착
       const ease = 1 - Math.pow(1 - progress, 3);
@@ -4254,6 +4280,17 @@ const gameCallbacks = {
         .filter((idx) => idx !== -1);
     }
 
+    // [수정] 서버 동기화로 ROULETTE 진입 시, 로컬 애니메이션 시작 전까지 대기 (총이 튀는 현상 방지)
+    if (newData.phase === "ROULETTE") {
+      // 이미 애니메이션이 시작되었다면(rouletteStartTime이 과거) 리셋하지 않음
+      if (
+        !gameState.rouletteStartTime ||
+        gameState.rouletteStartTime > Date.now()
+      ) {
+        gameState.rouletteStartTime = Date.now() + 100000; // 미래 시간으로 설정하여 progress 0 유지
+      }
+    }
+
     // Preserve table card positions and set defaults for new cards
     if (newData.tableCards) {
       // Determine target position for new cards based on lastPlayedBatch
@@ -4387,6 +4424,10 @@ const gameCallbacks = {
     playSound("devil");
     showMessage("데빌 카드 발동!", 200);
     gameState.shakeTimer = 60;
+
+    // [추가] 데빌 카드 발동 시 붉은 섬광 효과
+    gameState.lighting = "RED_FLASH";
+    gameState.lightingTimer = 120; // 2초간 지속
 
     // 배경음악 볼륨 줄이기 (긴장감 조성)
     const mainBgm = document.getElementById("bgm-main");
