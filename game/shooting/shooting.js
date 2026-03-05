@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
+import { BossSystem } from "./boss.js";
 
 // 1. 씬 설정
 const scene = new THREE.Scene();
@@ -17,7 +18,7 @@ const camera = new THREE.PerspectiveCamera(
 camera.position.y = 2.0; // 플레이어 눈높이 (2m)
 
 // 환경광: 전체적인 밝기를 조절합니다. (색상값 0x333333을 높이면 더 밝아짐)
-const ambientLight = new THREE.AmbientLight(0x333333);
+const ambientLight = new THREE.AmbientLight(0x444444);
 scene.add(ambientLight);
 
 // 플레이어 주변 조명 (PointLight): (색상, 강도, 거리)
@@ -33,6 +34,133 @@ flashlight.target.position.set(0, 0, -1);
 camera.add(flashlight);
 camera.add(flashlight.target);
 scene.add(camera);
+
+// 오디오 컨텍스트 (경고음용)
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playSiren() {
+  if (audioCtx.state === "suspended") audioCtx.resume();
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = "sawtooth";
+  osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+  osc.frequency.linearRampToValueAtTime(600, audioCtx.currentTime + 1.0);
+  osc.frequency.linearRampToValueAtTime(200, audioCtx.currentTime + 2.0);
+
+  gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+  gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 2.0);
+
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 2.0);
+}
+
+// BGM 시스템
+let bgmOscillators = [];
+let bgmInterval = null;
+let currentBgmType = null;
+
+function playBGM(type) {
+  if (currentBgmType === type) return; // 이미 같은 BGM이면 무시
+  stopBGM();
+  currentBgmType = type;
+
+  if (audioCtx.state === "suspended") audioCtx.resume();
+
+  if (type === "normal") {
+    playNormalBGM();
+  } else if (type === "boss") {
+    playBossBGM();
+  } else if (type === "ending") {
+    playEndingBGM();
+  }
+}
+
+function stopBGM() {
+  if (bgmInterval) clearInterval(bgmInterval);
+  bgmInterval = null;
+  bgmOscillators.forEach((osc) => {
+    try {
+      osc.stop();
+    } catch (e) {}
+    osc.disconnect();
+  });
+  bgmOscillators.length = 0;
+  currentBgmType = null;
+}
+
+function playNormalBGM() {
+  // 어두운 앰비언트 드론 사운드
+  const osc = audioCtx.createOscillator();
+  osc.type = "sawtooth";
+  osc.frequency.value = 55; // A1 (낮은음)
+  const gain = audioCtx.createGain();
+  gain.gain.value = 0.05;
+
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = "lowpass";
+  filter.frequency.value = 200;
+
+  osc.connect(filter);
+  filter.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  bgmOscillators.push(osc);
+
+  // 심장 박동 같은 비트
+  bgmInterval = setInterval(() => {
+    const t = audioCtx.currentTime;
+    const kick = audioCtx.createOscillator();
+    kick.frequency.setValueAtTime(100, t);
+    kick.frequency.exponentialRampToValueAtTime(0.01, t + 0.5);
+    const kGain = audioCtx.createGain();
+    kGain.gain.setValueAtTime(0.1, t);
+    kGain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+    kick.connect(kGain);
+    kGain.connect(audioCtx.destination);
+    kick.start(t);
+    kick.stop(t + 0.5);
+  }, 1000);
+}
+
+function playBossBGM() {
+  // 긴박한 사이렌 느낌의 베이스
+  bgmInterval = setInterval(() => {
+    const t = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    osc.type = "square";
+    osc.frequency.setValueAtTime(110, t);
+    osc.frequency.linearRampToValueAtTime(55, t + 0.1);
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.1, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(t);
+    osc.stop(t + 0.1);
+  }, 250); // 빠른 템포
+}
+
+function playEndingBGM() {
+  // 승리의 아르페지오 (C Major)
+  const notes = [261.63, 329.63, 392.0, 523.25];
+  let i = 0;
+  bgmInterval = setInterval(() => {
+    const t = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.value = notes[i % notes.length];
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.1, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 1.0);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(t);
+    osc.stop(t + 1.0);
+    i++;
+  }, 500);
+}
 
 // 무기 상태 관리
 const weaponState = {
@@ -239,14 +367,25 @@ function updateMapSize(wave) {
 
 // 5. 컨트롤 (PointerLock)
 const controls = new PointerLockControls(camera, document.body);
-const instructions = document.getElementById("instructions");
+const pauseMenu = document.getElementById("pause-menu");
 
 let gameStarted = false;
 let isFiring = false; // 발사 상태 플래그
 
-document.addEventListener("click", () => {
+document.addEventListener("click", (e) => {
+  // 시작 화면이나 모달이 떠있으면 포인터 락 방지
+  const startScreen = document.getElementById("start-screen");
+  const howtoModal = document.getElementById("howto-modal");
+  const gameOverScreen = document.getElementById("game-over-screen");
+  const pauseMenu = document.getElementById("pause-menu");
+  if (!startScreen.classList.contains("hidden")) return;
+  if (!howtoModal.classList.contains("hidden")) return;
+  if (gameOverScreen && !gameOverScreen.classList.contains("hidden")) return;
+  if (pauseMenu && !pauseMenu.classList.contains("hidden")) return;
+
   if (!controls.isLocked) {
     controls.lock();
+    // 모바일 모드일 때는 lock()이 동작하지 않거나 필요 없을 수 있음 (아래 로직에서 처리)
   }
 });
 
@@ -259,7 +398,8 @@ document.addEventListener("mouseup", () => {
 });
 
 controls.addEventListener("lock", () => {
-  instructions.style.display = "none";
+  if (isMobileMode) return; // 모바일은 별도 UI 사용
+  if (pauseMenu) pauseMenu.classList.add("hidden");
   if (!gameStarted) {
     gameStarted = true;
     resetGame();
@@ -267,10 +407,17 @@ controls.addEventListener("lock", () => {
 });
 
 controls.addEventListener("unlock", () => {
-  instructions.style.display = "block";
-  if (gameStarted) {
-    const h1 = instructions.querySelector("h1");
-    if (h1) h1.textContent = "Click to Resume";
+  if (isMobileMode) return;
+  // 엔딩 화면이 켜져있으면 일시정지 메뉴를 띄우지 않음
+  const endingScreen = document.getElementById("ending-screen");
+  if (endingScreen && !endingScreen.classList.contains("hidden")) {
+    return;
+  }
+  // 사망 연출 중에는 일시정지 메뉴 표시 안 함
+  if (isPlayerDying) return;
+
+  if (gameStarted && pauseMenu) {
+    pauseMenu.classList.remove("hidden");
   }
 });
 
@@ -288,6 +435,8 @@ const moveState = {
 
 // 달리기 상태 추가
 moveState.sprint = false;
+// 모바일 조이스틱 입력 벡터
+const joystickVector = { x: 0, y: 0 };
 
 let canJump = false;
 
@@ -315,11 +464,34 @@ document.addEventListener("keydown", (event) => {
     case "ShiftRight":
       moveState.sprint = true;
       break;
+    // 무기 교체 및 히든 단축키 통합
     case "Digit1":
-      switchWeapon("rifle");
-      break;
     case "Digit2":
-      switchWeapon("pistol");
+    case "Digit3":
+    case "Digit4":
+    case "Digit5":
+    case "Digit6":
+    case "Digit7":
+    case "Digit8":
+    case "Digit9":
+    case "Digit0":
+      if (event.shiftKey && event.altKey) {
+        const startScreen = document.getElementById("start-screen");
+        // 시작 화면이 보일 때만 작동
+        if (startScreen && !startScreen.classList.contains("hidden")) {
+          let targetWave = parseInt(event.code.replace("Digit", "")) * 10;
+          if (targetWave === 0) targetWave = 100; // 0은 100웨이브
+
+          startScreen.classList.add("hidden");
+          gameStarted = true;
+          controls.lock();
+          resetGame(targetWave - 1);
+        }
+      } else if (event.code === "Digit1") {
+        switchWeapon("rifle");
+      } else if (event.code === "Digit2") {
+        switchWeapon("pistol");
+      }
       break;
   }
 });
@@ -342,6 +514,202 @@ document.addEventListener("keyup", (event) => {
     case "ShiftRight":
       moveState.sprint = false;
       break;
+  }
+});
+
+// --- 시작 화면 및 모바일 컨트롤 로직 ---
+let isMobileMode = false;
+const startScreen = document.getElementById("start-screen");
+const mobileControls = document.getElementById("mobile-controls");
+const howtoModal = document.getElementById("howto-modal");
+
+// PC 시작
+document.getElementById("btn-pc-start").addEventListener("click", () => {
+  startScreen.classList.add("hidden");
+  controls.lock(); // 포인터 락 요청
+});
+
+// 모바일 시작
+document.getElementById("btn-mobile-start").addEventListener("click", () => {
+  isMobileMode = true;
+  startScreen.classList.add("hidden");
+  mobileControls.classList.remove("hidden");
+
+  // 전체화면 및 가로모드 요청
+  if (document.documentElement.requestFullscreen) {
+    document.documentElement.requestFullscreen().catch((e) => console.log(e));
+  }
+  if (screen.orientation && screen.orientation.lock) {
+    screen.orientation.lock("landscape").catch((e) => console.log(e));
+  }
+
+  // 게임 시작 처리
+  if (!gameStarted) {
+    gameStarted = true;
+    resetGame();
+  }
+  if (pauseMenu) pauseMenu.classList.add("hidden");
+});
+
+// 게임 방법
+document.getElementById("btn-howto").addEventListener("click", () => {
+  howtoModal.classList.remove("hidden");
+});
+document.getElementById("btn-close-howto").addEventListener("click", () => {
+  howtoModal.classList.add("hidden");
+});
+
+// 나가기
+document.getElementById("btn-exit").addEventListener("click", () => {
+  if (document.referrer && document.referrer.includes("game-list.html")) {
+    history.back();
+  } else {
+    location.href = "../../game-list.html"; // 경로 수정 (game/shooting/ 에서 상위로)
+  }
+});
+
+// 모바일 조이스틱 로직
+const joystickZone = document.getElementById("joystick-zone");
+const joystickKnob = document.getElementById("joystick-knob");
+let joystickId = null;
+const maxJoystickRadius = 40;
+
+joystickZone.addEventListener(
+  "touchstart",
+  (e) => {
+    e.preventDefault();
+    const touch = e.changedTouches[0];
+    joystickId = touch.identifier;
+    updateJoystick(touch);
+  },
+  { passive: false },
+);
+
+joystickZone.addEventListener(
+  "touchmove",
+  (e) => {
+    e.preventDefault();
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      if (e.changedTouches[i].identifier === joystickId) {
+        updateJoystick(e.changedTouches[i]);
+        break;
+      }
+    }
+  },
+  { passive: false },
+);
+
+joystickZone.addEventListener("touchend", (e) => {
+  e.preventDefault();
+  for (let i = 0; i < e.changedTouches.length; i++) {
+    if (e.changedTouches[i].identifier === joystickId) {
+      joystickId = null;
+      joystickKnob.style.transform = `translate(-50%, -50%)`;
+      joystickVector.x = 0;
+      joystickVector.y = 0;
+      break;
+    }
+  }
+});
+
+function updateJoystick(touch) {
+  const rect = joystickZone.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+
+  let dx = touch.clientX - centerX;
+  let dy = touch.clientY - centerY;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+
+  if (dist > maxJoystickRadius) {
+    const ratio = maxJoystickRadius / dist;
+    dx *= ratio;
+    dy *= ratio;
+  }
+
+  joystickKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+
+  // 정규화된 벡터 (-1 ~ 1)
+  joystickVector.x = dx / maxJoystickRadius;
+  joystickVector.y = dy / maxJoystickRadius;
+}
+
+// 모바일 버튼 로직
+document.getElementById("btn-m-jump").addEventListener("touchstart", (e) => {
+  e.preventDefault();
+  if (canJump) {
+    velocity.y += 20;
+    canJump = false;
+  }
+});
+document.getElementById("btn-m-shoot").addEventListener("touchstart", (e) => {
+  e.preventDefault();
+  isFiring = true;
+  if (!weaponState[weaponState.current].automatic) shoot();
+});
+document.getElementById("btn-m-shoot").addEventListener("touchend", (e) => {
+  e.preventDefault();
+  isFiring = false;
+});
+document.getElementById("btn-m-run").addEventListener("touchstart", (e) => {
+  e.preventDefault();
+  moveState.sprint = !moveState.sprint; // 토글 방식
+  e.target.classList.toggle("active", moveState.sprint);
+});
+document.getElementById("btn-m-pause").addEventListener("click", () => {
+  // 일시정지 토글 (간단히 메뉴 표시)
+  if (pauseMenu.classList.contains("hidden")) {
+    pauseMenu.classList.remove("hidden");
+    gameStarted = false;
+  } else {
+    pauseMenu.classList.add("hidden");
+    gameStarted = true;
+  }
+});
+
+// 모바일 시점 변환 (화면 드래그)
+let lastTouchX = 0;
+let lastTouchY = 0;
+document.addEventListener("touchstart", (e) => {
+  if (!isMobileMode) return;
+  // 조이스틱이나 버튼이 아닌 영역 터치 시 시점 제어
+  if (!e.target.closest("#mobile-controls")) {
+    lastTouchX = e.touches[0].clientX;
+    lastTouchY = e.touches[0].clientY;
+  }
+});
+document.addEventListener("touchmove", (e) => {
+  if (!isMobileMode || !gameStarted) return;
+  if (!e.target.closest("#mobile-controls")) {
+    const touch = e.touches[0];
+    const movementX = touch.clientX - lastTouchX;
+    const movementY = touch.clientY - lastTouchY;
+
+    // 카메라 회전 (감도 조절)
+    const sensitivity = 0.005;
+    const yawObject = controls.getObject(); // Camera wrapper
+    const pitchObject = yawObject.children[0]; // Camera itself (usually)
+
+    // PointerLockControls 구조상 yawObject.rotation.y, camera.rotation.x를 직접 제어해야 함
+    // 하지만 PointerLockControls는 내부적으로 mousemove를 사용하므로,
+    // 모바일에서는 직접 rotation을 수정합니다.
+
+    yawObject.rotation.y -= movementX * sensitivity;
+    // Pitch 제한 (-90 ~ 90도)
+    // PointerLockControls 내부 구조를 직접 건드리는 대신,
+    // 모바일에서는 controls 객체의 rotation을 직접 수정하는 것이 안전함
+    // (단, PointerLockControls가 활성화되지 않았을 때)
+
+    // Three.js PointerLockControls 구현을 보면 camera.rotation.x를 직접 제어함
+    // 여기서는 간단히 camera.rotation.x를 수정
+    camera.rotation.x -= movementY * sensitivity;
+    camera.rotation.x = Math.max(
+      -Math.PI / 2,
+      Math.min(Math.PI / 2, camera.rotation.x),
+    );
+
+    lastTouchX = touch.clientX;
+    lastTouchY = touch.clientY;
   }
 });
 
@@ -378,15 +746,16 @@ const enemyTypes = {
 
 const bullets = [];
 const enemies = [];
-const vaccines = [];
 let score = 0;
 const scoreElement = document.getElementById("score-board");
-const roundElement = document.getElementById("round-board");
-const vaccineElement = document.getElementById("vaccine-board");
+const waveElement = document.getElementById("wave-board");
+const bossHud = document.getElementById("boss-hud");
+const bossNameEl = document.getElementById("boss-name");
+const bossHealthBar = document.getElementById("boss-health-bar");
 
-let currentRound = 0;
-let vaccinesCollected = 0;
-const VACCINES_TO_WIN = 3;
+let currentWave = 0;
+let activeBoss = null; // 현재 보스 객체
+
 let enemiesRemainingInWave = 0; // 누락된 변수 추가
 let waveCooldown = 0; // 누락된 변수 추가
 const WAVE_COOLDOWN_TIME = 5; // 누락된 상수 추가
@@ -398,7 +767,29 @@ let isExhausted = false; // 탈진 상태
 let lastDamageTime = 0; // 무적 시간 체크용
 let lastShotTime = 0; // 연사 속도 체크용
 const items = []; // 아이템 배열
+const particles = []; // 파티클 배열
 let isReloading = false; // 재장전 상태 플래그
+let shakeTimer = 0; // 화면 흔들림 타이머
+let isPlayerDying = false; // 플레이어 사망 상태
+
+// Boss System Initialization
+const bossSystem = new BossSystem(scene, controls.getObject(), {
+  showMessage: showMessage,
+  damagePlayer: (amount, knockback) => {
+    playerHealth -= amount;
+    updateStatusBars();
+    if (knockback) velocity.add(knockback);
+  },
+  shakeCamera: (duration) => {
+    shakeTimer = duration;
+  },
+  createBloodParticles: createBloodParticles,
+  spawnMinion: (type) => spawnEnemy(type),
+  setFog: (near, far) => {
+    scene.fog.near = near;
+    scene.fog.far = far;
+  },
+});
 
 // 무기 교체 함수
 function switchWeapon(name) {
@@ -454,6 +845,28 @@ function createZombieTexture(colorStr) {
   ctx.fillRect(39, 45, 5, 5);
 
   return new THREE.CanvasTexture(canvas);
+}
+
+// 피 파티클 생성 함수
+function createBloodParticles(pos) {
+  const particleGeo = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+  const particleMat = new THREE.MeshBasicMaterial({ color: 0x8a0303 }); // 진한 피색
+
+  for (let i = 0; i < 8; i++) {
+    const particle = new THREE.Mesh(particleGeo, particleMat);
+    particle.position.copy(pos);
+
+    particle.userData = {
+      velocity: new THREE.Vector3(
+        (Math.random() - 0.5) * 5,
+        (Math.random() - 0.5) * 5,
+        (Math.random() - 0.5) * 5,
+      ),
+      life: 1.0, // 1초 생존
+    };
+    scene.add(particle);
+    particles.push(particle);
+  }
 }
 
 const zombieTextures = {
@@ -545,9 +958,9 @@ function reload() {
   }, currentW.reloadTime);
 }
 
-// 적 생성 함수
 function spawnEnemy(enemyTypeName) {
-  if (!controls.isLocked) return; // 게임 중이 아니면 생성 안 함
+  enemiesRemainingInWave--; // 적 생성 시 카운트 감소
+  // if (!controls.isLocked) return; // 일시정지여도 생성은 하되 움직이지 않게 함 (웨이브 꼬임 방지)
 
   const type = enemyTypes[enemyTypeName];
   if (!type) {
@@ -681,33 +1094,6 @@ function spawnEnemy(enemyTypeName) {
   enemies.push(zombie);
 }
 
-// 백신 생성 함수 (누락된 함수 추가)
-function spawnVaccines() {
-  // 기존 백신 제거
-  vaccines.forEach((v) => scene.remove(v));
-  vaccines.length = 0;
-
-  const geometry = new THREE.BoxGeometry(1, 1, 1);
-  const material = new THREE.MeshBasicMaterial({ color: 0x00ffff }); // 청록색 빛나는 상자
-  const mapRadius = getMapRadius(currentRound); // 현재 맵 크기 가져오기
-
-  for (let i = 0; i < VACCINES_TO_WIN; i++) {
-    const vaccine = new THREE.Mesh(geometry, material);
-
-    // 맵 내부 랜덤 배치 (벽 안쪽에 생성되도록 보장)
-    const angle = Math.random() * Math.PI * 2;
-    const radius = Math.random() * (mapRadius - 20); // 벽보다 20만큼 안쪽
-    vaccine.position.set(Math.cos(angle) * radius, 1, Math.sin(angle) * radius);
-
-    // 백신 위치 표시용 빛
-    const light = new THREE.PointLight(0x00ffff, 1, 20);
-    vaccine.add(light);
-
-    scene.add(vaccine);
-    vaccines.push(vaccine);
-  }
-}
-
 // 아이템 생성 함수
 function spawnItem(position) {
   const rand = Math.random();
@@ -737,66 +1123,97 @@ function spawnItem(position) {
   items.push(item);
 }
 
+// 보스 생성 함수
+function spawnBoss(wave) {
+  const boss = bossSystem.spawnBoss(wave);
+  enemies.push(boss);
+  activeBoss = boss;
+
+  // UI 표시
+  bossHud.classList.remove("hidden");
+  bossNameEl.textContent = boss.userData.name;
+  bossHealthBar.style.width = "100%";
+
+  // 보스 등장 연출
+  playSiren();
+  shakeTimer = 2.0; // 2초간 화면 흔들림
+  showMessage(
+    boss.userData.isFinalBoss
+      ? "⚠ FINAL BOSS APPROACHING ⚠"
+      : "WARNING: EXPERIMENT SUBJECT DETECTED!",
+    200,
+  );
+}
+
 // 웨이브 시작 함수
 function startNextWave() {
-  currentRound++;
+  currentWave++;
 
-  roundElement.textContent = `Round: ${currentRound}`;
-  showMessage(`Round ${currentRound} 시작!`);
+  waveElement.textContent = `Wave: ${currentWave}`;
+  showMessage(`Wave ${currentWave} 시작!`);
 
   // 웨이브에 맞춰 맵 크기 조절
-  updateMapSize(currentRound);
+  updateMapSize(currentWave);
 
-  // 백신 초기화 및 생성
-  vaccinesCollected = 0;
-  vaccineElement.textContent = `Vaccines: 0/${VACCINES_TO_WIN}`;
-  spawnVaccines();
-
-  // 라운드별 난이도 설정 (무한 라운드)
-  const totalZombies = 5 + Math.floor(currentRound * 2); // 라운드당 2마리씩 증가
   enemiesRemainingInWave = 0;
 
-  // 좀비 타입 분포 결정
-  const waveData = { grunt: 0, runner: 0, tank: 0 };
+  // 10웨이브마다 보스전
+  if (currentWave % 10 === 0) {
+    enemiesRemainingInWave = 0; // 보스는 즉시 생성되므로 대기 카운트 0
+    spawnBoss(currentWave);
+  } else {
+    playBGM("normal"); // 일반 웨이브 BGM 재생
+    // 일반 웨이브
+    const totalZombies = 5 + Math.floor(currentWave * 2); // 웨이브당 2마리씩 증가
 
-  for (let i = 0; i < totalZombies; i++) {
-    const rand = Math.random();
-    // 라운드가 높을수록 강력한 좀비 확률 증가
-    if (currentRound > 4 && rand < 0.15) waveData.tank++;
-    else if (currentRound > 2 && rand < 0.4) waveData.runner++;
-    else waveData.grunt++;
-  }
+    // 좀비 타입 분포 결정
+    const waveData = { grunt: 0, runner: 0, tank: 0 };
 
-  let spawnDelay = 1000; // 1초 후 첫 스폰 시작
-  for (const enemyType in waveData) {
-    const count = waveData[enemyType];
-    enemiesRemainingInWave += count;
-    for (let i = 0; i < count; i++) {
-      setTimeout(() => spawnEnemy(enemyType), spawnDelay);
-      spawnDelay += 500 + Math.random() * 500; // 스폰 간격 랜덤화
+    for (let i = 0; i < totalZombies; i++) {
+      const rand = Math.random();
+      // 웨이브가 높을수록 강력한 좀비 확률 증가
+      if (currentWave > 4 && rand < 0.15) waveData.tank++;
+      else if (currentWave > 2 && rand < 0.4) waveData.runner++;
+      else waveData.grunt++;
+    }
+
+    let spawnDelay = 1000; // 1초 후 첫 스폰 시작
+    for (const enemyType in waveData) {
+      const count = waveData[enemyType];
+      enemiesRemainingInWave += count;
+      for (let i = 0; i < count; i++) {
+        setTimeout(() => spawnEnemy(enemyType), spawnDelay);
+        spawnDelay += 500 + Math.random() * 500; // 스폰 간격 랜덤화
+      }
     }
   }
-  waveCooldown = 0; // 쿨다운 초기화
+
+  waveCooldown = 0;
 }
 
 // 게임 리셋 함수
-function resetGame() {
+function resetGame(initialWave = 0) {
   score = 0;
   scoreElement.textContent = `Score: ${score}`;
   enemies.forEach((en) => scene.remove(en));
   enemies.length = 0;
-  vaccines.forEach((v) => scene.remove(v));
-  vaccines.length = 0;
   items.forEach((i) => scene.remove(i));
   items.length = 0;
   controls.getObject().position.set(0, 2.0, 0); // 높이 수정 (2m)
   velocity.set(0, 0, 0);
-  currentRound = 0;
+  currentWave = initialWave;
   enemiesRemainingInWave = 0;
   playerHealth = 100; // 체력 리셋
   playerStamina = 100; // 스테미나 리셋
   isExhausted = false; // 탈진 상태 초기화
+  isPlayerDying = false; // 사망 상태 초기화
+  camera.rotation.z = 0; // 카메라 기울기 초기화
   isReloading = false; // 재장전 상태 초기화
+  activeBoss = null;
+  shakeTimer = 0;
+  bossSystem.clear(); // Clear boss projectiles/particles
+  bossHud.classList.add("hidden");
+  playBGM("normal"); // 리셋 시 일반 BGM
 
   // 탄약 리셋
   weaponState.rifle.mag = 60;
@@ -805,6 +1222,45 @@ function resetGame() {
   updateAmmoDisplay();
 
   startNextWave(); // 게임 리셋 후 바로 첫 웨이브 시작
+}
+
+// 타이틀 화면으로 복귀 함수
+function returnToTitle() {
+  gameStarted = false;
+  document.exitPointerLock();
+
+  // 게임 오브젝트 제거
+  enemies.forEach((en) => scene.remove(en));
+  enemies.length = 0;
+  items.forEach((i) => scene.remove(i));
+  items.length = 0;
+  particles.forEach((p) => scene.remove(p));
+  particles.length = 0;
+  bossSystem.clear();
+
+  // 플레이어 상태 초기화
+  controls.getObject().position.set(0, 2.0, 0);
+  velocity.set(0, 0, 0);
+  currentWave = 0;
+  enemiesRemainingInWave = 0;
+  playerHealth = 100;
+  playerStamina = 100;
+  isExhausted = false;
+  isPlayerDying = false;
+  camera.rotation.z = 0;
+  isReloading = false;
+  activeBoss = null;
+  shakeTimer = 0;
+  bossHud.classList.add("hidden");
+
+  // 무기 초기화
+  weaponState.rifle.mag = 60;
+  weaponState.rifle.reserve = 240;
+  switchWeapon("rifle");
+
+  stopBGM();
+  document.getElementById("start-screen").classList.remove("hidden");
+  if (pauseMenu) pauseMenu.classList.add("hidden");
 }
 
 // 게임 메시지 표시 함수
@@ -834,10 +1290,18 @@ function animate() {
   const time = performance.now();
   const delta = (time - prevTime) / 1000;
 
-  if (controls.isLocked) {
+  if (controls.isLocked || (isMobileMode && gameStarted)) {
+    // 웨이브 클리어 체크 (모든 적 처치 및 스폰 완료 시)
+    if (enemies.length === 0 && enemiesRemainingInWave <= 0 && gameStarted) {
+      waveCooldown += delta;
+      if (waveCooldown >= WAVE_COOLDOWN_TIME) {
+        startNextWave();
+      }
+    }
+
     // 연사 처리 (자동 무기만 animate 루프에서 발사)
     const currentW = weaponState[weaponState.current];
-    if (isFiring && currentW.automatic) {
+    if (isFiring && currentW.automatic && !isPlayerDying) {
       shoot();
     }
 
@@ -854,7 +1318,13 @@ function animate() {
       isExhausted = false;
     }
 
-    if (moveState.sprint && !isExhausted && playerStamina > 0 && isMoving) {
+    if (
+      moveState.sprint &&
+      !isExhausted &&
+      playerStamina > 0 &&
+      isMoving &&
+      !isPlayerDying
+    ) {
       currentSpeed = 400.0; // 달리기 속도 (기존 속도)
       playerStamina = Math.max(0, playerStamina - 30 * delta); // 스테미나 소모
       if (playerStamina <= 0) {
@@ -866,19 +1336,65 @@ function animate() {
 
     updateStatusBars();
 
+    // 화면 흔들림 효과
+    if (shakeTimer > 0) {
+      shakeTimer -= delta;
+      const intensity = 0.3;
+      camera.position.add(
+        new THREE.Vector3(
+          (Math.random() - 0.5) * intensity,
+          (Math.random() - 0.5) * intensity,
+          (Math.random() - 0.5) * intensity,
+        ),
+      );
+    }
+
+    // 파티클 업데이트
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.userData.life -= delta;
+      p.position.add(p.userData.velocity.clone().multiplyScalar(delta));
+      p.userData.velocity.y -= 9.8 * delta; // 중력 적용
+
+      if (p.userData.life <= 0 || p.position.y < 0) {
+        scene.remove(p);
+        particles.splice(i, 1);
+      }
+    }
+
+    const playerPos = controls.getObject().position;
+
+    // Update Boss System (Projectiles, Particles, Boss AI)
+    bossSystem.update(delta, time, enemies);
+
     // 이동 처리
     velocity.x -= velocity.x * 10.0 * delta;
     velocity.z -= velocity.z * 10.0 * delta;
     velocity.y -= 50.0 * delta; // 중력 적용 (마찰력 없이 일정하게)
 
-    direction.z = Number(moveState.forward) - Number(moveState.backward);
-    direction.x = Number(moveState.right) - Number(moveState.left);
-    direction.normalize();
+    if (isMobileMode) {
+      // 모바일: 조이스틱 입력 사용
+      direction.z = joystickVector.y; // Forward/Back is Y on joystick
+      direction.x = joystickVector.x; // Left/Right is X
+    } else {
+      direction.z = Number(moveState.forward) - Number(moveState.backward);
+      direction.x = Number(moveState.right) - Number(moveState.left);
+    }
 
-    if (moveState.forward || moveState.backward)
-      velocity.z -= direction.z * currentSpeed * delta;
-    if (moveState.left || moveState.right)
-      velocity.x -= direction.x * currentSpeed * delta;
+    // 사망 시 이동 불가
+    if (!isPlayerDying) {
+      direction.normalize();
+
+      if (moveState.forward || moveState.backward)
+        velocity.z -= direction.z * currentSpeed * delta;
+      if (moveState.left || moveState.right)
+        velocity.x -= direction.x * currentSpeed * delta;
+
+      if (isMobileMode && (joystickVector.x !== 0 || joystickVector.y !== 0)) {
+        velocity.z -= direction.z * currentSpeed * delta;
+        velocity.x -= direction.x * currentSpeed * delta;
+      }
+    }
 
     // 충돌 처리를 위해 이동 전 위치 저장
     const originalPos = controls.getObject().position.clone();
@@ -896,28 +1412,10 @@ function animate() {
     controls.getObject().position.y += velocity.y * delta;
 
     // 바닥 충돌 감지
-    if (controls.getObject().position.y < 2.0) {
+    if (!isPlayerDying && controls.getObject().position.y < 2.0) {
       velocity.y = 0;
       controls.getObject().position.y = 2.0;
       canJump = true;
-    }
-
-    // 백신 획득 처리
-    const playerPos = controls.getObject().position;
-    for (let i = vaccines.length - 1; i >= 0; i--) {
-      const v = vaccines[i];
-      v.rotation.y += delta; // 회전 효과
-
-      if (v.position.distanceTo(playerPos) < 3) {
-        scene.remove(v);
-        vaccines.splice(i, 1);
-        vaccinesCollected++;
-        vaccineElement.textContent = `Vaccines: ${vaccinesCollected}/${VACCINES_TO_WIN}`;
-
-        if (vaccinesCollected >= VACCINES_TO_WIN) {
-          startNextWave();
-        }
-      }
     }
 
     // 아이템 획득 처리
@@ -963,7 +1461,9 @@ function animate() {
       // 적과의 충돌 검사
       for (let j = enemies.length - 1; j >= 0; j--) {
         const e = enemies[j];
-        const enemyType = enemyTypes[e.userData.type];
+        const enemyType = e.userData.isBoss
+          ? e.userData
+          : enemyTypes[e.userData.type];
         const dist = b.position.distanceTo(e.position);
 
         // 충돌 판정: 좀비의 중심(허리 높이)을 기준으로 거리 계산
@@ -987,23 +1487,39 @@ function animate() {
           // 머리 높이 근처(±0.6)에 맞으면 헤드샷
           if (Math.abs(bulletHeight - e.userData.headY) < 0.6) {
             damage *= 2;
-            showMessage("HEADSHOT!", 500); // 짧게 헤드샷 메시지 표시
+            createBloodParticles(b.position); // 피 파티클 생성
+            // showMessage("HEADSHOT!", 500); // 알림 제거
           }
 
           e.userData.health -= damage;
 
+          // 보스 체력바 업데이트
+          if (e.userData.isBoss) {
+            bossHealthBar.style.width = `${(e.userData.health / e.userData.maxHealth) * 100}%`;
+          }
+
           if (e.userData.health <= 0) {
-            // 적 제거
-            scene.remove(e);
-            enemies.splice(j, 1);
+            // 사망 처리 (즉시 제거하지 않고 상태 변경)
+            if (!e.userData.isDying) {
+              e.userData.isDying = true;
 
-            // 점수 증가
-            score += enemyType.score;
-            scoreElement.textContent = `Score: ${score}`;
+              // 점수 및 아이템 처리는 사망 순간 1회만 실행
+              score += enemyType.score;
+              scoreElement.textContent = `Score: ${score}`;
 
-            // 아이템 드롭 (30% 확률)
-            if (Math.random() < 0.3) {
-              spawnItem(e.position);
+              if (Math.random() < 0.3) {
+                spawnItem(e.position);
+              }
+
+              // 보스 사망 시 UI 숨김
+              if (e.userData.isBoss) {
+                activeBoss = null;
+                bossHud.classList.add("hidden");
+
+                if (e.userData.isFinalBoss) {
+                  setTimeout(showEndingCredits, 3000); // 3초 후 엔딩
+                }
+              }
             }
           } else {
             // 넉백 효과 적용 (총알 진행 방향으로 밀어냄)
@@ -1018,7 +1534,21 @@ function animate() {
     // 적 이동 (플레이어 추적)
     for (let i = enemies.length - 1; i >= 0; i--) {
       const e = enemies[i];
-      const enemyType = enemyTypes[e.userData.type];
+
+      // 사망 애니메이션 (뒤로 넘어짐)
+      if (e.userData.isDying) {
+        e.rotation.x -= 4.0 * delta; // 뒤로 회전
+        if (e.rotation.x < -Math.PI / 2) {
+          // 90도 넘어가면 제거
+          scene.remove(e);
+          enemies.splice(i, 1);
+        }
+        continue; // 이동 로직 건너뜀
+      }
+
+      const enemyType = e.userData.isBoss
+        ? e.userData
+        : enemyTypes[e.userData.type];
       const dir = new THREE.Vector3().subVectors(playerPos, e.position);
       dir.y = 0; // Y축 방향 제거 (수평 이동만)
       dir.normalize();
@@ -1028,23 +1558,33 @@ function animate() {
       const knockbackStep = e.userData.knockback.clone().multiplyScalar(delta);
       knockbackStep.y = 0; // 넉백 Y축 제거
       e.position.add(moveStep).add(knockbackStep);
-      e.position.y = -0.5; // [위치 조절] 좀비 Y축 높이 고정 (위와 동일하게 맞추세요)
+
+      // Boss position is handled by BossSystem.update, but we need to ensure normal zombies stay on ground
+      if (!e.userData.isBoss) {
+        e.position.y = -0.5;
+      }
+
       e.userData.knockback.multiplyScalar(0.9); // 넉백 감쇠 (마찰력)
 
-      // 플레이어의 몸통 높이(y=0 또는 1)를 바라보게 하여 위를 쳐다보지 않게 함
-      e.lookAt(playerPos.x, 1, playerPos.z);
+      // [수정] 좀비가 플레이어를 바라볼 때 수평으로만 회전 (눕는 현상 방지)
+      e.lookAt(playerPos.x, e.position.y, playerPos.z);
 
       // 좀비 애니메이션 (팔다리 흔들기)
       if (e.userData.limbs) {
         const { leftArm, rightArm, leftLeg, rightLeg } = e.userData.limbs;
+        const distToPlayer = e.position.distanceTo(playerPos);
 
-        if (e.userData.type === "runner") {
+        // 공격 모션 (가까울 때)
+        if (distToPlayer < 3.0) {
+          leftArm.rotation.x = -Math.PI / 2 + Math.sin(time * 15) * 0.5; // 팔을 위아래로 휘두름
+          rightArm.rotation.x = -Math.PI / 2 - Math.sin(time * 15) * 0.5;
+        } else if (e.userData.type === "runner") {
           // 러너: 달리기 모션 (빠르고 역동적)
           const runSpeed = 18;
           const runAngle =
             Math.sin(time * runSpeed + e.userData.animOffset) * 1.0;
 
-          // 몸을 앞으로 기울임 (lookAt 후 로컬 회전 적용)
+          // 몸을 앞으로 기울임
           e.rotateX(0.4);
 
           // 다리: 빠르게 교차
@@ -1086,25 +1626,50 @@ function animate() {
 
       if (distSq < hitRadius * hitRadius) {
         // 플레이어 피격 처리 (1초 무적 시간)
-        if (time - lastDamageTime > 1.0) {
-          playerHealth -= enemyType.damage; // 좀비 타입별 데미지 적용
+        if (time - lastDamageTime > 1000) {
+          const damage = e.userData.isBoss ? 30 : enemyType.damage; // 보스 데미지 30
+          playerHealth -= damage;
           lastDamageTime = time;
 
-          // 플레이어 넉백 (뒤로 밀려남)
-          const pushDir = new THREE.Vector3()
-            .subVectors(playerPos, e.position)
-            .normalize();
-          velocity.add(pushDir.multiplyScalar(40));
+          // 플레이어 넉백 (경직 및 약한 밀림)
+          const pushDir = new THREE.Vector3().subVectors(playerPos, e.position);
+          pushDir.y = 0; // 위로 뜨지 않게 Y축 제거
+          pushDir.normalize();
+
+          // 기존 속도 초기화 (경직) 후 약한 넉백 적용
+          velocity.set(0, 0, 0);
+          velocity.add(pushDir.multiplyScalar(10));
 
           if (playerHealth <= 0) {
-            showMessage("사망했습니다...");
-            setTimeout(resetGame, 1000);
+            if (!isPlayerDying) {
+              isPlayerDying = true;
+              showMessage("사망했습니다...");
+              setTimeout(showGameOverScreen, 3000); // 3초 후 게임 오버 화면
+            }
           } else {
             showMessage(`피가 ${playerHealth} 남았습니다!`);
           }
         }
       }
     }
+  }
+
+  // 사망 애니메이션 (카메라 쓰러짐)
+  if (isPlayerDying) {
+    // 바닥으로 쓰러짐 (높이 0.5까지)
+    camera.position.y = THREE.MathUtils.lerp(camera.position.y, 0.5, delta * 3);
+    // 고개 꺾임 (Z축 회전)
+    camera.rotation.z = THREE.MathUtils.lerp(
+      camera.rotation.z,
+      -Math.PI / 4,
+      delta * 2,
+    );
+    // 시선 아래로 (X축 회전)
+    camera.rotation.x = THREE.MathUtils.lerp(
+      camera.rotation.x,
+      -Math.PI / 6,
+      delta * 2,
+    );
   }
 
   prevTime = time;
@@ -1154,10 +1719,62 @@ window.addEventListener("resize", () => {
 
 // 마우스 클릭 시 단발 무기 발사 처리
 document.addEventListener("mousedown", () => {
-  if (controls.isLocked && gameStarted) {
+  if ((controls.isLocked || isMobileMode) && gameStarted && !isPlayerDying) {
     isFiring = true;
     if (!weaponState[weaponState.current].automatic) {
       shoot();
     }
   }
+});
+
+// 엔딩 크레딧 표시 함수
+function showEndingCredits() {
+  document.exitPointerLock(); // 마우스 잠금 해제
+  playBGM("ending"); // 엔딩 BGM 재생
+  const endingScreen = document.getElementById("ending-screen");
+  if (endingScreen) endingScreen.classList.remove("hidden");
+  gameStarted = false;
+}
+
+document.getElementById("btn-ending-home")?.addEventListener("click", () => {
+  window.location.href = "../../index.html";
+});
+
+// 게임 오버 화면 표시 함수
+function showGameOverScreen() {
+  gameStarted = false;
+  document.exitPointerLock();
+  stopBGM();
+
+  const screen = document.getElementById("game-over-screen");
+  const waveEl = document.getElementById("final-wave");
+  const scoreEl = document.getElementById("final-score");
+
+  if (waveEl) waveEl.textContent = currentWave;
+  if (scoreEl) scoreEl.textContent = score;
+
+  if (screen) screen.classList.remove("hidden");
+}
+
+document.getElementById("btn-return-title")?.addEventListener("click", () => {
+  document.getElementById("game-over-screen").classList.add("hidden");
+  returnToTitle();
+});
+
+// 일시정지 메뉴 버튼 이벤트
+document.getElementById("btn-pause-resume")?.addEventListener("click", () => {
+  document.getElementById("pause-menu").classList.add("hidden");
+  if (isMobileMode) gameStarted = true;
+  else controls.lock();
+});
+
+document.getElementById("btn-pause-restart")?.addEventListener("click", () => {
+  document.getElementById("pause-menu").classList.add("hidden");
+  resetGame();
+  if (!isMobileMode) controls.lock();
+});
+
+document.getElementById("btn-pause-menu")?.addEventListener("click", () => {
+  document.getElementById("pause-menu").classList.add("hidden");
+  returnToTitle();
 });

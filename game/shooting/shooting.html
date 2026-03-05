@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>3D Shooting Game</title>
     <link rel="stylesheet" href="shooting.css" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
     <!-- Import Map: Three.js 모듈 로딩을 위해 필수 -->
     <script type="importmap">
       {
@@ -16,11 +17,71 @@
     </script>
   </head>
   <body>
+    <!-- 시작 페이지 -->
+    <div id="start-screen">
+      <div class="start-bg">
+        <!-- 배경 이미지 (placeholder) -->
+        <div class="bg-overlay"></div>
+      </div>
+      <img
+        src="../../game/shooting/asset/shooting_main.png"
+        id="main-char-img"
+        alt="Main Character"
+      />
+      <div class="start-content">
+        <h1 class="game-title">ZOMBIE SURVIVAL</h1>
+        <div class="btn-group">
+          <button id="btn-pc-start" class="btn-main">PC START</button>
+          <button id="btn-mobile-start" class="btn-main">MOBILE START</button>
+          <button id="btn-howto" class="btn-sub">HOW TO PLAY</button>
+          <button id="btn-exit" class="btn-sub">EXIT</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 게임 방법 모달 -->
+    <div id="howto-modal" class="hidden">
+      <div class="modal-content">
+        <h2>SURVIVAL GUIDE</h2>
+        <p>
+          도시가 좀비 바이러스로 뒤덮였습니다.<br />당신은 유일한 생존자입니다.
+        </p>
+        <ul>
+          <li>
+            <strong>목표:</strong> 몰려오는 좀비 웨이브를 막아내고 생존하세요.
+          </li>
+          <li>
+            <strong>조작 (PC):</strong> WASD 이동, SPACE 점프, SHIFT 달리기,
+            마우스 발사
+          </li>
+          <li>
+            <strong>조작 (Mobile):</strong> 좌측 조이스틱 이동, 우측 버튼 액션,
+            화면 드래그 시점 전환
+          </li>
+          <li>
+            <strong>팁:</strong> 헤드샷은 치명적입니다. 10웨이브마다 강력한
+            변종이 나타납니다.
+          </li>
+        </ul>
+        <button id="btn-close-howto">UNDERSTOOD</button>
+      </div>
+    </div>
+
+    <!-- 모바일 컨트롤 UI -->
+    <div id="mobile-controls" class="hidden">
+      <div id="joystick-zone"><div id="joystick-knob"></div></div>
+      <div id="mobile-actions">
+        <button id="btn-m-jump">JUMP</button>
+        <button id="btn-m-run">RUN</button>
+        <button id="btn-m-shoot">SHOOT</button>
+      </div>
+      <button id="btn-m-pause">II</button>
+    </div>
+
     <div id="ui-layer">
       <div id="crosshair"></div>
       <div id="score-board">Score: 0</div>
-      <div id="round-board">Round: 1</div>
-      <div id="vaccine-board">Vaccines: 0/3</div>
+      <div id="wave-board">Wave: 1</div>
       <div id="ammo-board">Ammo: 60 / 240</div>
       <div id="weapon-ui">
         <div id="weapon-1" class="weapon-slot active">1</div>
@@ -36,10 +97,45 @@
           <span>ST</span>
         </div>
       </div>
+      <div id="boss-hud" class="hidden">
+        <div id="boss-name">Experiment Subject</div>
+        <div id="boss-health-container">
+          <div id="boss-health-bar"></div>
+        </div>
+      </div>
+      <div id="game-over-screen" class="hidden">
+        <div class="game-over-content">
+          <h1>GAME OVER</h1>
+          <p>Survived Waves: <span id="final-wave">0</span></p>
+          <p>Final Score: <span id="final-score">0</span></p>
+          <button id="btn-return-title">Return to Title</button>
+        </div>
+      </div>
+      <div id="ending-screen" class="hidden">
+        <div class="credits-content">
+          <h1>MISSION COMPLETE</h1>
+          <p>The Kaiju has been defeated.</p>
+          <div class="credits-list">
+            <h2>CREDITS</h2>
+            <p>Game Design & Programming</p>
+            <h3>You & Gemini</h3>
+            <br />
+            <p>Graphics Engine</p>
+            <h3>Three.js</h3>
+            <br /><br />
+            <h1>THANK YOU FOR PLAYING</h1>
+          </div>
+        </div>
+        <button id="btn-ending-home">Return to Home</button>
+      </div>
       <div id="game-message"></div>
-      <div id="instructions">
-        <h1>Click to Start</h1>
-        <p>WASD: Move, SPACE: Jump, Click: Shoot</p>
+      <div id="pause-menu" class="hidden">
+        <h1>PAUSED</h1>
+        <div class="btn-group">
+          <button id="btn-pause-resume" class="btn-sub">계속하기</button>
+          <button id="btn-pause-restart" class="btn-sub">처음부터</button>
+          <button id="btn-pause-menu" class="btn-sub">메뉴로</button>
+        </div>
       </div>
     </div>
     <script type="module" src="shooting.js"></script>
