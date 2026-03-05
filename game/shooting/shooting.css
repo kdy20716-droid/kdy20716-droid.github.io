@@ -82,7 +82,7 @@ body {
 
 #ammo-board {
   position: absolute;
-  bottom: 20px;
+  bottom: 30px;
   right: 20px;
   color: #ffff00;
   font-size: 30px;
@@ -107,4 +107,77 @@ body {
 
 #game-message.show {
   opacity: 1;
+}
+
+#weapon-ui {
+  position: absolute;
+  bottom: 80px;
+  right: 20px;
+  display: flex;
+  gap: 10px;
+}
+
+.weapon-slot {
+  width: 40px;
+  height: 40px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  font-family: sans-serif;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 5px;
+}
+
+.weapon-slot.active {
+  border-color: #ffff00;
+  color: #ffff00;
+  background: rgba(255, 255, 0, 0.2);
+}
+
+#status-bars {
+  position: absolute;
+  bottom: 30px;
+  left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 250px;
+}
+
+.bar-container {
+  position: relative;
+  width: 100%;
+  height: 20px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.bar-container span {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: white;
+  font-size: 12px;
+  font-family: sans-serif;
+  font-weight: bold;
+  z-index: 2;
+  text-shadow: 1px 1px 2px #000;
+}
+
+#health-bar {
+  width: 100%;
+  height: 100%;
+  background: #ff4444;
+  transition: width 0.2s;
+}
+
+#stamina-bar {
+  width: 100%;
+  height: 100%;
+  background: #4488ff;
+  transition: width 0.1s;
 }

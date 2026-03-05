@@ -3,8 +3,9 @@ import { PointerLockControls } from "three/addons/controls/PointerLockControls.j
 
 // 1. 씬 설정
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x050505); // 밤 배경
-scene.fog = new THREE.Fog(0x050505, 10, 300); // 안개 거리 증가 (벽 가시성 확보)
+scene.background = new THREE.Color(0x000000); // 완전한 어둠
+// 안개 설정: (색상, 시작 거리, 끝 거리) - 끝 거리를 조절하여 가시거리를 변경하세요.
+scene.fog = new THREE.Fog(0x000000, 30, 150); // 기존보다 가시거리 증가
 
 // 2. 카메라 및 조명
 const camera = new THREE.PerspectiveCamera(
@@ -13,18 +14,20 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   1000,
 );
-camera.position.y = 3.0; // 플레이어 눈높이 (키 높임)
+camera.position.y = 2.0; // 플레이어 눈높이 (2m)
 
-const light = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6); // 환경광 밝기 증가
-scene.add(light);
+// 환경광: 전체적인 밝기를 조절합니다. (색상값 0x333333을 높이면 더 밝아짐)
+const ambientLight = new THREE.AmbientLight(0x333333);
+scene.add(ambientLight);
 
-// 달빛 (DirectionalLight) 추가 - 전체적인 가시성 확보
-const moonLight = new THREE.DirectionalLight(0xffffff, 0.5);
-moonLight.position.set(50, 100, 50);
-scene.add(moonLight);
+// 플레이어 주변 조명 (PointLight): (색상, 강도, 거리)
+// 강도(2.0)와 거리(100)를 조절하여 주변 밝기를 변경하세요.
+const playerLight = new THREE.PointLight(0xffffff, 30.0, 100);
+camera.add(playerLight);
 
 // 플레이어 손전등 (SpotLight)
-const flashlight = new THREE.SpotLight(0xffffff, 5, 60, Math.PI / 6, 0.5, 1);
+// (색상, 강도, 거리, 각도, 페넘브라, 감쇠) - 강도(5)와 거리(250)를 조절하세요.
+const flashlight = new THREE.SpotLight(0xffffff, 15, 250, Math.PI / 1, 0.5, 1);
 flashlight.position.set(0.5, 0, 0); // 카메라 오른쪽
 flashlight.target.position.set(0, 0, -1);
 camera.add(flashlight);
@@ -39,18 +42,25 @@ const weaponState = {
     reserve: 240, // 예비 탄약 (총 300발 - 60발)
     maxMag: 60,
     damage: 1,
-    fireRate: 0.15,
-    speed: 100,
+    fireRate: 0.1, // 연사 속도 상향 (0.2 -> 0.1)
+    speed: 300, // 탄속 증가
+    automatic: true, // 연사 가능
+    reloadTime: 2000, // 재장전 시간 2초
   },
   pistol: {
     mag: Infinity, // 무한
     reserve: Infinity,
     damage: 1,
-    fireRate: 0.4, // 연사 속도 느림
-    speed: 80,
+    fireRate: 0.2,
+    speed: 200, // 탄속 증가
+    automatic: false, // 단발 사격
   },
 };
 const ammoElement = document.getElementById("ammo-board");
+const weapon1Slot = document.getElementById("weapon-1");
+const weapon2Slot = document.getElementById("weapon-2");
+const healthBar = document.getElementById("health-bar");
+const staminaBar = document.getElementById("stamina-bar");
 
 // 소총 모델 생성 및 카메라 부착
 const rifle = new THREE.Group();
@@ -135,7 +145,7 @@ document.body.appendChild(renderer.domElement);
 
 // 4. 바닥 생성
 const floorGeometry = new THREE.PlaneGeometry(2000, 2000, 100, 100);
-const floorMaterial = new THREE.MeshLambertMaterial({ color: 0x111111 }); // 아스팔트 색
+const floorMaterial = new THREE.MeshLambertMaterial({ color: 0x808080 }); // 회색 바닥
 const floor = new THREE.Mesh(floorGeometry, floorMaterial);
 floor.rotation.x = -Math.PI / 2;
 scene.add(floor);
@@ -258,6 +268,10 @@ controls.addEventListener("lock", () => {
 
 controls.addEventListener("unlock", () => {
   instructions.style.display = "block";
+  if (gameStarted) {
+    const h1 = instructions.querySelector("h1");
+    if (h1) h1.textContent = "Click to Resume";
+  }
 });
 
 scene.add(controls.getObject());
@@ -271,6 +285,9 @@ const moveState = {
   left: false,
   right: false,
 };
+
+// 달리기 상태 추가
+moveState.sprint = false;
 
 let canJump = false;
 
@@ -294,6 +311,16 @@ document.addEventListener("keydown", (event) => {
         canJump = false;
       }
       break;
+    case "ShiftLeft":
+    case "ShiftRight":
+      moveState.sprint = true;
+      break;
+    case "Digit1":
+      switchWeapon("rifle");
+      break;
+    case "Digit2":
+      switchWeapon("pistol");
+      break;
   }
 });
 
@@ -311,6 +338,10 @@ document.addEventListener("keyup", (event) => {
     case "KeyD":
       moveState.right = false;
       break;
+    case "ShiftLeft":
+    case "ShiftRight":
+      moveState.sprint = false;
+      break;
   }
 });
 
@@ -320,24 +351,27 @@ const enemyTypes = {
     name: "grunt",
     size: 2,
     color: 0x556b2f, // 썩은 녹색
-    speed: 5,
+    speed: 7.5,
     health: 5, // 체력 5
+    damage: 20, // 데미지 20
     score: 10,
   },
   tank: {
     name: "tank",
     size: 4,
     color: 0x2f4f4f, // 어두운 회색
-    speed: 2.5,
+    speed: 3.75,
     health: 15, // 체력 15
+    damage: 50, // 데미지 50
     score: 50,
   },
   runner: {
     name: "runner",
     size: 1.5,
     color: 0x8b0000, // 핏빛 빨강
-    speed: 8,
+    speed: 12,
     health: 3, // 체력 3
+    damage: 20, // 데미지 20
     score: 20,
   },
 };
@@ -356,12 +390,15 @@ const VACCINES_TO_WIN = 3;
 let enemiesRemainingInWave = 0; // 누락된 변수 추가
 let waveCooldown = 0; // 누락된 변수 추가
 const WAVE_COOLDOWN_TIME = 5; // 누락된 상수 추가
-let playerHealth = 3; // 플레이어 체력
+let playerHealth = 100; // 플레이어 체력 100으로 변경
+let playerStamina = 100; // 스테미나 추가
+const maxHealth = 100;
+const maxStamina = 100;
+let isExhausted = false; // 탈진 상태
 let lastDamageTime = 0; // 무적 시간 체크용
 let lastShotTime = 0; // 연사 속도 체크용
 const items = []; // 아이템 배열
-let moveSpeedBonus = 1.0; // 이동 속도 배율
-let speedBoostTimer = null; // 속도 버프 타이머
+let isReloading = false; // 재장전 상태 플래그
 
 // 무기 교체 함수
 function switchWeapon(name) {
@@ -369,9 +406,13 @@ function switchWeapon(name) {
   if (name === "rifle") {
     rifle.visible = true;
     pistol.visible = false;
+    weapon1Slot.classList.add("active");
+    weapon2Slot.classList.remove("active");
   } else {
     rifle.visible = false;
     pistol.visible = true;
+    weapon1Slot.classList.remove("active");
+    weapon2Slot.classList.add("active");
   }
   updateAmmoDisplay();
 }
@@ -423,28 +464,32 @@ const zombieTextures = {
 
 // 총알 발사 함수
 function shoot() {
+  if (isReloading) return; // 재장전 중 발사 불가
+
   const currentW = weaponState[weaponState.current];
+  const now = performance.now() / 1000; // 초 단위 시간
+
+  // 연사 속도 체크
+  if (now - lastShotTime < currentW.fireRate) return;
 
   // 탄약 체크 및 처리 (소총인 경우)
   if (weaponState.current === "rifle") {
     if (currentW.mag <= 0) {
       // 탄창이 비었을 때
       if (currentW.reserve > 0) {
-        // 재장전 (간소화: 즉시 재장전)
-        const reloadAmount = Math.min(currentW.maxMag, currentW.reserve);
-        currentW.mag = reloadAmount;
-        currentW.reserve -= reloadAmount;
-        showMessage("재장전!");
+        reload(); // 재장전 함수 호출
+        return;
       } else {
         // 예비 탄약도 없으면 권총으로 전환
         switchWeapon("pistol");
         showMessage("탄약 소진! 권총 전환");
-        return; // 이번 클릭은 발사 안 함 (전환 딜레이 효과)
+        return;
       }
     }
     currentW.mag--;
   }
 
+  lastShotTime = now;
   updateAmmoDisplay();
 
   const bulletGeometry = new THREE.SphereGeometry(0.2, 8, 8);
@@ -481,6 +526,23 @@ function shoot() {
     const index = bullets.indexOf(bullet);
     if (index > -1) bullets.splice(index, 1);
   }, 2000);
+}
+
+// 재장전 함수
+function reload() {
+  if (isReloading) return;
+  const currentW = weaponState[weaponState.current];
+  isReloading = true;
+  showMessage("재장전 중...");
+
+  setTimeout(() => {
+    const reloadAmount = Math.min(currentW.maxMag, currentW.reserve);
+    currentW.mag = reloadAmount;
+    currentW.reserve -= reloadAmount;
+    isReloading = false;
+    updateAmmoDisplay();
+    showMessage("재장전 완료!");
+  }, currentW.reloadTime);
 }
 
 // 적 생성 함수
@@ -581,10 +643,10 @@ function spawnEnemy(enemyTypeName) {
     const legGeo = new THREE.BoxGeometry(0.25, 0.9, 0.25);
     legGeo.translate(0, -0.45, 0);
     leftLeg = new THREE.Mesh(legGeo, bodyMaterial);
-    leftLeg.position.set(-0.2, 0.45, 0);
+    leftLeg.position.set(-0.2, 0.9, 0); // 다리 위치 수정 (바닥에 닿게)
     zombie.add(leftLeg);
     rightLeg = new THREE.Mesh(legGeo, bodyMaterial);
-    rightLeg.position.set(0.2, 0.45, 0);
+    rightLeg.position.set(0.2, 0.9, 0); // 다리 위치 수정
     zombie.add(rightLeg);
   }
 
@@ -596,7 +658,7 @@ function spawnEnemy(enemyTypeName) {
 
   zombie.position.set(
     controls.getObject().position.x + x,
-    0, // 바닥에 배치 (발바닥 기준)
+    -0.5, // [위치 조절] 좀비 Y축 높이 (기존 -1.0에서 -0.5로 상향)
     controls.getObject().position.z + z,
   );
 
@@ -610,6 +672,7 @@ function spawnEnemy(enemyTypeName) {
     speed: type.speed,
     score: type.score,
     knockback: new THREE.Vector3(), // 넉백 벡터 초기화 (오류 해결)
+    headY: (type.name === "tank" ? 2.35 : 1.55) * 2.0, // 헤드샷 판정용 머리 높이 (스케일 2.0 적용)
     limbs: { leftArm, rightArm, leftLeg, rightLeg },
     animOffset: Math.random() * 100, // 애니메이션 오프셋
   };
@@ -726,11 +789,14 @@ function resetGame() {
   vaccines.length = 0;
   items.forEach((i) => scene.remove(i));
   items.length = 0;
-  controls.getObject().position.set(0, 3.0, 0); // 높이 수정
+  controls.getObject().position.set(0, 2.0, 0); // 높이 수정 (2m)
   velocity.set(0, 0, 0);
   currentRound = 0;
   enemiesRemainingInWave = 0;
-  playerHealth = 3; // 체력 리셋
+  playerHealth = 100; // 체력 리셋
+  playerStamina = 100; // 스테미나 리셋
+  isExhausted = false; // 탈진 상태 초기화
+  isReloading = false; // 재장전 상태 초기화
 
   // 탄약 리셋
   weaponState.rifle.mag = 60;
@@ -753,6 +819,12 @@ function showMessage(text) {
   }, 2000);
 }
 
+// 상태바 업데이트 함수
+function updateStatusBars() {
+  healthBar.style.width = `${(playerHealth / maxHealth) * 100}%`;
+  staminaBar.style.width = `${(playerStamina / maxStamina) * 100}%`;
+}
+
 // 8. 게임 루프
 let prevTime = performance.now();
 
@@ -763,12 +835,36 @@ function animate() {
   const delta = (time - prevTime) / 1000;
 
   if (controls.isLocked) {
-    // 연사 처리 (무기별 연사 속도 적용)
-    const fireRate = weaponState[weaponState.current].fireRate;
-    if (isFiring && time - lastShotTime > fireRate) {
+    // 연사 처리 (자동 무기만 animate 루프에서 발사)
+    const currentW = weaponState[weaponState.current];
+    if (isFiring && currentW.automatic) {
       shoot();
-      lastShotTime = time;
     }
+
+    // 스테미나 및 이동 속도 계산
+    let currentSpeed = 200.0; // 기본 걷기 속도 (느리게)
+    const isMoving =
+      moveState.forward ||
+      moveState.backward ||
+      moveState.left ||
+      moveState.right;
+
+    // 탈진 상태 회복 체크 (10% 이상 차야 달리기 가능)
+    if (isExhausted && playerStamina > maxStamina * 0.1) {
+      isExhausted = false;
+    }
+
+    if (moveState.sprint && !isExhausted && playerStamina > 0 && isMoving) {
+      currentSpeed = 400.0; // 달리기 속도 (기존 속도)
+      playerStamina = Math.max(0, playerStamina - 30 * delta); // 스테미나 소모
+      if (playerStamina <= 0) {
+        isExhausted = true; // 스테미나 고갈 시 탈진 상태 진입
+      }
+    } else {
+      playerStamina = Math.min(maxStamina, playerStamina + 10 * delta); // 스테미나 회복
+    }
+
+    updateStatusBars();
 
     // 이동 처리
     velocity.x -= velocity.x * 10.0 * delta;
@@ -780,9 +876,9 @@ function animate() {
     direction.normalize();
 
     if (moveState.forward || moveState.backward)
-      velocity.z -= direction.z * 400.0 * moveSpeedBonus * delta; // 속도 버프 적용
+      velocity.z -= direction.z * currentSpeed * delta;
     if (moveState.left || moveState.right)
-      velocity.x -= direction.x * 400.0 * moveSpeedBonus * delta;
+      velocity.x -= direction.x * currentSpeed * delta;
 
     // 충돌 처리를 위해 이동 전 위치 저장
     const originalPos = controls.getObject().position.clone();
@@ -800,9 +896,9 @@ function animate() {
     controls.getObject().position.y += velocity.y * delta;
 
     // 바닥 충돌 감지
-    if (controls.getObject().position.y < 3.0) {
+    if (controls.getObject().position.y < 2.0) {
       velocity.y = 0;
-      controls.getObject().position.y = 3.0;
+      controls.getObject().position.y = 2.0;
       canJump = true;
     }
 
@@ -829,23 +925,24 @@ function animate() {
       const item = items[i];
       item.rotation.y += delta * 2; // 아이템 회전 효과
 
-      if (item.position.distanceTo(playerPos) < 2) {
+      // 아이템 획득 범위 확대 및 높이 무시 (XZ 평면 거리 계산)
+      const distXZ = Math.sqrt(
+        Math.pow(item.position.x - playerPos.x, 2) +
+          Math.pow(item.position.z - playerPos.z, 2),
+      );
+
+      if (distXZ < 3) {
+        // 범위 3으로 확대
         if (item.userData.type === "health") {
-          if (playerHealth < 3) {
-            playerHealth++;
+          if (playerHealth < maxHealth) {
+            playerHealth = Math.min(maxHealth, playerHealth + 20); // 체력 20 회복
             showMessage("체력 회복!");
           } else {
             showMessage("체력이 가득 찼습니다.");
           }
         } else if (item.userData.type === "speed") {
-          moveSpeedBonus = 2.0; // 속도 2배
-          showMessage("이동 속도 증가!");
-
-          if (speedBoostTimer) clearTimeout(speedBoostTimer);
-          speedBoostTimer = setTimeout(() => {
-            moveSpeedBonus = 1.0;
-            showMessage("속도 정상화");
-          }, 5000); // 5초 지속
+          playerStamina = maxStamina; // 스테미나 100 회복
+          showMessage("스테미나 완전 회복!");
         } else if (item.userData.type === "ammo") {
           weaponState.rifle.reserve += 60; // 탄약 60발 추가
           updateAmmoDisplay();
@@ -870,19 +967,30 @@ function animate() {
         const dist = b.position.distanceTo(e.position);
 
         // 충돌 판정: 좀비의 중심(허리 높이)을 기준으로 거리 계산
+        // 좀비 스케일(2.0)을 고려하여 히트박스 중심과 크기 재조정
+        const scaledSize = enemyType.size * 2.0;
         const enemyCenter = e.position
           .clone()
-          .add(new THREE.Vector3(0, enemyType.size / 2, 0));
+          .add(new THREE.Vector3(0, scaledSize / 2, 0));
         const distToCenter = b.position.distanceTo(enemyCenter);
-        const hitBox = enemyType.size / 2 + 0.5;
+        const hitBox = scaledSize / 2 + 0.5;
 
         if (distToCenter < hitBox) {
           // 총알 제거
           scene.remove(b);
           bullets.splice(i, 1);
 
-          // 체력 감소
-          e.userData.health--;
+          // 데미지 계산 (헤드샷 판정)
+          let damage = weaponState[weaponState.current].damage;
+          const bulletHeight = b.position.y - e.position.y; // 좀비 발바닥 기준 총알 높이
+
+          // 머리 높이 근처(±0.6)에 맞으면 헤드샷
+          if (Math.abs(bulletHeight - e.userData.headY) < 0.6) {
+            damage *= 2;
+            showMessage("HEADSHOT!", 500); // 짧게 헤드샷 메시지 표시
+          }
+
+          e.userData.health -= damage;
 
           if (e.userData.health <= 0) {
             // 적 제거
@@ -911,17 +1019,20 @@ function animate() {
     for (let i = enemies.length - 1; i >= 0; i--) {
       const e = enemies[i];
       const enemyType = enemyTypes[e.userData.type];
-      const dir = new THREE.Vector3()
-        .subVectors(playerPos, e.position)
-        .normalize();
+      const dir = new THREE.Vector3().subVectors(playerPos, e.position);
+      dir.y = 0; // Y축 방향 제거 (수평 이동만)
+      dir.normalize();
 
       // 이동 + 넉백 적용
       const moveStep = dir.multiplyScalar(e.userData.speed * delta);
       const knockbackStep = e.userData.knockback.clone().multiplyScalar(delta);
+      knockbackStep.y = 0; // 넉백 Y축 제거
       e.position.add(moveStep).add(knockbackStep);
+      e.position.y = -0.5; // [위치 조절] 좀비 Y축 높이 고정 (위와 동일하게 맞추세요)
       e.userData.knockback.multiplyScalar(0.9); // 넉백 감쇠 (마찰력)
 
-      e.lookAt(playerPos);
+      // 플레이어의 몸통 높이(y=0 또는 1)를 바라보게 하여 위를 쳐다보지 않게 함
+      e.lookAt(playerPos.x, 1, playerPos.z);
 
       // 좀비 애니메이션 (팔다리 흔들기)
       if (e.userData.limbs) {
@@ -976,7 +1087,7 @@ function animate() {
       if (distSq < hitRadius * hitRadius) {
         // 플레이어 피격 처리 (1초 무적 시간)
         if (time - lastDamageTime > 1.0) {
-          playerHealth--;
+          playerHealth -= enemyType.damage; // 좀비 타입별 데미지 적용
           lastDamageTime = time;
 
           // 플레이어 넉백 (뒤로 밀려남)
@@ -994,8 +1105,6 @@ function animate() {
         }
       }
     }
-  } else if (gameStarted) {
-    gameStarted = false;
   }
 
   prevTime = time;
@@ -1041,4 +1150,14 @@ window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// 마우스 클릭 시 단발 무기 발사 처리
+document.addEventListener("mousedown", () => {
+  if (controls.isLocked && gameStarted) {
+    isFiring = true;
+    if (!weaponState[weaponState.current].automatic) {
+      shoot();
+    }
+  }
 });
