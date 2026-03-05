@@ -16,12 +16,13 @@ engine.world.gravity.y = 0; // 탑뷰이므로 중력 제거
 
 const canvas = document.getElementById("game-canvas");
 const container = document.getElementById("game-container");
+canvas.style.touchAction = "none"; // 터치 제스처(스크롤 등) 방지
 
 // 게임 해상도 1:1 비율 설정
 const width = 800;
 const height = 800;
-const tableWidth = 400; // 당구대 너비
-const tableHeight = 697; // 당구대 높이
+const tableWidth = 320; // 당구대 너비
+const tableHeight = 560; // 당구대 높이
 
 const render = Render.create({
   element: container,
@@ -303,7 +304,7 @@ function createBalls() {
   // 큐볼
   cueBall = Bodies.circle(
     centerX,
-    centerY + tableHeight / 2 - 150,
+    centerY + tableHeight / 2 - 120,
     ballRadius,
     {
       restitution: 0.9,
@@ -317,7 +318,7 @@ function createBalls() {
 
   // 목적구 (15개, 삼각형 배치)
   const startX = centerX;
-  const startY = centerY - tableHeight / 2 + 150;
+  const startY = centerY - tableHeight / 2 + 120;
 
   // 공 색상 정의 (1~15)
   const ballColors = {
@@ -407,11 +408,21 @@ window.addEventListener("mousemove", handleInputMove);
 window.addEventListener("touchmove", handleInputMove, { passive: false });
 window.addEventListener("mouseup", handleInputEnd);
 window.addEventListener("touchend", handleInputEnd);
+window.addEventListener("touchcancel", handleInputCancel);
+
+function handleInputCancel(e) {
+  if (isDragging) {
+    isDragging = false;
+    dragStart = null;
+    powerGaugeWrap.classList.add("hidden");
+  }
+}
 
 function handleInputStart(e) {
   if (e.type === "touchstart") e.preventDefault(); // 모바일 터치 기본 동작 방지
   if (isGameEnded || !cueBall) return; // 게임 종료 또는 시작 전 클릭 방지
   if (isShooting || isMoving(cueBall)) return; // 샷 진행 중이거나 공이 움직이면 조작 불가
+  if (isDragging) return; // 멀티터치 방지
 
   // 프리볼(Ball in Hand) 상태일 때 배치 시작
   if (isBallInHand) {
@@ -434,7 +445,7 @@ function handleInputStart(e) {
   }
 
   const pos = getMousePos(e);
-  if (Vector.magnitude(Vector.sub(pos, cueBall.position)) < 80) {
+  if (Vector.magnitude(Vector.sub(pos, cueBall.position)) < 100) { // 터치 인식 범위 확대
     isDragging = true;
     dragStart = Vector.clone(cueBall.position);
     currentMousePos = pos;
@@ -447,7 +458,7 @@ function handleInputMove(e) {
   if (isGameEnded || !cueBall) return;
 
   if (!isDragging) return;
-  e.preventDefault();
+  if (e.cancelable) e.preventDefault();
   const pos = getMousePos(e);
   currentMousePos = pos;
   const forceVector = Vector.sub(dragStart, pos);
@@ -614,7 +625,7 @@ function checkPockets() {
         Vector.magnitude(Vector.sub(cueBall.position, pocket.position)) <
         pocket.circleRadius
       ) {
-        Body.setPosition(cueBall, { x: width / 2, y: height - 150 });
+        Body.setPosition(cueBall, { x: width / 2, y: height / 2 + tableHeight / 2 - 120 });
         Body.setVelocity(cueBall, { x: 0, y: 0 });
         foulThisTurn = true;
         showFloatingText(pocket.position.x, pocket.position.y, "빠짐!");
@@ -690,7 +701,7 @@ function checkOutOfBounds() {
       cueBall.position.y < -buffer ||
       cueBall.position.y > height + buffer
     ) {
-      Body.setPosition(cueBall, { x: width / 2, y: height - 150 });
+      Body.setPosition(cueBall, { x: width / 2, y: height / 2 + tableHeight / 2 - 120 });
       Body.setVelocity(cueBall, { x: 0, y: 0 });
       foulThisTurn = true;
       showMessage("파울! (장외)", 100);
