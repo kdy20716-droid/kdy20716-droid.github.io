@@ -410,10 +410,15 @@ class MultiplayerGameManager {
         } else {
           // All victims processed, check win condition
           const survivors = gameData.players.filter((p) => !p.isDead);
-          if (survivors.length <= 1) {
+          const humanSurvivors = survivors.filter((p) => !p.isAI);
+
+          if (survivors.length <= 1 || humanSurvivors.length === 0) {
             gameData.status = "game_over";
-            gameData.winner =
-              survivors.length === 1 ? survivors[0].nickname : "No one";
+            if (survivors.length === 1) {
+              gameData.winner = survivors[0].nickname;
+            } else {
+              gameData.winner = "AI";
+            }
           } else {
             // Start new round
             // 1. Find next turn (skip dead players)
@@ -493,10 +498,15 @@ class MultiplayerGameManager {
 
         // Check win condition
         const survivors = gameData.players.filter((p) => !p.isDead);
-        if (survivors.length <= 1) {
+        const humanSurvivors = survivors.filter((p) => !p.isAI);
+
+        if (survivors.length <= 1 || humanSurvivors.length === 0) {
           gameData.status = "game_over";
-          gameData.winner =
-            survivors.length === 1 ? survivors[0].nickname : "No one";
+          if (survivors.length === 1) {
+            gameData.winner = survivors[0].nickname;
+          } else {
+            gameData.winner = "AI";
+          }
         } else {
           // Start new round
           // 1. Find next turn (skip dead players)
