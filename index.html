@@ -86,10 +86,12 @@
               <a href="https://github.com/kdy20716-droid/kdy20716-droid.github.io/blob/main/README.md" target="_blank" title="GitHub"
                 ><i class="fab fa-github"></i
               ></a>
-              <a href="mailto:email@example.com" title="Email"
-                ><i class="fas fa-envelope"></i
-              ></a>
-              <a href="#" title="Blog"><i class="fas fa-pen-square"></i></a>
+              <div class="email-container">
+                <a href="javascript:void(0)" id="email-btn" title="Email"
+                  ><i class="fas fa-envelope"></i
+                ></a>
+                <span id="email-popup" class="email-popup">kdy20716@gmail.com</span>
+              </div>
             </div>
           </div>
         </div>
@@ -125,14 +127,13 @@
                 tabindex="-1"
               ></iframe>
               <img
-                src="asset/portfolio.png"
+             
                 alt="Game Portfolio"
                 style="display: none"
               />
             </div>
             <div class="portfolio-info">
               <h3>Game Portfolio</h3>
-              <p>클릭하여 상세 내용을 확인하세요.</p>
             </div>
           </div>
           <!-- Project Item 2 -->
@@ -148,7 +149,6 @@
             </div>
             <div class="portfolio-info">
               <h3>Suika Game</h3>
-              <p>클릭하여 상세 내용을 확인하세요.</p>
             </div>
           </div>
           <!-- Project Item 3 -->
@@ -164,7 +164,6 @@
             </div>
             <div class="portfolio-info">
               <h3>Liar's Roulette</h3>
-              <p>클릭하여 상세 내용을 확인하세요.</p>
             </div>
           </div>
           <!-- Project Item 4 -->
@@ -180,7 +179,6 @@
             </div>
             <div class="portfolio-info">
               <h3>Pocketball</h3>
-              <p>클릭하여 상세 내용을 확인하세요.</p>
             </div>
           </div>
           <!-- Project Item 5 -->
@@ -196,7 +194,6 @@
             </div>
             <div class="portfolio-info">
               <h3>3D Shooting Game</h3>
-              <p>클릭하여 상세 내용을 확인하세요.</p>
             </div>
           </div>
           <!-- Project Item 6 -->
@@ -215,7 +212,6 @@
             </div>
             <div class="portfolio-info">
               <h3>Project 6</h3>
-              <p>클릭하여 상세 내용을 확인하세요.</p>
             </div>
           </div>
         </div>
@@ -521,14 +517,24 @@
         <h2 class="section-title">Educations</h2>
         <div class="timeline">
           <div class="timeline-item">
-            <span class="date">2022 - 2027</span>
-            <h3>University Name</h3>
-            <p>Computer Science Degree</p>
+            <span class="date">2025.12.29 - 2026.08.21</span>
+            <h3>생성형 AI 융합 웹개발 & 기획자 양성과정 수료</h3>
+            <p>더조은컴퓨터아카데미 종로</p>
+          </div>
+          <div class="timeline-item">
+            <span class="date">2022.03 - 2027.02</span>
+            <h3>인덕대학교 졸업</h3>
+            <p>게임&VR콘텐츠 디자인학과</p>
+            <div class="timeline-item nested military">
+              <span class="date">2022.08 - 2024.02</span>
+              <h3>육군 제8기동사단 전역</h3>
+              <p>제50포병대대</p>
+            </div>
           </div>
           <div class="timeline-item">
             <span class="date">2017 - 2020</span>
-            <h3>High School Name</h3>
-            <p>Science Department</p>
+            <h3>경성고등학교 졸업</h3>
+            <p>일반계 남자고등학교</p>
           </div>
         </div>
       </div>
@@ -571,6 +577,34 @@
               'View More Skills <i class="fas fa-chevron-down"></i>';
           }
         });
+
+      // Email Popup Logic
+      const emailBtn = document.getElementById("email-btn");
+      const emailPopup = document.getElementById("email-popup");
+
+      if (emailBtn && emailPopup) {
+        emailBtn.addEventListener("click", function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          emailPopup.classList.toggle("show");
+        });
+
+        emailPopup.addEventListener("click", function (e) {
+          e.stopPropagation();
+          const emailText = this.innerText === "Copied!" ? "kdy20716@gmail.com" : this.innerText;
+          navigator.clipboard.writeText(emailText).then(() => {
+            this.innerText = "Copied!";
+            setTimeout(() => {
+              this.innerText = "kdy20716@gmail.com";
+              emailPopup.classList.remove("show");
+            }, 1500);
+          });
+        });
+
+        document.addEventListener("click", function () {
+          emailPopup.classList.remove("show");
+        });
+      }
     </script>
   </body>
 </html>
