@@ -46,11 +46,15 @@
 ---
 
 ## 📈 나의 활동 통계 (My Stats)
+
 <p align="center">
-  <img src="https://github-readme-stats.vercel.app/api?username=kdy20716-droid&show_icons=true&theme=radical&bg_color=0D1117&hide_border=true" alt="Doyeon's GitHub Stats" />
-  <br><br>
-  <img src="https://github-readme-stats-two-nu.vercel.app/api/top-langs/?username=kdy20716-droid&layout=compact&theme=radical&bg_color=0D1117&hide_border=true" alt="Top Languages" />
+  <img src="https://github-readme-stats-sigma-five.vercel.app/api?username=kdy20716-droid&show_icons=true&theme=radical&bg_color=0D1117&hide_border=true" alt="Doyeon's GitHub Stats" />
 </p>
+
+<p align="center">
+  <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=kdy20716-droid&layout=compact&theme=radical&bg_color=0D1117&hide_border=true" alt="Top Languages" />
+</p>
+
 ---
 
 ## 📫 연락처 및 개인 정보
