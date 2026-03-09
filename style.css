@@ -539,7 +539,7 @@ body.dark-mode #scroll-progress {
 /* Skills */
 .skills-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: 1fr;
   gap: 30px;
 }
 
@@ -1179,4 +1179,10 @@ footer {
 
 to {
   opacity: 1;
+}
+
+@media (min-width: 768px) {
+  .skills-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
