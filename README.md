@@ -45,21 +45,23 @@
 
 ---
 
-## 📈 나의 활동 통계 (My Stats)
-*(통계 그래프가 보이지 않는다면 잠시 후 새로고침 해주세요)*
+## 📈 나의 활동 통계 (My Stats)<p align="center">
 
-<p align="center">
-  <img src="https://github-readme-stats.vercel.app/api?username=kdy20716-droid&show_icons=true&theme=radical&bg_color=0D1117&hide_border=true" alt="Doyeon's GitHub Stats" />
-  <br>
-  <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=kdy20716-droid&layout=compact&theme=radical&bg_color=0D1117&hide_border=true" alt="Top Languages" />
+<p align="left">
+  <img src="https://github-readme-stats-sigma-five.vercel.app/api?username=kdy20716-droid&show_icons=true&theme=radical&bg_color=0D1117&hide_border=true" alt="Doyeon's GitHub Stats" />
 </p>
+
+<br><br>
+
+<p align="left">
+<img src="https://github-readme-stats-two-nu.vercel.app/api/top-langs/?username=kdy20716-droid&layout=compact&theme=radical&bg_color=0D1117&hide_border=true" alt="Top Languages" /></p>
 
 ---
 
 ## 📫 연락처 및 개인 정보
 
 * 🎂 **생일**: 07월 16일
-* 🕹️ **관심 분야**: 닌텐도 게임, 심리 게임, UI/UX 디자인
+* 🕹️ **관심 분야**: 게임 개발자, UI/UX 디자인
 * 💻 **GitHub**: [kdy20716-droid](https://github.com/kdy20716-droid)
 
 ---
