@@ -17,7 +17,11 @@
       <div class="title">
         Office Survivor<br /><span style="font-size: 2rem">칼퇴의 꿈</span>
       </div>
-      <button class="btn" id="start-btn">출근하기 (Start)</button>
+      <div class="start-menu-buttons">
+        <button class="btn" id="start-btn">출근하기</button>
+        <button class="btn" id="howto-btn">게임 방법</button>
+        <button class="btn" id="back-btn">뒤로 가기</button>
+      </div>
     </div>
 
     <!-- HUD -->
@@ -30,10 +34,11 @@
           <div class="stats">Lv. <span id="level">1</span></div>
           <div class="stats">Wave: <span id="wave">0</span></div>
         </div>
+        <div id="timer">00:00</div>
         <div class="stats">HP: <span id="hp">100</span></div>
       </div>
-      <div id="timer">00:00</div>
       <div id="boss-warning">⚠️ 퇴근 시간 임박! (BOSS) ⚠️</div>
+      <div id="ability-dock"></div>
     </div>
 
     <!-- 모바일 컨트롤 (조이스틱) -->
@@ -58,6 +63,40 @@
       </div>
     </div>
 
+    <!-- 게임 방법 모달 -->
+    <div id="howto-modal" class="ui-layer hidden">
+      <div class="modal-content">
+        <h2>게임 방법</h2>
+        <ul class="rules-list">
+          <li>
+            <strong>목표:</strong> 100 웨이브의 최종 보스 '꼰대 과장님'을
+            처치하고 칼퇴하세요!
+          </li>
+          <li>
+            <strong>조작 (PC):</strong> WASD 또는 방향키로 이동합니다. 공격은
+            자동으로 이루어집니다.
+          </li>
+          <li>
+            <strong>조작 (모바일):</strong> 화면 왼쪽의 가상 조이스틱으로
+            이동합니다.
+          </li>
+          <li>
+            <strong>레벨업:</strong> 쏟아지는 업무(적)를 처리하고 경험치를
+            획득하여 레벨업하세요.
+          </li>
+          <li>
+            <strong>특성 선택:</strong> 레벨업 시 주어지는 3가지 특성 중 하나를
+            선택하여 캐릭터를 강화할 수 있습니다.
+          </li>
+          <li>
+            <strong>일시정지:</strong> PC에서는 'ESC' 키, 모바일에서는 오른쪽
+            상단 'II' 버튼으로 일시정지할 수 있습니다.
+          </li>
+        </ul>
+        <button class="btn" id="close-howto-btn">닫기</button>
+      </div>
+    </div>
+
     <!-- 일시정지 모달 -->
     <div id="pause-modal" class="ui-layer hidden">
       <h2 style="color: white; font-size: 3rem">PAUSED</h2>
@@ -73,6 +112,6 @@
       <button class="btn" id="restart-btn">다시 출근하기</button>
     </div>
 
-    <script src="survival.js"></script>
+    <script type="module" src="survival.js"></script>
   </body>
 </html>

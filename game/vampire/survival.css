@@ -42,6 +42,14 @@ body {
   z-index: 100;
 }
 
+.start-menu-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  align-items: center;
+  margin-top: 50px; /* 버튼 그룹 위치 아래로 조정 */
+}
+
 .title {
   font-size: 4rem;
   color: #fff;
@@ -72,10 +80,18 @@ body {
   background-color: #f39c12;
 }
 
+#back-btn {
+  background-color: #e74c3c; /* 빨간색으로 변경 */
+}
+
+#back-btn:hover {
+  background-color: #c0392b; /* 호버 시 더 어두운 빨간색 */
+}
+
 /* HUD (헤드업 디스플레이) */
 #hud {
-  justify-content: flex-start;
-  align-items: flex-start;
+  justify-content: flex-start; /* 상단 정렬 복구 */
+  align-items: stretch;
   padding: 20px;
   box-sizing: border-box;
 }
@@ -85,6 +101,12 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-top: 10px; /* 경험치 바 아래 여백 */
+  font-family: "Courier New", Courier, monospace; /* 오피스 느낌 폰트 */
+  text-shadow: 1px 1px 0 #000;
+  background: rgba(0, 0, 0, 0.3); /* 가독성을 위한 배경 */
+  padding: 5px 15px;
+  border-radius: 5px;
 }
 
 .exp-bar-container {
@@ -94,6 +116,7 @@ body {
   width: 100%;
   height: 10px;
   background-color: #333;
+  z-index: 10;
 }
 
 #exp-bar {
@@ -111,14 +134,54 @@ body {
 }
 
 #timer {
-  position: absolute;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
   font-size: 2rem;
   color: #fff;
   font-weight: bold;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  font-family: "Courier New", Courier, monospace;
+}
+
+/* 능력 목록 (오른쪽 세로 나열) */
+#ability-dock {
+  position: absolute;
+  top: 100px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+.ability-icon {
+  width: 50px;
+  height: 50px;
+  background-color: rgba(0, 0, 0, 0.5);
+  border: 2px solid #fff;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 24px;
+  color: #fff;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+  position: relative;
+}
+
+.ability-level {
+  position: absolute;
+  bottom: -5px;
+  right: -5px;
+  background-color: #f1c40f;
+  color: #333;
+  font-size: 12px;
+  font-weight: bold;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 1px solid #fff;
 }
 
 /* 레벨업 모달 */
@@ -136,10 +199,11 @@ body {
 }
 
 .card {
-  background: #fff;
+  background: #fdfaf4; /* Off-white paper color */
+  color: #333;
   width: 200px;
   height: 280px;
-  border-radius: 15px;
+  border-radius: 5px; /* Sharp corners like paper */
   padding: 20px;
   display: flex;
   flex-direction: column;
@@ -147,11 +211,12 @@ body {
   text-align: center;
   cursor: pointer;
   transition: transform 0.2s;
-  border: 4px solid #34495e;
+  border: 1px solid #ddd;
+  box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.2);
 }
 
 .card:hover {
-  transform: translateY(-10px);
+  transform: translateY(-10px) rotate(1deg);
   border-color: #e74c3c;
 }
 
@@ -161,15 +226,39 @@ body {
 }
 
 .card-title {
-  font-size: 1.2rem;
+  font-size: 1.3rem;
   font-weight: bold;
   margin-bottom: 10px;
   color: #2c3e50;
+  font-family: "Courier New", Courier, monospace; /* Typewriter font */
 }
 
 .card-desc {
   font-size: 0.9rem;
-  color: #7f8c8d;
+  color: #555;
+  font-family: "Times New Roman", Times, serif; /* Serif font for body */
+  white-space: pre-wrap; /* Allow \n for line breaks */
+}
+
+/* 패시브 게이지 바 */
+.gauge-container {
+  display: flex;
+  gap: 5px;
+  margin-top: 15px;
+  justify-content: center;
+}
+
+.gauge-segment {
+  width: 30px;
+  height: 8px;
+  background-color: #555;
+  border-radius: 2px;
+  border: 1px solid #333;
+}
+
+.gauge-segment.filled {
+  background-color: #f1c40f;
+  box-shadow: 0 0 5px #f1c40f;
 }
 
 /* 게임 오버 모달 */
@@ -219,6 +308,48 @@ body {
   background-color: rgba(0, 0, 0, 0.7);
   z-index: 55; /* 레벨업 모달(50)보다 위, 게임오버(60)보다 아래 */
   pointer-events: auto;
+}
+
+/* 게임 방법 모달 */
+#howto-modal {
+  background-color: rgba(0, 0, 0, 0.8);
+  z-index: 110; /* 시작 화면(100)보다 위에 */
+  pointer-events: auto;
+}
+
+.modal-content {
+  background: #fff;
+  padding: 30px 40px;
+  border-radius: 20px;
+  width: 90%;
+  max-width: 600px;
+  text-align: center;
+  color: #333;
+  border: 5px solid #3498db;
+}
+
+.modal-content h2 {
+  font-size: 2rem;
+  margin-top: 0;
+  margin-bottom: 20px;
+  color: #2c3e50;
+}
+
+.rules-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 30px 0;
+  text-align: left;
+}
+
+.rules-list li {
+  margin-bottom: 15px;
+  line-height: 1.6;
+  font-size: 1rem;
+}
+
+.rules-list li strong {
+  color: #e74c3c;
 }
 
 /* 웨이브 시작 메시지 */

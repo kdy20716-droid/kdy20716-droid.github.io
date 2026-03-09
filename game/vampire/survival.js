@@ -1,3 +1,5 @@
+import { WEAPONS, PASSIVES } from "./Ability.js";
+
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
@@ -38,6 +40,7 @@ const player = {
     cooldown: 0,
     might: 0,
   },
+  passiveCounts: {}, // 패시브 레벨 추적용
 };
 
 // 입력 처리 (키보드)
@@ -130,75 +133,7 @@ let enemies = [];
 let projectiles = [];
 let exps = [];
 let damageNumbers = [];
-
-// 무기 정의
-const WEAPONS = {
-  stapler: {
-    name: "스테이플러",
-    desc: "가장 가까운 적에게 심을 발사합니다.",
-    icon: "📎",
-    type: "projectile",
-    damage: 10,
-    cooldown: 60, // 프레임 단위
-    speed: 7,
-    count: 1,
-    timer: 0,
-  },
-  coffee: {
-    name: "뜨거운 커피",
-    desc: "주변 적들에게 지속적인 피해를 줍니다.",
-    icon: "☕",
-    type: "aura",
-    damage: 2,
-    area: 60,
-    cooldown: 10,
-    timer: 0,
-  },
-  keyboard: {
-    name: "키보드 샷건",
-    desc: "무작위 방향으로 키보드를 던집니다.",
-    icon: "⌨️",
-    type: "projectile",
-    damage: 25,
-    cooldown: 90,
-    speed: 4,
-    count: 1,
-    duration: 60, // 관통하며 날아가는 시간
-    timer: 0,
-  },
-};
-
-// 패시브 정의
-const PASSIVES = {
-  shoes: {
-    name: "편한 슬리퍼",
-    desc: "이동 속도가 증가합니다.",
-    icon: "🩴",
-    stat: "speed",
-    val: 0.5,
-  },
-  coffee_mix: {
-    name: "카페인 수혈",
-    desc: "공격 속도가 빨라집니다.",
-    icon: "💊",
-    stat: "cooldown",
-    val: 0.1,
-  },
-  dumbbell: {
-    name: "야근 근육",
-    desc: "공격력이 증가합니다.",
-    icon: "💪",
-    stat: "might",
-    val: 0.2,
-  },
-  magnet: {
-    name: "법인 카드",
-    desc: "경험치 획득 범위가 늘어납니다.",
-    icon: "💳",
-    stat: "area",
-    val: 0.2,
-  },
-};
+let items = []; // 아이템 배열 추가
 
 // 적 정의
 const ENEMY_TYPES = [
@@ -218,6 +153,16 @@ const BOSS_TYPE = {
   size: 60,
 };
 
+const FINAL_BOSS_TYPE = {
+  name: "꼰대 과장님",
+  icon: "🤬",
+  hp: 50000,
+  speed: 3.5,
+  exp: 10000,
+  damage: 50,
+  size: 100,
+};
+
 // 버튼 이벤트 리스너 연결
 document.getElementById("start-btn").addEventListener("click", startGame);
 document
@@ -228,6 +173,27 @@ document.getElementById("mobile-pause-btn").addEventListener("click", () => {
   if (gameState === "PLAYING") pauseGame();
   else if (gameState === "PAUSED") resumeGame();
 });
+
+// 게임 방법 및 뒤로가기 버튼 리스너
+const howtoBtn = document.getElementById("howto-btn");
+const backBtn = document.getElementById("back-btn");
+const howtoModal = document.getElementById("howto-modal");
+const closeHowtoBtn = document.getElementById("close-howto-btn");
+
+if (howtoBtn && howtoModal && closeHowtoBtn) {
+  howtoBtn.addEventListener("click", () => {
+    howtoModal.classList.remove("hidden");
+  });
+  closeHowtoBtn.addEventListener("click", () => {
+    howtoModal.classList.add("hidden");
+  });
+}
+
+if (backBtn) {
+  backBtn.addEventListener("click", () => {
+    window.location.href = "../game-list.html";
+  });
+}
 
 // 게임 시작
 function startGame() {
@@ -244,10 +210,12 @@ function startGame() {
   player.exp = 0;
   player.nextExp = 10;
   player.weapons = [{ ...WEAPONS.stapler, level: 1 }]; // 기본 무기
+  player.passiveCounts = {}; // 패시브 카운트 초기화
 
   enemies = [];
   projectiles = [];
   exps = [];
+  items = []; // 아이템 초기화
   timer = 0;
 
   // 웨이브 초기화
@@ -347,9 +315,23 @@ function update() {
 
     // 플레이어와 충돌
     const dist = Math.hypot(player.x - enemy.x, player.y - enemy.y);
-    if (dist < player.size + enemy.size) {
-      player.hp -= enemy.damage * 0.05; // 프레임당 데미지라 낮게 설정
-      if (player.hp <= 0) gameOver();
+    if (dist < player.size + enemy.size + 5) {
+      // 보호막 체크
+      const shield = player.weapons.find(
+        (w) => w.type === "shield" && w.active,
+      );
+      if (shield) {
+        // 보호막이 있으면 데미지 무효화 및 보호막 해제
+        shield.active = false;
+        shield.timer = 0;
+        showDamage(player.x, player.y, "BLOCKED!", "cyan");
+        // 적을 살짝 밀어냄
+        enemy.x += Math.cos(angle) * -50;
+        enemy.y += Math.sin(angle) * -50;
+      } else {
+        player.hp -= enemy.damage * 0.05; // 프레임당 데미지라 낮게 설정
+        if (player.hp <= 0) gameOver();
+      }
     }
   });
 
@@ -358,9 +340,36 @@ function update() {
     weapon.timer++;
     const cooldown = weapon.cooldown * (1 - player.passives.cooldown);
 
+    // 보호막 쿨타임 로직
+    if (weapon.type === "shield" && !weapon.active) {
+      if (weapon.timer >= weapon.cooldown) {
+        weapon.active = true;
+        weapon.timer = 0;
+        showDamage(player.x, player.y, "Shield Ready!", "cyan");
+      }
+      return; // 보호막은 발사되지 않음
+    }
+
     if (weapon.timer >= cooldown) {
       weapon.timer = 0;
       useWeapon(weapon);
+    }
+  });
+
+  // 4.5. 궤도형 무기 업데이트
+  player.weapons.forEach((weapon) => {
+    if (weapon.type === "orbiting") {
+      // 회전 의자 로직
+      const count = weapon.count || 1;
+      for (let i = 0; i < count; i++) {
+        // 의자 개수에 따라 각도 분배
+        const offset = (Math.PI * 2 * i) / count;
+        const angle = (timer * weapon.rotationSpeed + offset) % (Math.PI * 2);
+        const orbitX = player.x + Math.cos(angle) * weapon.area;
+        const orbitY = player.y + Math.sin(angle) * weapon.area;
+
+        handleOrbitingWeaponCollision(orbitX, orbitY, weapon);
+      }
     }
   });
 
@@ -368,22 +377,29 @@ function update() {
   for (let i = projectiles.length - 1; i >= 0; i--) {
     const p = projectiles[i];
 
+    // 모든 투사체 수명 감소 (오라 포함)
+    p.duration--;
+    if (p.duration <= 0) {
+      projectiles.splice(i, 1);
+      continue;
+    }
+
     if (p.type === "projectile") {
       p.x += Math.cos(p.angle) * p.speed;
       p.y += Math.sin(p.angle) * p.speed;
-      p.duration--;
-
-      // 화면 밖이나 수명 다하면 제거
-      if (
-        p.duration <= 0 ||
-        p.x < 0 ||
-        p.x > canvas.width ||
-        p.y < 0 ||
-        p.y > canvas.height
-      ) {
+      // 화면 밖 제거
+      if (p.x < 0 || p.x > canvas.width || p.y < 0 || p.y > canvas.height) {
         projectiles.splice(i, 1);
         continue;
       }
+    } else if (p.type === "homing_projectile") {
+      // 유도탄 로직
+      if (p.target && p.target.hp > 0) {
+        const angle = Math.atan2(p.target.y - p.y, p.target.x - p.x);
+        p.angle = angle; // 방향 계속 업데이트
+      }
+      p.x += Math.cos(p.angle) * p.speed;
+      p.y += Math.sin(p.angle) * p.speed;
     }
 
     // 적과 충돌 체크
@@ -408,8 +424,20 @@ function update() {
           exps.push({ x: enemy.x, y: enemy.y, val: enemy.exp });
           enemies.splice(j, 1);
 
+          // 아이템 드롭 (낮은 확률)
+          const dropRoll = Math.random();
+          if (dropRoll < 0.02) {
+            // 2% 확률로 자석
+            items.push({ x: enemy.x, y: enemy.y, type: "magnet", icon: "🧲" });
+          } else if (dropRoll < 0.07) {
+            // 5% 확률로 HP 회복 (자석 확률 제외)
+            items.push({ x: enemy.x, y: enemy.y, type: "health", icon: "❤️" });
+          }
+
           // 보스 처치 시 승리? 혹은 계속
-          if (enemy.isBoss) {
+          if (enemy.isFinalBoss) {
+            gameClear();
+          } else if (enemy.isBoss) {
             showDamage(enemy.x, enemy.y, "BOSS DOWN!", "gold");
             document.getElementById("boss-warning").style.display = "none";
           }
@@ -425,19 +453,20 @@ function update() {
   }
 
   // 6. 경험치 획득
-  const magnetRange = 50 * (1 + player.passives.area);
+  const magnetRange = 50 * (1 + (player.passives.area || 0));
   for (let i = exps.length - 1; i >= 0; i--) {
     const exp = exps[i];
     const dist = Math.hypot(player.x - exp.x, player.y - exp.y);
 
     // 자석 효과
     if (dist < magnetRange) {
-      exp.x += (player.x - exp.x) * 0.1;
-      exp.y += (player.y - exp.y) * 0.1;
+      const speed = exp.isMagnetized ? 0.4 : 0.2; // 자석에 끌리면 더 빠르게, 기본 속도 2배
+      exp.x += (player.x - exp.x) * speed;
+      exp.y += (player.y - exp.y) * speed;
     }
 
     if (dist < player.size) {
-      player.exp += exp.val;
+      player.exp += exp.val * (1 + (player.passives.exp_gain || 0)); // 경험치 획득량 증가 적용
       exps.splice(i, 1);
       if (player.exp >= player.nextExp) {
         levelUp();
@@ -451,6 +480,27 @@ function update() {
     d.life--;
     if (d.life <= 0) damageNumbers.splice(i, 1);
   });
+
+  // 8. 아이템 획득 (새로 추가)
+  for (let i = items.length - 1; i >= 0; i--) {
+    const item = items[i];
+    const dist = Math.hypot(player.x - item.x, player.y - item.y);
+
+    if (dist < player.size + 15) {
+      // 아이템 획득 범위
+      if (item.type === "health") {
+        player.hp = Math.min(player.maxHp, player.hp + 20);
+        showDamage(player.x, player.y, "+20 HP", "lime");
+      } else if (item.type === "magnet") {
+        // 모든 경험치를 플레이어에게 끌어당김
+        exps.forEach((exp) => {
+          exp.isMagnetized = true;
+        });
+        showDamage(player.x, player.y, "경험치 흡수!", "gold");
+      }
+      items.splice(i, 1);
+    }
+  }
 
   // UI 업데이트
   updateUI();
@@ -484,6 +534,34 @@ function draw() {
     ctx.beginPath();
     ctx.arc(e.x, e.y, 4, 0, Math.PI * 2);
     ctx.fill();
+  });
+
+  // 회전 의자 그리기
+  player.weapons.forEach((w) => {
+    if (w.type === "orbiting") {
+      const count = w.count || 1;
+      for (let i = 0; i < count; i++) {
+        const offset = (Math.PI * 2 * i) / count;
+        const angle = (timer * w.rotationSpeed + offset) % (Math.PI * 2);
+        const orbitX = player.x + Math.cos(angle) * w.area;
+        const orbitY = player.y + Math.sin(angle) * w.area;
+        ctx.font = "30px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(w.icon, orbitX, orbitY);
+      }
+    }
+  });
+
+  // 보호막 그리기
+  player.weapons.forEach((w) => {
+    if (w.type === "shield" && w.active) {
+      ctx.strokeStyle = "cyan";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, player.size + 10, 0, Math.PI * 2);
+      ctx.stroke();
+    }
   });
 
   // 적 그리기
@@ -603,6 +681,62 @@ function spawnBoss() {
   setTimeout(() => (warning.style.display = "none"), 3000);
 }
 
+function spawnFinalBoss() {
+  const boss = {
+    x: canvas.width / 2,
+    y: -100,
+    ...FINAL_BOSS_TYPE,
+    isBoss: true,
+    isFinalBoss: true,
+    hp: FINAL_BOSS_TYPE.hp,
+    maxHp: FINAL_BOSS_TYPE.hp,
+  };
+  enemies.push(boss);
+
+  const warning = document.getElementById("boss-warning");
+  warning.innerText = "⚠️ 꼰대 과장님 출현! (FINAL BOSS) ⚠️";
+  warning.style.display = "block";
+  setTimeout(() => {
+    warning.style.display = "none";
+    warning.innerText = "⚠️ 퇴근 시간 임박! (BOSS) ⚠️";
+  }, 5000);
+}
+
+function handleOrbitingWeaponCollision(orbitX, orbitY, weapon) {
+  for (let j = enemies.length - 1; j >= 0; j--) {
+    const enemy = enemies[j];
+    const dist = Math.hypot(orbitX - enemy.x, orbitY - enemy.y);
+
+    // 충돌 판정 (의자 크기 + 적 크기 + 여유분)
+    // 의자(궤도 무기)의 판정이 잘 안된다면 여유분을 늘려줍니다.
+    if (dist < 30 + enemy.size) {
+      // 쿨다운 적용 (너무 빠르게 연속 히트 방지)
+      if (!enemy.orbitHitCooldown || timer > enemy.orbitHitCooldown) {
+        enemy.orbitHitCooldown = timer + 30; // 0.5초 쿨다운
+
+        const dmg = weapon.damage * (1 + player.passives.might);
+        enemy.hp -= dmg;
+
+        if (Math.random() > 0.7) showDamage(enemy.x, enemy.y, Math.floor(dmg));
+
+        if (enemy.hp <= 0) {
+          exps.push({
+            x: enemy.x,
+            y: enemy.y,
+            val: enemy.exp * (1 + (player.passives.exp_gain || 0)),
+          });
+          enemies.splice(j, 1);
+
+          if (enemy.isBoss) {
+            showDamage(enemy.x, enemy.y, "BOSS DOWN!", "gold");
+            document.getElementById("boss-warning").style.display = "none";
+          }
+        }
+      }
+    }
+  }
+}
+
 function useWeapon(weapon) {
   if (weapon.type === "projectile") {
     // 가장 가까운 적 찾기
@@ -679,6 +813,35 @@ function updateUI() {
     .toString()
     .padStart(2, "0");
   document.getElementById("timer").innerText = `${m}:${s}`;
+
+  // 능력 목록 업데이트 (오른쪽 UI)
+  updateAbilityDock();
+}
+
+function updateAbilityDock() {
+  const dock = document.getElementById("ability-dock");
+  dock.innerHTML = "";
+
+  // 무기 아이콘
+  player.weapons.forEach((w) => {
+    const div = document.createElement("div");
+    div.className = "ability-icon";
+    div.innerHTML = `${w.icon}<div class="ability-level">${w.level}</div>`;
+    div.title = w.name;
+    dock.appendChild(div);
+  });
+
+  // 패시브 아이콘 (PASSIVES 객체 참조 필요)
+  for (const [key, count] of Object.entries(player.passiveCounts)) {
+    const passive = Object.values(PASSIVES).find((p) => p.name === key);
+    if (passive) {
+      const div = document.createElement("div");
+      div.className = "ability-icon";
+      div.innerHTML = `${passive.icon}<div class="ability-level">${count}</div>`;
+      div.title = passive.name;
+      dock.appendChild(div);
+    }
+  }
 }
 
 function startNextWave() {
@@ -686,8 +849,11 @@ function startNextWave() {
   waveCooldown = 0;
   enemiesToSpawn = 5 + currentWave * 3; // 웨이브당 3마리씩 증가
 
-  // 5 웨이브마다 보스 출현
-  if (currentWave > 0 && currentWave % 5 === 0) {
+  // 100 웨이브 최종 보스, 5 웨이브마다 중간 보스
+  if (currentWave === 100) {
+    spawnFinalBoss();
+    enemiesToSpawn = 0;
+  } else if (currentWave > 0 && currentWave % 5 === 0) {
     spawnBoss();
     enemiesToSpawn = Math.floor(enemiesToSpawn / 2); // 보스 웨이브는 일반 몹 감소
   }
@@ -728,44 +894,73 @@ function levelUp() {
     const card = document.createElement("div");
     card.className = "card";
 
-    // 이미 가지고 있는지 확인
-    const hasWeapon = player.weapons.find((w) => w.name === opt.name);
-    const isPassive = opt.stat !== undefined;
-    let btnText = "선택";
     let desc = opt.desc;
 
-    if (hasWeapon) {
-      btnText = "강화";
-      desc = "데미지/범위 증가";
+    if (opt.isUpgrade) {
+      const nextLevel = opt.level + 1;
+      desc = `[Lv.${nextLevel}] 데미지/범위/속도 증가`;
+      if (nextLevel % 3 === 0) {
+        desc += `\n★ 특수 강화: 개수/발사체 증가!`;
+      }
+    }
+
+    // 패시브 게이지 바 생성
+    let gaugeHtml = "";
+    if (opt.stat) {
+      const currentLevel = player.passiveCounts[opt.name] || 0;
+      gaugeHtml = `<div class="gauge-container">`;
+      for (let i = 0; i < 3; i++) {
+        // 현재 레벨만큼 채워진 상태로 표시 (선택하면 다음 칸이 채워질 예정)
+        // 사용자 요청: "고르기 전에 게이지 바 3개가 있고 고를때 마다 게이지가 하나씩 차서 보이게 해줘"
+        // 즉, 현재 상태를 보여주는 것이 직관적임.
+        const filledClass = i < currentLevel ? "filled" : "";
+        gaugeHtml += `<div class="gauge-segment ${filledClass}"></div>`;
+      }
+      gaugeHtml += `</div>`;
+      desc += ` (Lv.${currentLevel}/3)`;
     }
 
     card.innerHTML = `
       <div class="card-icon">${opt.icon}</div>
       <div class="card-title">${opt.name}</div>
       <div class="card-desc">${desc}</div>
+      ${gaugeHtml}
     `;
 
-    card.onclick = () => selectUpgrade(opt);
+    card.onclick = () => selectUpgrade(opt, opt.isUpgrade);
     container.appendChild(card);
   });
 
   document.getElementById("levelup-modal").classList.remove("hidden");
 }
 
-function selectUpgrade(opt) {
+function selectUpgrade(opt, isUpgrade) {
   // 무기인지 패시브인지 확인
   if (opt.stat) {
     // 패시브
-    player.passives[opt.stat] += opt.val;
+    if (opt.stat === "max_hp") {
+      player.maxHp *= 1 + opt.val;
+      player.hp *= 1 + opt.val; // 현재 체력도 비율만큼 증가
+    } else {
+      player.passives[opt.stat] = (player.passives[opt.stat] || 0) + opt.val;
+    }
+    // 패시브 레벨 증가
+    player.passiveCounts[opt.name] = (player.passiveCounts[opt.name] || 0) + 1;
   } else {
     // 무기
-    const existing = player.weapons.find((w) => w.name === opt.name);
-    if (existing) {
+    if (isUpgrade) {
+      const existing = player.weapons.find((w) => w.name === opt.name);
+      existing.level++;
       existing.damage *= 1.2;
       existing.area *= 1.1;
       existing.cooldown *= 0.9;
+
+      // 3레벨마다 특수 강화 (개수 증가)
+      if (existing.level % 3 === 0) {
+        existing.count = (existing.count || 1) + 1;
+      }
     } else {
-      player.weapons.push({ ...opt, level: 1, timer: 0 });
+      player.weapons.push({ ...WEAPONS[opt.name], level: 1, timer: 0 });
     }
   }
 
@@ -791,6 +986,23 @@ function resumeGame() {
   requestAnimationFrame(gameLoop);
 }
 
+function gameClear() {
+  gameState = "GAMEOVER";
+  document.getElementById("gameover-modal").classList.remove("hidden");
+
+  const m = Math.floor(timer / 3600)
+    .toString()
+    .padStart(2, "0");
+  const s = Math.floor((timer % 3600) / 60)
+    .toString()
+    .padStart(2, "0");
+  document.getElementById("final-time").innerText = `${m}:${s}`;
+
+  document.getElementById("gameover-text").innerText =
+    "꼰대 과장님 처치! 칼퇴 성공!";
+  document.getElementById("gameover-text").style.color = "#2ecc71";
+}
+
 function gameOver() {
   gameState = "GAMEOVER";
   document.getElementById("gameover-modal").classList.remove("hidden");
@@ -803,9 +1015,6 @@ function gameOver() {
     .padStart(2, "0");
   document.getElementById("final-time").innerText = `${m}:${s}`;
 
-  if (timer > 180 * 60) {
-    // 3분 이상 버티면
-    document.getElementById("gameover-text").innerText = "칼퇴 성공!";
-    document.getElementById("gameover-text").style.color = "#2ecc71";
-  }
+  document.getElementById("gameover-text").innerText = "야근 확정...";
+  document.getElementById("gameover-text").style.color = "#e74c3c";
 }
