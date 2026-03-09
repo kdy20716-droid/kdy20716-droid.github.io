@@ -10,6 +10,7 @@ export const WEAPONS = {
     speed: 7,
     count: 1,
     timer: 0,
+    evolution: "stapler_evo",
   },
   coffee: {
     name: "뜨거운 커피",
@@ -20,6 +21,7 @@ export const WEAPONS = {
     area: 60,
     cooldown: 18, // 0.3초 (60fps 기준 약 18프레임)
     timer: 0,
+    evolution: "coffee_evo",
   },
   keyboard: {
     name: "키보드 샷건",
@@ -32,6 +34,7 @@ export const WEAPONS = {
     count: 1,
     duration: 60, // 관통하며 날아가는 시간
     timer: 0,
+    evolution: "keyboard_evo",
   },
   report: {
     name: "결재 서류",
@@ -43,6 +46,7 @@ export const WEAPONS = {
     speed: 5,
     count: 1,
     timer: 0,
+    evolution: "report_evo",
   },
   chair: {
     name: "회전 의자",
@@ -54,6 +58,7 @@ export const WEAPONS = {
     count: 1, // 의자 개수
     rotationSpeed: 0.05, // 회전 속도
     timer: 0,
+    evolution: "chair_evo",
   },
   energy_drink: {
     name: "에너지 드링크",
@@ -64,6 +69,7 @@ export const WEAPONS = {
     area: 150, // 폭발 반경
     cooldown: 300,
     timer: 0,
+    evolution: "energy_drink_evo",
   },
   airpods: {
     name: "에어팟 (노이즈 캔슬링)",
@@ -73,6 +79,89 @@ export const WEAPONS = {
     cooldown: 3600, // 60초 * 60프레임
     active: true, // 시작 시 활성화
     timer: 0,
+    evolution: "airpods_evo",
+  },
+  // --- 진화 무기 (Lv.6) ---
+  stapler_evo: {
+    name: "머신건 스테이플러",
+    desc: "엄청난 속도로 스테이플러 심을 난사합니다.",
+    icon: "🔫",
+    type: "projectile",
+    damage: 30,
+    cooldown: 4, // 매우 빠름
+    speed: 15,
+    count: 3,
+    timer: 0,
+    isEvolved: true,
+  },
+  coffee_evo: {
+    name: "용암 커피",
+    desc: "닿는 모든 것을 녹여버리는 뜨거운 커피 웅덩이를 생성합니다.",
+    icon: "🌋",
+    type: "aura",
+    damage: 10,
+    area: 150,
+    cooldown: 10,
+    timer: 0,
+    isEvolved: true,
+  },
+  keyboard_evo: {
+    name: "RGB 게이밍 키보드",
+    desc: "화려한 LED와 함께 키보드를 사방으로 던집니다.",
+    icon: "🌈",
+    type: "projectile",
+    damage: 80,
+    cooldown: 40,
+    speed: 8,
+    count: 8, // 8방향 발사
+    duration: 120,
+    timer: 0,
+    isEvolved: true,
+  },
+  report_evo: {
+    name: "해고 통지서",
+    desc: "적을 끝까지 추격하여 치명적인 피해를 입힙니다.",
+    icon: "💀",
+    type: "homing_projectile",
+    damage: 200,
+    cooldown: 60,
+    speed: 10,
+    count: 3,
+    timer: 0,
+    isEvolved: true,
+  },
+  chair_evo: {
+    name: "CEO 의자",
+    desc: "최고급 의자가 고속으로 회전하며 적들을 갈아버립니다.",
+    icon: "👑",
+    type: "orbiting",
+    damage: 50,
+    area: 180,
+    count: 4,
+    rotationSpeed: 0.15,
+    timer: 0,
+    isEvolved: true,
+  },
+  energy_drink_evo: {
+    name: "핵융합 드링크",
+    desc: "화면 전체에 가까운 범위에 폭발을 일으킵니다.",
+    icon: "☢️",
+    type: "explosion",
+    damage: 500,
+    area: 400,
+    cooldown: 180,
+    timer: 0,
+    isEvolved: true,
+  },
+  airpods_evo: {
+    name: "방음 헤드셋",
+    desc: "더 자주 보호막이 생성되며, 파괴 시 주변 적을 밀쳐냅니다.",
+    icon: "🎧",
+    type: "shield",
+    cooldown: 1200, // 20초
+    active: true,
+    timer: 0,
+    isEvolved: true,
   },
 };
 

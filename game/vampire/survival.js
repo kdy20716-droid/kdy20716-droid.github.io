@@ -134,6 +134,7 @@ let projectiles = [];
 let exps = [];
 let damageNumbers = [];
 let items = []; // 아이템 배열 추가
+let chests = []; // 보물상자 배열 추가
 
 // 적 정의
 const ENEMY_TYPES = [
@@ -146,7 +147,7 @@ const ENEMY_TYPES = [
 const BOSS_TYPE = {
   name: "부장님",
   icon: "👹",
-  hp: 3000,
+  hp: 1500, // 체력 하향
   speed: 2.5,
   exp: 1000,
   damage: 20,
@@ -156,7 +157,7 @@ const BOSS_TYPE = {
 const FINAL_BOSS_TYPE = {
   name: "꼰대 과장님",
   icon: "🤬",
-  hp: 50000,
+  hp: 25000, // 체력 하향
   speed: 3.5,
   exp: 10000,
   damage: 50,
@@ -216,6 +217,7 @@ function startGame() {
   projectiles = [];
   exps = [];
   items = []; // 아이템 초기화
+  chests = []; // 보물상자 초기화
   timer = 0;
 
   // 웨이브 초기화
@@ -438,6 +440,10 @@ function update() {
           if (enemy.isFinalBoss) {
             gameClear();
           } else if (enemy.isBoss) {
+            // 보스 처치 시 보물상자 드롭
+            chests.push({ x: enemy.x, y: enemy.y });
+            showDamage(enemy.x, enemy.y, "보물상자 발견!", "gold");
+
             showDamage(enemy.x, enemy.y, "BOSS DOWN!", "gold");
             document.getElementById("boss-warning").style.display = "none";
           }
@@ -499,6 +505,16 @@ function update() {
         showDamage(player.x, player.y, "경험치 흡수!", "gold");
       }
       items.splice(i, 1);
+    }
+  }
+
+  // 9. 보물상자 획득
+  for (let i = chests.length - 1; i >= 0; i--) {
+    const chest = chests[i];
+    const dist = Math.hypot(player.x - chest.x, player.y - chest.y);
+    if (dist < player.size + 30) {
+      openChest();
+      chests.splice(i, 1);
     }
   }
 
@@ -679,6 +695,20 @@ function spawnBoss() {
   const warning = document.getElementById("boss-warning");
   warning.style.display = "block";
   setTimeout(() => (warning.style.display = "none"), 3000);
+}
+
+function openChest() {
+  gameState = "PAUSED";
+  // 보물상자 UI 표시 (레벨업 모달 재사용하되 골드 버튼 추가)
+  levelUp(true); // true flag for chest
+
+  const modalTitle = document.querySelector("#levelup-modal h2");
+  if (modalTitle) modalTitle.innerText = "보물상자 획득! (Treasure Chest)";
+
+  const goldBtn = document.getElementById("gold-reward-btn");
+  if (goldBtn) {
+    goldBtn.classList.remove("hidden");
+  }
 }
 
 function spawnFinalBoss() {
@@ -898,9 +928,13 @@ function levelUp() {
 
     if (opt.isUpgrade) {
       const nextLevel = opt.level + 1;
-      desc = `[Lv.${nextLevel}] 데미지/범위/속도 증가`;
-      if (nextLevel % 3 === 0) {
-        desc += `\n★ 특수 강화: 개수/발사체 증가!`;
+      if (nextLevel === 6) {
+        desc = `[진화 가능!] 강력한 무기로 진화합니다.`;
+      } else {
+        desc = `[Lv.${nextLevel}] 데미지/범위/속도 대폭 증가`;
+        if (nextLevel % 3 === 0) {
+          desc += `\n★ 특수 강화: 개수/발사체 증가!`;
+        }
       }
     }
 
@@ -934,6 +968,13 @@ function levelUp() {
   document.getElementById("levelup-modal").classList.remove("hidden");
 }
 
+// 골드 획득 버튼 핸들러 (전역 스코프에 노출 필요할 수 있음, 여기선 이벤트 리스너로 처리)
+document.getElementById("gold-reward-btn")?.addEventListener("click", () => {
+  player.exp += 500; // 골드 대신 대량의 경험치 지급
+  showDamage(player.x, player.y, "GOLD ACQUIRED! (+EXP)", "gold");
+  resumeGame();
+});
+
 function selectUpgrade(opt, isUpgrade) {
   // 무기인지 패시브인지 확인
   if (opt.stat) {
@@ -951,13 +992,27 @@ function selectUpgrade(opt, isUpgrade) {
     if (isUpgrade) {
       const existing = player.weapons.find((w) => w.name === opt.name);
       existing.level++;
-      existing.damage *= 1.2;
-      existing.area *= 1.1;
-      existing.cooldown *= 0.9;
 
-      // 3레벨마다 특수 강화 (개수 증가)
-      if (existing.level % 3 === 0) {
-        existing.count = (existing.count || 1) + 1;
+      // 레벨 6 도달 시 진화
+      if (existing.level === 6 && existing.evolution) {
+        const evolvedWeapon = WEAPONS[existing.evolution];
+        // 기존 무기 속성을 진화된 무기로 덮어쓰기 (참조 유지)
+        Object.assign(existing, evolvedWeapon, { level: 1, isEvolved: true });
+        showDamage(player.x, player.y, "WEAPON EVOLVED!", "magenta");
+      } else {
+        // 일반 강화 (더 강력하게)
+        existing.damage *= 1.5; // 1.2 -> 1.5
+        existing.area *= 1.2;
+        existing.cooldown *= 0.85; // 0.9 -> 0.85
+        existing.speed *= 1.1;
+
+        // 3레벨마다 특수 강화 (개수 증가)
+        if (existing.level % 3 === 0) {
+          existing.count = (existing.count || 1) + 1;
+        }
+
+        // 에어팟(보호막)은 쿨타임 감소가 중요
+        if (existing.type === "shield") existing.cooldown *= 0.8;
       }
     } else {
       player.weapons.push({ ...WEAPONS[opt.name], level: 1, timer: 0 });
@@ -981,6 +1036,7 @@ function resumeGame() {
   if (!document.getElementById("levelup-modal").classList.contains("hidden"))
     return;
   document.getElementById("pause-modal").classList.add("hidden");
+  document.getElementById("levelup-modal").classList.add("hidden"); // 보물상자 닫기용
   gameState = "PLAYING";
   lastTime = performance.now(); // 델타 타임 튀는 것 방지
   requestAnimationFrame(gameLoop);
