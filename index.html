@@ -83,7 +83,7 @@
               적용하는 것을 즐깁니다. 이곳에 본인의 소개글을 작성해주세요.
             </p>
             <div class="about-links">
-              <a href="https://github.com/" target="_blank" title="GitHub"
+              <a href="https://github.com/kdy20716-droid/kdy20716-droid.github.io/blob/main/README.md" target="_blank" title="GitHub"
                 ><i class="fab fa-github"></i
               ></a>
               <a href="mailto:email@example.com" title="Email"
@@ -347,7 +347,6 @@
           <!-- Hidden Categories Wrapper -->
           <div
             id="extra-skills"
-            style="display: none; grid-column: 1 / -1; width: 100%"
           >
             <div class="skills-grid" style="margin-top: 0">
               <!-- Design -->
@@ -562,11 +561,11 @@
         .getElementById("skills-toggle")
         .addEventListener("click", function () {
           const extraSkills = document.getElementById("extra-skills");
-          if (extraSkills.style.display === "none") {
-            extraSkills.style.display = "block";
+          extraSkills.classList.toggle("visible");
+
+          if (extraSkills.classList.contains("visible")) {
             this.innerHTML = 'View Less Skills <i class="fas fa-chevron-up"></i>';
           } else {
-            extraSkills.style.display = "none";
             this.innerHTML =
               'View More Skills <i class="fas fa-chevron-down"></i>';
           }
