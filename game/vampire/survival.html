@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>Office Survivor: 칼퇴의 꿈</title>
+    <link rel="stylesheet" href="survival.css" />
+  </head>
+  <body>
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- 메인 화면 -->
+    <div id="start-screen" class="ui-layer">
+      <div class="title">
+        Office Survivor<br /><span style="font-size: 2rem">칼퇴의 꿈</span>
+      </div>
+      <button class="btn" id="start-btn">출근하기 (Start)</button>
+    </div>
+
+    <!-- HUD -->
+    <div id="hud" class="ui-layer hidden">
+      <div class="exp-bar-container">
+        <div id="exp-bar"></div>
+      </div>
+      <div class="hud-top">
+        <div style="display: flex; gap: 20px">
+          <div class="stats">Lv. <span id="level">1</span></div>
+          <div class="stats">Wave: <span id="wave">0</span></div>
+        </div>
+        <div class="stats">HP: <span id="hp">100</span></div>
+      </div>
+      <div id="timer">00:00</div>
+      <div id="boss-warning">⚠️ 퇴근 시간 임박! (BOSS) ⚠️</div>
+    </div>
+
+    <!-- 모바일 컨트롤 (조이스틱) -->
+    <div id="mobile-controls" class="hidden">
+      <div id="joystick-zone">
+        <div id="joystick-knob"></div>
+      </div>
+    </div>
+
+    <!-- 모바일 일시정지 버튼 -->
+    <button id="mobile-pause-btn" class="hidden">II</button>
+
+    <div id="wave-start-message" class="hidden"></div>
+
+    <!-- 레벨업 모달 -->
+    <div id="levelup-modal" class="ui-layer hidden">
+      <h2 style="color: white; font-size: 2rem; margin-bottom: 20px">
+        업무 능력 향상! (Level Up)
+      </h2>
+      <div class="card-container" id="upgrade-cards">
+        <!-- 카드가 JS로 생성됨 -->
+      </div>
+    </div>
+
+    <!-- 일시정지 모달 -->
+    <div id="pause-modal" class="ui-layer hidden">
+      <h2 style="color: white; font-size: 3rem">PAUSED</h2>
+      <button class="btn" id="resume-btn">계속하기 (Resume)</button>
+    </div>
+
+    <!-- 게임 오버 모달 -->
+    <div id="gameover-modal" class="ui-layer hidden">
+      <div class="gameover-title" id="gameover-text">야근 확정...</div>
+      <div class="gameover-score">
+        생존 시간: <span id="final-time">00:00</span>
+      </div>
+      <button class="btn" id="restart-btn">다시 출근하기</button>
+    </div>
+
+    <script src="survival.js"></script>
+  </body>
+</html>
