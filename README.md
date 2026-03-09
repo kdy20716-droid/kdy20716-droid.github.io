@@ -48,7 +48,7 @@
 ## 📈 나의 활동 통계 (My Stats)<p align="center">
 
 <p align="center">
-  <img src="https://github-readme-stats.vercel.app/api?username=kdy20716-droid&show_icons=true&theme=radical&bg_color=0D1117&hide_border=true" alt="Doyeon's GitHub Stats" />
+  <img src="https://github-readme-stats-git-master-anuraghazra.vercel.app/api?username=kdy20716-droid&show_icons=true&theme=radical&bg_color=0D1117&hide_border=true" alt="Doyeon's GitHub Stats" />
 </p>
 
 <br><br>
