@@ -544,15 +544,21 @@ body.dark-mode #scroll-progress {
 }
 
 .skills-category {
-  background: #fff;
-  padding: 25px;
-  border-radius: 10px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+  background: linear-gradient(145deg, #ffffff, #f5f5f5);
+  padding: 30px;
+  border-radius: 15px;
+  box-shadow:
+    5px 5px 15px #d9d9d9,
+    -5px -5px 15px #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.5);
   transition: transform 0.3s ease;
+  cursor: pointer;
+  border: 2px solid transparent;
 }
 
 .skills-category:hover {
   transform: translateY(-5px);
+  border-color: #3498db;
 }
 
 .skills-category h3 {
@@ -587,7 +593,7 @@ body.dark-mode #scroll-progress {
   display: inline-flex;
   align-items: center;
   border: 1px solid transparent; /* For color border */
-  cursor: pointer;
+  cursor: default;
 }
 
 .skill-tag:hover {
@@ -949,6 +955,55 @@ body.dark-mode #scroll-progress {
   color: #fff;
 }
 
+/* Skills Toggle Button */
+.skills-toggle-container {
+  text-align: center;
+  margin-top: 30px;
+  width: 100%;
+}
+
+.skills-toggle-btn {
+  cursor: pointer;
+  color: #555;
+  font-size: 1.1rem;
+  font-weight: bold;
+  transition: color 0.3s;
+  display: inline-block;
+  padding: 10px;
+}
+
+/* Skills Animation */
+@keyframes popInLeft {
+  0% {
+    opacity: 0;
+    transform: translateX(-50px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes popInRight {
+  0% {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Apply animation when extra-skills is visible (display: block) */
+#extra-skills[style*="block"] .skills-category:nth-child(odd) {
+  animation: popInLeft 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+#extra-skills[style*="block"] .skills-category:nth-child(even) {
+  animation: popInRight 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
 /* Dark mode adjustments for specific tags if needed */
 body.dark-mode .skill-tag.unity,
 body.dark-mode .skill-tag.unreal,
@@ -979,7 +1034,11 @@ body.dark-mode .skill-tag.capcut:hover {
 
 /* Dark Mode for Skills */
 body.dark-mode .skills-category {
-  background: #2c2c2c;
+  background: linear-gradient(145deg, #1e1e1e, #252525);
+  box-shadow:
+    5px 5px 15px #121212,
+    -5px -5px 15px #2e2e2e;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 body.dark-mode .skills-category h3 {
@@ -994,6 +1053,10 @@ body.dark-mode .skill-tag {
 
 body.dark-mode .skill-tag:hover {
   color: #fff;
+}
+
+body.dark-mode .skills-toggle-btn {
+  color: #ddd;
 }
 
 /* Timeline */
