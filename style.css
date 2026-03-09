@@ -997,12 +997,16 @@ body.dark-mode #scroll-progress {
 /* Extra Skills Container */
 #extra-skills {
   display: none;
-  grid-column: 1 / -1;
   width: 100%;
 }
 
 #extra-skills.visible {
   display: block;
+}
+
+/* Add margin between the main skills and extra skills */
+#extra-skills .skills-grid {
+  margin-top: 30px;
 }
 
 /* Skills Animation */
