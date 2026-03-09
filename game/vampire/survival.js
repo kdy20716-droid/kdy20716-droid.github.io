@@ -561,10 +561,9 @@ function draw() {
         const angle = (timer * w.rotationSpeed + offset) % (Math.PI * 2);
         const orbitX = player.x + Math.cos(angle) * w.area;
         const orbitY = player.y + Math.sin(angle) * w.area;
-        ctx.font = "30px Arial";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(w.icon, orbitX, orbitY);
+
+        // 의자 그리기
+        drawSprite(ctx, w.name, orbitX, orbitY, 30, 0);
       }
     }
   });
@@ -597,10 +596,37 @@ function draw() {
   });
 
   // 플레이어 그리기
-  ctx.font = "30px Arial";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("🧑‍💼", player.x, player.y);
+  const isMoving =
+    keys["KeyW"] ||
+    keys["ArrowUp"] ||
+    keys["KeyS"] ||
+    keys["ArrowDown"] ||
+    keys["KeyA"] ||
+    keys["ArrowLeft"] ||
+    keys["KeyD"] ||
+    keys["ArrowRight"] ||
+    joystickVector.x !== 0 ||
+    joystickVector.y !== 0;
+  drawSprite(ctx, "player", player.x, player.y, 40, 0, isMoving);
+
+  // 플레이어 HP 바 그리기
+  const hpBarWidth = 40;
+  const hpBarHeight = 6;
+  const hpPercent = Math.max(0, player.hp / player.maxHp);
+  ctx.fillStyle = "#333";
+  ctx.fillRect(
+    player.x - hpBarWidth / 2,
+    player.y + 25,
+    hpBarWidth,
+    hpBarHeight,
+  );
+  ctx.fillStyle = "#e74c3c";
+  ctx.fillRect(
+    player.x - hpBarWidth / 2,
+    player.y + 25,
+    hpBarWidth * hpPercent,
+    hpBarHeight,
+  );
 
   // 오라(커피) 그리기
   player.weapons.forEach((w) => {
@@ -621,8 +647,7 @@ function draw() {
   // 투사체 그리기
   projectiles.forEach((p) => {
     if (p.type === "projectile") {
-      ctx.font = "20px Arial";
-      ctx.fillText(p.icon, p.x, p.y);
+      drawSprite(ctx, p.name, p.x, p.y, 25, p.angle);
     }
   });
 
@@ -700,15 +725,108 @@ function spawnBoss() {
 function openChest() {
   gameState = "PAUSED";
   // 보물상자 UI 표시 (레벨업 모달 재사용하되 골드 버튼 추가)
-  levelUp(true); // true flag for chest
+  const modal = document.getElementById("levelup-modal");
+  modal.classList.remove("hidden");
 
   const modalTitle = document.querySelector("#levelup-modal h2");
   if (modalTitle) modalTitle.innerText = "보물상자 획득! (Treasure Chest)";
 
+  const container = document.getElementById("upgrade-cards");
+  container.innerHTML = '<div class="chest-anim-box">🎁</div>';
+
   const goldBtn = document.getElementById("gold-reward-btn");
   if (goldBtn) {
-    goldBtn.classList.remove("hidden");
+    goldBtn.classList.add("hidden"); // 애니메이션 중에는 숨김
   }
+
+  // 1.5초 후 상자 오픈 및 보상 지급
+  setTimeout(() => {
+    const chestBox = container.querySelector(".chest-anim-box");
+    if (chestBox) {
+      chestBox.className = "chest-open";
+      chestBox.innerText = "✨";
+    }
+
+    // 1~5개 랜덤 보상 개수 결정
+    const count = Math.floor(Math.random() * 5) + 1;
+    const rewards = [];
+
+    // 보상 풀 생성 (현재 보유한 아이템 위주)
+    const pool = [];
+    // 보유 무기 (진화 전)
+    player.weapons.forEach((w) => {
+      if (!w.isEvolved) {
+        // 원본 데이터 찾기
+        const original = Object.values(WEAPONS).find(
+          (ow) => ow.name === w.name,
+        );
+        if (original) pool.push(original);
+      }
+    });
+    // 보유 패시브 (만렙 미만)
+    Object.keys(player.passiveCounts).forEach((name) => {
+      const p = Object.values(PASSIVES).find((pas) => pas.name === name);
+      if (p && player.passiveCounts[name] < (p.maxLevel || 3)) pool.push(p);
+    });
+
+    // 풀이 비었거나 부족하면 전체 풀에서 랜덤 추가
+    if (pool.length === 0) {
+      pool.push(...Object.values(WEAPONS));
+      pool.push(...Object.values(PASSIVES));
+    }
+
+    for (let i = 0; i < count; i++) {
+      const item = pool[Math.floor(Math.random() * pool.length)];
+      if (item) rewards.push(item);
+    }
+
+    // 보상 표시 및 적용
+    container.innerHTML = "";
+
+    // 카드들을 담을 가로 컨테이너 생성
+    const cardsRow = document.createElement("div");
+    cardsRow.className = "chest-cards-row";
+
+    rewards.forEach((reward, idx) => {
+      // 즉시 적용
+      const result = applyUpgrade(reward);
+
+      const card = document.createElement("div");
+      card.className = "card reward-card";
+      card.style.animationDelay = `${idx * 0.2}s`;
+
+      let desc = "";
+      if (result.type === "evolution") desc = "진화 완료!";
+      else if (result.type === "weapon_new") desc = "새로운 무기!";
+      else desc = `Lv.${result.level} 강화됨`;
+
+      card.innerHTML = `
+        <div class="card-icon"></div>
+        <div class="card-title">${result.name}</div>
+        <div class="card-desc">${desc}</div>
+      `;
+
+      const iconContainer = card.querySelector(".card-icon");
+      const canvas = document.createElement("canvas");
+      canvas.width = 80;
+      canvas.height = 80;
+      drawSprite(canvas.getContext("2d"), reward.name, 40, 40, 70);
+      iconContainer.appendChild(canvas);
+
+      cardsRow.appendChild(card);
+    });
+    container.appendChild(cardsRow);
+
+    // 확인 버튼 추가
+    const closeBtn = document.createElement("button");
+    closeBtn.className = "btn chest-confirm-btn"; // 새로운 스타일 클래스 적용
+    closeBtn.innerText = "확인";
+    closeBtn.onclick = () => {
+      modal.classList.add("hidden");
+      resumeGame();
+    };
+    container.appendChild(closeBtn);
+  }, 1500);
 }
 
 function spawnFinalBoss() {
@@ -791,6 +909,7 @@ function useWeapon(weapon) {
         damage: weapon.damage,
         duration: 60, // 1초
         icon: weapon.icon,
+        name: weapon.name, // 이름 추가 (그리기용)
         type: "projectile",
       });
     } else if (weapon.name.includes("키보드")) {
@@ -804,8 +923,42 @@ function useWeapon(weapon) {
         damage: weapon.damage,
         duration: weapon.duration,
         icon: weapon.icon,
+        name: weapon.name,
         type: "projectile",
       });
+    }
+  } else if (weapon.type === "explosion") {
+    // 폭발 무기 (에너지 드링크 등) 로직 추가
+    const explosionArea = weapon.area * (1 + player.passives.area);
+    damageNumbers.push({
+      x: player.x,
+      y: player.y,
+      val: "💥",
+      life: 30,
+      color: "orange",
+      size: explosionArea,
+    });
+    // 폭발 데미지 처리 (궤도 무기 충돌 로직 재사용 가능하거나 별도 처리)
+    handleOrbitingWeaponCollision(player.x, player.y, weapon);
+
+    // 추가 폭발 (count > 1일 때 랜덤 위치)
+    const count = weapon.count || 1;
+    for (let i = 1; i < count; i++) {
+      const offsetX = (Math.random() - 0.5) * 200;
+      const offsetY = (Math.random() - 0.5) * 200;
+      damageNumbers.push({
+        x: player.x + offsetX,
+        y: player.y + offsetY,
+        val: "💥",
+        life: 30,
+        color: "orange",
+        size: explosionArea,
+      });
+      handleOrbitingWeaponCollision(
+        player.x + offsetX,
+        player.y + offsetY,
+        weapon,
+      );
     }
   } else if (weapon.type === "aura") {
     // 오라는 매 프레임 충돌 체크하므로 여기선 생성만 (이미 projectiles 배열 대신 별도 처리 혹은 매 프레임 생성)
@@ -816,7 +969,7 @@ function useWeapon(weapon) {
       type: "aura",
       area: weapon.area,
       damage: weapon.damage,
-      duration: 1, // 즉시 소멸 (매 틱마다 생성)
+      duration: 2, // [수정] 1프레임 후 삭제되지 않도록 여유를 둠 (업데이트 순서 문제 해결)
     });
   }
 }
@@ -833,7 +986,6 @@ function updateUI() {
   // 레벨 및 체력
   document.getElementById("level").innerText = player.level;
   document.getElementById("wave").innerText = currentWave;
-  document.getElementById("hp").innerText = Math.floor(player.hp);
 
   // 타이머
   const m = Math.floor(timer / 3600)
@@ -848,6 +1000,286 @@ function updateUI() {
   updateAbilityDock();
 }
 
+// --- 그래픽 드로잉 시스템 ---
+
+function drawSprite(ctx, name, x, y, size, rotation = 0, isMoving = false) {
+  if (!name) return;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rotation);
+
+  // 100x100 기준 좌표계로 스케일링
+  const scale = size / 100;
+  ctx.scale(scale, scale);
+
+  // 이름에 따른 그리기 분기
+  if (name === "player") {
+    drawPlayerCharacter(ctx, isMoving);
+  } else if (name.includes("스테이플러")) {
+    drawStapler(ctx, name.includes("머신건"));
+  } else if (name.includes("커피")) {
+    drawCoffee(ctx, name.includes("용암"));
+  } else if (name.includes("키보드")) {
+    drawKeyboard(ctx, name.includes("RGB"));
+  } else if (name.includes("서류") || name.includes("해고")) {
+    drawReport(ctx, name.includes("해고"));
+  } else if (name.includes("의자")) {
+    drawChair(ctx, name.includes("CEO"));
+  } else if (name.includes("드링크")) {
+    drawEnergyDrink(ctx, name.includes("핵융합"));
+  } else if (name.includes("에어팟") || name.includes("헤드셋")) {
+    drawAirpods(ctx, name.includes("헤드셋"));
+  } else if (name.includes("슬리퍼")) {
+    drawSlippers(ctx);
+  } else if (name.includes("카페인")) {
+    drawCoffeeMix(ctx);
+  } else if (name.includes("근육")) {
+    drawDumbbell(ctx);
+  } else if (name.includes("메뉴얼")) {
+    drawBook(ctx);
+  } else if (name.includes("방석")) {
+    drawCushion(ctx);
+  } else if (name.includes("카드")) {
+    drawCard(ctx);
+  } else {
+    // 기본값 (물음표)
+    ctx.fillStyle = "#fff";
+    ctx.font = "50px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("?", 0, 0);
+  }
+
+  ctx.restore();
+}
+
+function drawPlayerCharacter(ctx, isMoving) {
+  // 회사원 캐릭터 그리기
+
+  // 다리 애니메이션
+  const legOffset = isMoving ? Math.sin(timer * 0.2) * 10 : 0;
+
+  // 다리 (검은 바지)
+  ctx.fillStyle = "#2c3e50";
+  // 왼쪽 다리
+  ctx.beginPath();
+  ctx.roundRect(-15, 20, 10, 30 + legOffset, 5);
+  ctx.fill();
+  // 오른쪽 다리
+  ctx.beginPath();
+  ctx.roundRect(5, 20, 10, 30 - legOffset, 5);
+  ctx.fill();
+
+  // 몸통 (흰 셔츠)
+  ctx.fillStyle = "#ecf0f1";
+  ctx.beginPath();
+  ctx.roundRect(-20, -20, 40, 50, 10);
+  ctx.fill();
+
+  // 넥타이 (빨강)
+  ctx.fillStyle = "#e74c3c";
+  ctx.beginPath();
+  ctx.moveTo(0, -15);
+  ctx.lineTo(-5, 10);
+  ctx.lineTo(0, 25);
+  ctx.lineTo(5, 10);
+  ctx.fill();
+
+  // 머리 (살색)
+  ctx.fillStyle = "#f1c40f";
+  ctx.beginPath();
+  ctx.arc(0, -35, 20, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 안경
+  ctx.strokeStyle = "#333";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(-7, -35, 5, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(7, -35, 5, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(-2, -35);
+  ctx.lineTo(2, -35);
+  ctx.stroke();
+
+  // 서류가방 (손에 들고 있음)
+  ctx.fillStyle = "#5d4037";
+  ctx.fillRect(20, 0, 20, 15);
+  ctx.strokeStyle = "#3e2723";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(25, 0);
+  ctx.arc(30, 0, 5, Math.PI, 0);
+  ctx.stroke();
+}
+
+function drawStapler(ctx, isEvo) {
+  ctx.fillStyle = isEvo ? "#e74c3c" : "#95a5a6";
+  ctx.fillRect(-30, -10, 60, 20); // 몸통
+  ctx.fillStyle = "#7f8c8d";
+  ctx.fillRect(-30, 10, 60, 5); // 밑판
+  ctx.fillStyle = "#34495e";
+  ctx.fillRect(20, -10, 10, 20); // 앞부분
+}
+
+function drawCoffee(ctx, isEvo) {
+  ctx.fillStyle = isEvo ? "#c0392b" : "#d35400"; // 컵 색상
+  ctx.beginPath();
+  ctx.moveTo(-20, -20);
+  ctx.lineTo(20, -20);
+  ctx.lineTo(15, 30);
+  ctx.lineTo(-15, 30);
+  ctx.fill();
+  // 손잡이
+  ctx.strokeStyle = isEvo ? "#c0392b" : "#d35400";
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.arc(20, 0, 10, -Math.PI / 2, Math.PI / 2);
+  ctx.stroke();
+  // 김
+  ctx.strokeStyle = "#fff";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-10, -30);
+  ctx.lineTo(-10, -40);
+  ctx.moveTo(0, -30);
+  ctx.lineTo(0, -45);
+  ctx.moveTo(10, -30);
+  ctx.lineTo(10, -40);
+  ctx.stroke();
+}
+
+function drawKeyboard(ctx, isEvo) {
+  ctx.fillStyle = "#2c3e50";
+  ctx.roundRect(-40, -20, 80, 40, 5);
+  ctx.fill();
+  // 키캡
+  ctx.fillStyle = isEvo ? "#f1c40f" : "#ecf0f1";
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 5; j++) {
+      ctx.fillRect(-35 + j * 14, -15 + i * 12, 10, 8);
+    }
+  }
+}
+
+function drawReport(ctx, isEvo) {
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(-25, -35, 50, 70);
+  // 텍스트 라인
+  ctx.fillStyle = isEvo ? "#c0392b" : "#bdc3c7";
+  for (let i = 0; i < 5; i++) {
+    ctx.fillRect(-20, -25 + i * 12, 40, 5);
+  }
+  if (isEvo) {
+    // 해고 도장
+    ctx.strokeStyle = "red";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(0, 0, 20, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.moveTo(-10, -10);
+    ctx.lineTo(10, 10);
+    ctx.moveTo(10, -10);
+    ctx.lineTo(-10, 10);
+    ctx.stroke();
+  }
+}
+
+function drawChair(ctx, isEvo) {
+  ctx.fillStyle = isEvo ? "#f1c40f" : "#7f8c8d";
+  ctx.fillRect(-25, 10, 50, 10); // 좌석
+  ctx.fillRect(-25, -30, 50, 40); // 등받이
+  ctx.strokeStyle = "#34495e";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(0, 20);
+  ctx.lineTo(0, 40); // 다리 기둥
+  ctx.moveTo(-20, 40);
+  ctx.lineTo(20, 40); // 바퀴 지지대
+  ctx.stroke();
+}
+
+function drawEnergyDrink(ctx, isEvo) {
+  ctx.fillStyle = isEvo ? "#2ecc71" : "#3498db";
+  ctx.beginPath();
+  ctx.ellipse(0, -20, 15, 5, 0, 0, Math.PI * 2); // 윗면
+  ctx.fill();
+  ctx.fillRect(-15, -20, 30, 50); // 몸통
+  ctx.beginPath();
+  ctx.ellipse(0, 30, 15, 5, 0, 0, Math.PI * 2); // 아랫면
+  ctx.fill();
+  // 번개 마크
+  ctx.fillStyle = "#f1c40f";
+  ctx.beginPath();
+  ctx.moveTo(5, -10);
+  ctx.lineTo(-5, 0);
+  ctx.lineTo(0, 0);
+  ctx.lineTo(-5, 15);
+  ctx.lineTo(5, 5);
+  ctx.lineTo(0, 5);
+  ctx.fill();
+}
+
+function drawAirpods(ctx, isEvo) {
+  ctx.fillStyle = "#fff";
+  if (isEvo) {
+    // 헤드셋
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = "#333";
+    ctx.beginPath();
+    ctx.arc(0, 0, 25, Math.PI, 0); // 밴드
+    ctx.stroke();
+    ctx.fillRect(-35, -5, 15, 30); // 왼쪽 유닛
+    ctx.fillRect(20, -5, 15, 30); // 오른쪽 유닛
+  } else {
+    // 이어폰
+    ctx.beginPath();
+    ctx.arc(-10, -10, 15, 0, Math.PI * 2); // 유닛
+    ctx.fill();
+    ctx.fillRect(-5, -10, 8, 40); // 기둥
+  }
+}
+
+// 패시브 아이콘 그리기 함수들 (간략화)
+function drawSlippers(ctx) {
+  ctx.fillStyle = "#95a5a6";
+  ctx.fillRect(-25, -15, 50, 30);
+  ctx.fillStyle = "#e74c3c";
+  ctx.fillRect(-25, -15, 20, 30);
+}
+function drawCoffeeMix(ctx) {
+  ctx.fillStyle = "#f1c40f";
+  ctx.rotate(Math.PI / 4);
+  ctx.fillRect(-10, -30, 20, 60);
+}
+function drawDumbbell(ctx) {
+  ctx.fillStyle = "#34495e";
+  ctx.fillRect(-30, -10, 10, 20);
+  ctx.fillRect(20, -10, 10, 20);
+  ctx.fillRect(-20, -5, 40, 10);
+}
+function drawBook(ctx) {
+  ctx.fillStyle = "#3498db";
+  ctx.fillRect(-25, -30, 50, 60);
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(-20, -25, 40, 50);
+}
+function drawCushion(ctx) {
+  ctx.fillStyle = "#e91e63";
+  ctx.roundRect(-30, -30, 60, 60, 10);
+  ctx.fill();
+}
+function drawCard(ctx) {
+  ctx.fillStyle = "#f39c12";
+  ctx.fillRect(-25, -35, 50, 70);
+  ctx.fillStyle = "#000";
+  ctx.font = "20px Arial";
+  ctx.fillText("$", -10, 10);
+}
+
 function updateAbilityDock() {
   const dock = document.getElementById("ability-dock");
   dock.innerHTML = "";
@@ -856,7 +1288,14 @@ function updateAbilityDock() {
   player.weapons.forEach((w) => {
     const div = document.createElement("div");
     div.className = "ability-icon";
-    div.innerHTML = `${w.icon}<div class="ability-level">${w.level}</div>`;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 50;
+    canvas.height = 50;
+    drawSprite(canvas.getContext("2d"), w.name, 25, 25, 40); // 아이콘 그리기
+
+    div.appendChild(canvas);
+    div.innerHTML += `<div class="ability-level">${w.level}</div>`;
     div.title = w.name;
     dock.appendChild(div);
   });
@@ -867,7 +1306,14 @@ function updateAbilityDock() {
     if (passive) {
       const div = document.createElement("div");
       div.className = "ability-icon";
-      div.innerHTML = `${passive.icon}<div class="ability-level">${count}</div>`;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = 50;
+      canvas.height = 50;
+      drawSprite(canvas.getContext("2d"), passive.name, 25, 25, 40);
+
+      div.appendChild(canvas);
+      div.innerHTML += `<div class="ability-level">${count}</div>`;
       div.title = passive.name;
       dock.appendChild(div);
     }
@@ -928,11 +1374,13 @@ function levelUp() {
 
     if (opt.isUpgrade) {
       const nextLevel = opt.level + 1;
-      if (nextLevel === 6) {
+      if (nextLevel === 3 && opt.evolution) {
+        // [수정] 3레벨 진화 안내
         desc = `[진화 가능!] 강력한 무기로 진화합니다.`;
       } else {
         desc = `[Lv.${nextLevel}] 데미지/범위/속도 대폭 증가`;
-        if (nextLevel % 3 === 0) {
+        if (opt.isEvolved && nextLevel % 3 === 0) {
+          // [수정] 진화 후 강화 안내
           desc += `\n★ 특수 강화: 개수/발사체 증가!`;
         }
       }
@@ -955,11 +1403,19 @@ function levelUp() {
     }
 
     card.innerHTML = `
-      <div class="card-icon">${opt.icon}</div>
+      <div class="card-icon"></div>
       <div class="card-title">${opt.name}</div>
       <div class="card-desc">${desc}</div>
       ${gaugeHtml}
     `;
+
+    // 카드 아이콘 캔버스 추가
+    const iconContainer = card.querySelector(".card-icon");
+    const canvas = document.createElement("canvas");
+    canvas.width = 80;
+    canvas.height = 80;
+    drawSprite(canvas.getContext("2d"), opt.name, 40, 40, 70);
+    iconContainer.appendChild(canvas);
 
     card.onclick = () => selectUpgrade(opt, opt.isUpgrade);
     container.appendChild(card);
@@ -975,7 +1431,8 @@ document.getElementById("gold-reward-btn")?.addEventListener("click", () => {
   resumeGame();
 });
 
-function selectUpgrade(opt, isUpgrade) {
+// 업그레이드 적용 헬퍼 함수
+function applyUpgrade(opt) {
   // 무기인지 패시브인지 확인
   if (opt.stat) {
     // 패시브
@@ -987,37 +1444,66 @@ function selectUpgrade(opt, isUpgrade) {
     }
     // 패시브 레벨 증가
     player.passiveCounts[opt.name] = (player.passiveCounts[opt.name] || 0) + 1;
+    return {
+      name: opt.name,
+      level: player.passiveCounts[opt.name],
+      type: "passive",
+    };
   } else {
     // 무기
-    if (isUpgrade) {
-      const existing = player.weapons.find((w) => w.name === opt.name);
+    const existing = player.weapons.find((w) => w.name === opt.name);
+    if (existing) {
       existing.level++;
 
-      // 레벨 6 도달 시 진화
-      if (existing.level === 6 && existing.evolution) {
+      // [수정] 레벨 3 도달 시 진화
+      if (existing.level === 3 && existing.evolution) {
         const evolvedWeapon = WEAPONS[existing.evolution];
         // 기존 무기 속성을 진화된 무기로 덮어쓰기 (참조 유지)
         Object.assign(existing, evolvedWeapon, { level: 1, isEvolved: true });
         showDamage(player.x, player.y, "WEAPON EVOLVED!", "magenta");
+        return { name: evolvedWeapon.name, level: 1, type: "evolution" };
+      }
+      // [수정] 진화 후 3번 강화(Lv 3, 6, 9...)마다 특수 강화
+      else if (existing.isEvolved && existing.level % 3 === 0) {
+        existing.damage *= 1.5; // 데미지 대폭 증가
+        existing.count += 2; // 투사체 개수 2개 증가
+        existing.area *= 1.3; // 범위 증가
+        existing.cooldown *= 0.9; // 쿨타임 감소
+        showDamage(player.x, player.y, "SUPER UPGRADE!", "cyan");
+        return {
+          name: existing.name,
+          level: existing.level,
+          type: "weapon_upgrade",
+        };
       } else {
         // 일반 강화 (더 강력하게)
-        existing.damage *= 1.5; // 1.2 -> 1.5
-        existing.area *= 1.2;
-        existing.cooldown *= 0.85; // 0.9 -> 0.85
+        existing.damage *= 1.2;
+        existing.area *= 1.1;
+        existing.cooldown *= 0.95;
         existing.speed *= 1.1;
 
         // 3레벨마다 특수 강화 (개수 증가)
-        if (existing.level % 3 === 0) {
+        if (!existing.isEvolved && existing.level % 3 === 0) {
           existing.count = (existing.count || 1) + 1;
         }
 
         // 에어팟(보호막)은 쿨타임 감소가 중요
         if (existing.type === "shield") existing.cooldown *= 0.8;
+        return {
+          name: existing.name,
+          level: existing.level,
+          type: "weapon_upgrade",
+        };
       }
     } else {
-      player.weapons.push({ ...WEAPONS[opt.name], level: 1, timer: 0 });
+      player.weapons.push({ ...opt, level: 1, timer: 0 });
+      return { name: opt.name, level: 1, type: "weapon_new" };
     }
   }
+}
+
+function selectUpgrade(opt, isUpgrade) {
+  applyUpgrade(opt);
 
   document.getElementById("levelup-modal").classList.add("hidden");
   gameState = "PLAYING";

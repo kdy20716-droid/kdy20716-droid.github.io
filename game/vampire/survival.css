@@ -252,6 +252,87 @@ body {
   box-shadow: 0 0 15px gold;
 }
 
+/* 보물상자 애니메이션 */
+.chest-anim-box {
+  font-size: 100px;
+  margin: 30px;
+  animation: chestShake 0.5s infinite;
+  cursor: default;
+}
+
+@keyframes chestShake {
+  0% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-10deg);
+  }
+  50% {
+    transform: rotate(10deg);
+  }
+  75% {
+    transform: rotate(-10deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+.chest-open {
+  font-size: 120px;
+  margin: 30px;
+  animation: chestPop 0.5s ease-out;
+}
+
+@keyframes chestPop {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.reward-card {
+  animation: cardAppear 0.5s ease-out backwards;
+  border-color: gold;
+  box-shadow: 0 0 15px gold;
+}
+
+@keyframes cardAppear {
+  from {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* 보물상자 보상 레이아웃 */
+.chest-cards-row {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  width: 100%;
+  flex-wrap: nowrap; /* 한 줄로 표시 */
+  overflow-x: auto; /* 화면 넘치면 스크롤 */
+  padding: 10px;
+}
+
+/* 보물상자 확인 버튼 */
+.chest-confirm-btn {
+  margin-top: 25px;
+  padding: 10px 40px;
+  font-size: 1.2rem;
+  border-radius: 10px; /* 약간 뭉툭한 모서리 */
+  background-color: #2ecc71;
+  color: white;
+}
+
 /* 패시브 게이지 바 */
 .gauge-container {
   display: flex;

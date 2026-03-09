@@ -87,9 +87,9 @@ export const WEAPONS = {
     desc: "엄청난 속도로 스테이플러 심을 난사합니다.",
     icon: "🔫",
     type: "projectile",
-    damage: 30,
-    cooldown: 4, // 매우 빠름
-    speed: 15,
+    damage: 20, // 데미지 하향 (30 -> 20)
+    cooldown: 8, // 쿨타임 증가 (4 -> 8)
+    speed: 12, // 탄속 소폭 하향
     count: 3,
     timer: 0,
     isEvolved: true,
@@ -99,7 +99,7 @@ export const WEAPONS = {
     desc: "닿는 모든 것을 녹여버리는 뜨거운 커피 웅덩이를 생성합니다.",
     icon: "🌋",
     type: "aura",
-    damage: 10,
+    damage: 8, // 데미지 소폭 하향
     area: 150,
     cooldown: 10,
     timer: 0,
@@ -110,7 +110,7 @@ export const WEAPONS = {
     desc: "화려한 LED와 함께 키보드를 사방으로 던집니다.",
     icon: "🌈",
     type: "projectile",
-    damage: 80,
+    damage: 60, // 데미지 하향
     cooldown: 40,
     speed: 8,
     count: 8, // 8방향 발사
@@ -123,7 +123,7 @@ export const WEAPONS = {
     desc: "적을 끝까지 추격하여 치명적인 피해를 입힙니다.",
     icon: "💀",
     type: "homing_projectile",
-    damage: 200,
+    damage: 150, // 데미지 하향
     cooldown: 60,
     speed: 10,
     count: 3,
@@ -135,7 +135,7 @@ export const WEAPONS = {
     desc: "최고급 의자가 고속으로 회전하며 적들을 갈아버립니다.",
     icon: "👑",
     type: "orbiting",
-    damage: 50,
+    damage: 40, // 데미지 하향
     area: 180,
     count: 4,
     rotationSpeed: 0.15,
@@ -147,7 +147,7 @@ export const WEAPONS = {
     desc: "화면 전체에 가까운 범위에 폭발을 일으킵니다.",
     icon: "☢️",
     type: "explosion",
-    damage: 500,
+    damage: 300, // 데미지 하향
     area: 400,
     cooldown: 180,
     timer: 0,
