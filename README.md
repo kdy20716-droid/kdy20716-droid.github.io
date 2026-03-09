@@ -51,7 +51,6 @@
   <br><br>
   <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=kdy20716-droid&layout=compact&theme=radical&bg_color=0D1117&hide_border=true" alt="Top Languages" />
 </p>
-
 ---
 
 ## 📫 연락처 및 개인 정보
