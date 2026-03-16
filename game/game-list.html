@@ -85,8 +85,9 @@
         box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
         backdrop-filter: blur(4px);
         border: 1px solid rgba(255, 255, 255, 0.1);
-        max-width: 600px;
+        max-width: 1000px;
         width: 90%;
+        overflow: hidden;
       }
 
       h1 {
@@ -101,12 +102,23 @@
 
       .game-list {
         display: flex;
-        flex-direction: column;
-        gap: 20px;
+        flex-direction: row;
+        gap: 30px;
+        padding: 40px 20px;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+
+      .game-list::-webkit-scrollbar {
+        display: none;
       }
 
       .game-card {
         display: flex;
+        flex-direction: column;
+        justify-content: center;
         align-items: center;
         text-decoration: none;
         color: white;
@@ -114,22 +126,30 @@
         border-radius: 15px;
         transition: all 0.3s ease;
         position: relative;
-        overflow: hidden;
         border: 1px solid rgba(255, 255, 255, 0.1);
+        flex: 0 0 260px;
+        height: 320px;
+        scroll-snap-align: center;
+        filter: brightness(0.4) scale(0.9);
+        opacity: 0.6;
       }
 
-      .game-card:hover {
-        transform: translateY(-5px);
+      .game-card.focused {
+        filter: brightness(1) scale(1.1);
+        opacity: 1;
         box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+        z-index: 2;
+        border-color: rgba(255, 255, 255, 0.8);
       }
 
       .game-card .icon {
-        font-size: 40px;
-        margin-right: 20px;
+        font-size: 60px;
+        margin-right: 0;
+        margin-bottom: 20px;
       }
 
       .game-card .info {
-        text-align: left;
+        text-align: center;
       }
 
       .game-card .title {
@@ -265,15 +285,65 @@
         playTone(600, "triangle", 0.15);
       }
 
-      // 이벤트 리스너 등록
-      document.querySelectorAll(".game-card").forEach((card) => {
+      // 게임 카드 선택 및 포커스 로직
+      const cards = document.querySelectorAll(".game-card");
+      let currentIndex = 0;
+
+      function updateFocus() {
+        cards.forEach((card, index) => {
+          if (index === currentIndex) {
+            card.classList.add("focused");
+            card.scrollIntoView({
+              behavior: "smooth",
+              inline: "center",
+              block: "nearest",
+            });
+          } else {
+            card.classList.remove("focused");
+          }
+        });
+      }
+
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowRight") {
+          e.preventDefault();
+          if (currentIndex < cards.length - 1) {
+            currentIndex++;
+            playHoverSound();
+            updateFocus();
+          }
+        } else if (e.key === "ArrowLeft") {
+          e.preventDefault();
+          if (currentIndex > 0) {
+            currentIndex--;
+            playHoverSound();
+            updateFocus();
+          }
+        } else if (e.key === "Enter") {
+          e.preventDefault();
+          cards[currentIndex].click();
+        }
+      });
+
+      cards.forEach((card, index) => {
         card.addEventListener("mouseenter", () => {
-          playHoverSound();
+          if (currentIndex !== index) {
+            currentIndex = index;
+            playHoverSound();
+            updateFocus();
+          }
         });
         card.addEventListener("click", () => {
+          e.preventDefault();
           playClickSound();
+          setTimeout(() => {
+            window.location.href = card.getAttribute("href");
+          }, 200);
         });
       });
+
+      // 초기 포커스 설정
+      updateFocus();
     </script>
   </body>
 </html>
