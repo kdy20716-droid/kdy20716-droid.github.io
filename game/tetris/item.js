@@ -7,6 +7,7 @@ COLORS[9] = "#ff3333"; // 폭탄 (빨강)
 COLORS[10] = "#ffd700"; // 별 (노랑)
 COLORS[11] = "#33ff33"; // 하트 (초록)
 COLORS[12] = "#ff00ff"; // 시한폭탄 (마젠타)
+COLORS[13] = "#ffffff"; // 멀티플레이 아이템 박스 (흰색)
 
 // --- 2P 멀티 아이템전 시스템 ---
 const ITEM_TYPES = {
@@ -18,10 +19,14 @@ const ITEM_TYPES = {
 
 let multiplayerInventory = new Array(9).fill(null);
 let selectedSlotIndex = 0;
+let multiItemSpawnCounter = 0;
+let multiItemNextThreshold = 10;
 
 window.resetMultiplayerInventory = function () {
   multiplayerInventory.fill(null);
   selectedSlotIndex = 0;
+  multiItemSpawnCounter = 0;
+  multiItemNextThreshold = Math.floor(Math.random() * 11) + 10; // 시작 시 첫 아이템 상자 기준: 10~20 블록
   window.isReversed = false;
   updateInventoryUI();
   const ink = document.getElementById("ink-overlay");
@@ -115,8 +120,27 @@ window.receiveItemAttack = function (itemType) {
 const _oldGenerateRandomPiece = generateRandomPiece;
 generateRandomPiece = function () {
   const piece = _oldGenerateRandomPiece();
-  // 아이템 모드일 때 20% 확률로 아이템 블록 등장
-  if (isItemMode && Math.random() < 0.2) {
+
+  if (window.isMultiItemMode) {
+    multiItemSpawnCounter++;
+    // 10~20개 블록마다 아이템 상자 하나를 무작위로 심어줌
+    if (multiItemSpawnCounter >= multiItemNextThreshold) {
+      multiItemSpawnCounter = 0;
+      multiItemNextThreshold = Math.floor(Math.random() * 11) + 10; // 다음 기준도 10~20 재설정
+
+      let blocks = [];
+      for (let y = 0; y < piece.matrix.length; y++) {
+        for (let x = 0; x < piece.matrix[y].length; x++) {
+          if (piece.matrix[y][x] !== 0) blocks.push({ x, y });
+        }
+      }
+      if (blocks.length > 0) {
+        const target = blocks[Math.floor(Math.random() * blocks.length)];
+        piece.matrix[target.y][target.x] = 13; // 13: 🎁 멀티플레이 아이템 박스
+      }
+    }
+  } else if (isItemMode && Math.random() < 0.2) {
+    // 싱글플레이 아이템 모드일 때 20% 확률로 아이템 블록 등장
     let blocks = [];
     for (let y = 0; y < piece.matrix.length; y++) {
       for (let x = 0; x < piece.matrix[y].length; x++) {
@@ -147,7 +171,7 @@ drawMatrix = function (matrix, offset, targetCtx = ctx) {
   // 아이템 블록 위에는 텍스트(이모티콘) 추가
   matrix.forEach((row, y) => {
     row.forEach((value, x) => {
-      if ((value >= 9 && value <= 11) || value === 12) {
+      if ((value >= 9 && value <= 11) || value === 12 || value === 13) {
         targetCtx.save();
         targetCtx.font = "0.7px Arial";
         targetCtx.textAlign = "center";
@@ -157,6 +181,7 @@ drawMatrix = function (matrix, offset, targetCtx = ctx) {
         if (value === 10) icon = "⭐";
         if (value === 11) icon = "❤️";
         if (value === 12) icon = "⏱️";
+        if (value === 13) icon = "🎁";
         targetCtx.fillText(icon, x + offset.x + 0.5, y + offset.y + 0.5);
         targetCtx.restore();
       }
@@ -170,10 +195,18 @@ sweep = function () {
   // 멀티플레이 아이템전 로직
   if (window.isMultiItemMode) {
     let linesCleared = 0;
+    let multiItemsCollected = 0; // 줄을 지울 때 포함된 아이템 상자 수
+
     outer: for (let y = board.length - 1; y >= 0; --y) {
       for (let x = 0; x < board[y].length; ++x) {
         if (board[y][x] === 0) continue outer;
       }
+
+      // 지워지는 줄에 아이템 상자(13)가 박혀 있는지 검사
+      for (let x = 0; x < board[y].length; ++x) {
+        if (board[y][x] === 13) multiItemsCollected++;
+      }
+
       const row = board.splice(y, 1)[0].fill(0);
       board.unshift(row);
       ++y;
@@ -186,8 +219,11 @@ sweep = function () {
       scoreElement.textContent = score;
       dropInterval = Math.max(100, 1000 - Math.floor(score / 500) * 100);
 
-      // 멀티 아이템 획득 (지운 줄 수만큼 획득)
-      for (let i = 0; i < linesCleared; i++) addMultiplayerItem();
+      // 없앤 아이템 상자 개수만큼 인벤토리에 지급
+      for (let i = 0; i < multiItemsCollected; i++) {
+        addMultiplayerItem();
+        showItemPopup("🎁 아이템 획득!");
+      }
 
       // 기본 공격(쓰레기 블록)도 같이 날리기
       if (isMultiplayer && linesCleared >= 2) {
