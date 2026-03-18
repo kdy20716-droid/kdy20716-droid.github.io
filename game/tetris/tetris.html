@@ -16,6 +16,17 @@
       <h1 class="main-title">TETRIS</h1>
       <div class="menu-buttons">
         <button id="btn-1p" class="menu-btn">1P 시작</button>
+        <button
+          id="btn-item-mode"
+          class="menu-btn"
+          style="
+            background: linear-gradient(45deg, #f39c12, #e74c3c);
+            border-color: #f39c12;
+            color: #fff;
+          "
+        >
+          아이템전
+        </button>
         <button id="btn-2p" class="menu-btn">2P 멀티</button>
         <button id="btn-howto" class="menu-btn">게임 방법</button>
         <button
@@ -27,6 +38,9 @@
         </button>
       </div>
     </div>
+
+    <!-- 화면 전환 효과용 빗스듬한 선 -->
+    <div id="color-wipe-line" class="color-wipe-line hidden"></div>
 
     <!-- 방 참가 코드 입력 화면 -->
     <div id="multi-menu-screen" class="screen-container hidden">
@@ -212,5 +226,6 @@
       </div>
     </div>
     <script src="tetris.js"></script>
+    <script src="item.js"></script>
   </body>
 </html>

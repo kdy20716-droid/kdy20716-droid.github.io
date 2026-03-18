@@ -425,3 +425,80 @@ canvas {
   color: #ddd;
   font-weight: bold;
 }
+
+/* 아이템전 테마 배경 */
+body.item-theme {
+  background: linear-gradient(
+    -45deg,
+    #1f0b2e,
+    #6a1b41,
+    #9e2a2b,
+    #1f0b2e
+  ) !important;
+  background-size: 400% 400%;
+  animation: gradientBG 15s ease infinite;
+}
+
+/* 화면 전환 빗스듬한 선 효과 */
+.color-wipe-line {
+  position: fixed;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    135deg,
+    transparent 48%,
+    rgba(255, 255, 255, 0.9) 50%,
+    transparent 52%
+  );
+  box-shadow: 0 0 30px rgba(255, 255, 255, 0.5);
+  z-index: 9998;
+  pointer-events: none;
+  transform: translateX(-100%) translateY(-100%);
+}
+.color-wipe-line.active {
+  animation: wipeDiagonal 1.2s ease-in-out forwards;
+}
+@keyframes wipeDiagonal {
+  0% {
+    transform: translateX(-100%) translateY(-100%);
+  }
+  100% {
+    transform: translateX(100%) translateY(100%);
+  }
+}
+
+/* 아이템 발동 팝업 알림 */
+.item-popup {
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #ffd700;
+  font-size: 1.5rem;
+  font-weight: 900;
+  text-shadow: 0 4px 10px rgba(0, 0, 0, 0.8);
+  animation: popupFloat 1.5s ease-out forwards;
+  pointer-events: none;
+  z-index: 100;
+  white-space: nowrap;
+}
+@keyframes popupFloat {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -60%) scale(1.2);
+  }
+  80% {
+    opacity: 1;
+    transform: translate(-50%, -80%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -100%) scale(0.8);
+  }
+}
