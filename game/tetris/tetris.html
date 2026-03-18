@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tetris</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="tetris.css" />
+  </head>
+  <body>
+    <!-- 메인 화면 -->
+    <div id="start-screen" class="screen-container">
+      <h1 class="main-title">TETRIS</h1>
+      <div class="menu-buttons">
+        <button id="btn-1p" class="menu-btn">1P 시작</button>
+        <button id="btn-2p" class="menu-btn">2P 멀티</button>
+        <button id="btn-howto" class="menu-btn">게임 방법</button>
+        <button
+          id="btn-back"
+          class="menu-btn back-btn"
+          onclick="location.href = '../game-list.html'"
+        >
+          ◀ 뒤로 가기
+        </button>
+      </div>
+    </div>
+
+    <!-- 방 참가 코드 입력 화면 -->
+    <div id="multi-menu-screen" class="screen-container hidden">
+      <h2 class="main-title" style="font-size: 3rem; margin-bottom: 30px">
+        멀티플레이
+      </h2>
+      <div style="display: flex; gap: 10px; margin-bottom: 20px">
+        <input
+          type="text"
+          id="room-code-input"
+          placeholder="방 코드 입력"
+          class="input-field"
+        />
+        <button id="btn-join-check" class="menu-btn" style="padding: 10px 20px">
+          참가
+        </button>
+      </div>
+      <button id="btn-create-room" class="menu-btn" style="width: 250px">
+        방 만들기
+      </button>
+      <button
+        id="btn-back-menu"
+        class="menu-btn back-btn"
+        style="margin-top: 20px; width: 250px"
+      >
+        ◀ 뒤로 가기
+      </button>
+      <p
+        id="multi-status"
+        style="color: #ccc; margin-top: 20px; font-size: 16px"
+      ></p>
+    </div>
+
+    <!-- 멀티플레이 로비 -->
+    <div id="lobby-screen" class="screen-container hidden">
+      <div class="lobby-container">
+        <div class="lobby-main">
+          <h2 class="lobby-title" style="color: #e94057; margin: 0 0 20px 0">
+            대기실
+          </h2>
+          <div class="room-info">
+            <span class="room-label" style="color: #aaa; font-size: 0.9rem"
+              >ROOM CODE</span
+            >
+            <div
+              id="display-room-code"
+              class="room-code"
+              style="font-size: 2.5rem; font-weight: bold"
+            >
+              ----
+            </div>
+          </div>
+          <div id="lobby-player-slots" class="player-slots-container">
+            <!-- 동적 생성 -->
+          </div>
+          <div
+            class="lobby-buttons"
+            style="display: flex; gap: 15px; margin-top: 30px"
+          >
+            <button id="btn-game-start-multi" class="menu-btn" disabled>
+              게임 시작
+            </button>
+            <button id="btn-back-lobby" class="menu-btn back-btn">
+              나가기
+            </button>
+          </div>
+        </div>
+        <div class="lobby-chat">
+          <div class="chat-header">Chat</div>
+          <div id="chat-messages" class="chat-messages"></div>
+          <div class="chat-input-area">
+            <input
+              type="text"
+              id="chat-input"
+              placeholder="메시지 입력..."
+              maxlength="50"
+              class="input-field"
+            />
+            <button id="btn-send-chat" class="menu-btn" style="padding: 10px">
+              전송
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 닉네임 입력 모달 -->
+    <div id="join-modal" class="modal-layer hidden">
+      <div class="modal-content">
+        <h2>닉네임 입력</h2>
+        <input
+          type="text"
+          id="nickname-input"
+          placeholder="이름을 입력하세요"
+          class="input-field"
+          style="margin: 20px 0; width: 100%; text-align: center"
+        />
+        <div style="display: flex; gap: 10px; justify-content: center">
+          <button id="btn-join-confirm" class="menu-btn">입장</button>
+          <button id="btn-join-cancel" class="menu-btn back-btn">취소</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 게임 방법 모달 -->
+    <div id="howto-modal" class="modal-layer hidden">
+      <div class="modal-content">
+        <h2>게임 방법</h2>
+        <div class="controls-desc">
+          <p>⬅️ ➡️ : 블록 좌우 이동</p>
+          <p>⬆️ : 블록 회전</p>
+          <p>⬇️ : 아래로 내리기</p>
+          <p>스페이스바 : 수직 낙하(하드 드롭)</p>
+        </div>
+        <button id="btn-close-howto" class="menu-btn" style="margin-top: 20px">
+          닫기
+        </button>
+      </div>
+    </div>
+
+    <!-- 게임 화면 -->
+    <div id="game-screen" class="game-container hidden">
+      <div class="header">
+        <button id="back-btn">◀ 뒤로가기</button>
+        <h1>TETRIS</h1>
+      </div>
+      <div class="main-content">
+        <div class="left-panel">
+          <div class="score-board">
+            <h2>SCORE</h2>
+            <p id="score">0</p>
+          </div>
+          <div class="controls-info">
+            <p>⌨️ <strong>조작법</strong></p>
+            <p>⬅️ ➡️ : 좌우 이동</p>
+            <p>⬆️ : 회전</p>
+            <p>⬇️ : 아래로 내리기</p>
+            <p>스페이스바 : 수직 낙하</p>
+          </div>
+        </div>
+        <div class="board-wrapper">
+          <div id="my-space-indicator" class="my-space-arrow hidden">
+            ⬇️ 내 공간
+          </div>
+          <canvas id="tetris-board" width="300" height="600"></canvas>
+        </div>
+        <div class="right-panel">
+          <div class="next-piece">
+            <h2>NEXT</h2>
+            <canvas id="next-board" width="120" height="120"></canvas>
+          </div>
+          <button id="start-btn">게임 시작</button>
+        </div>
+        <!-- 멀티플레이 시 상대방 캔버스 -->
+        <div class="opponent-panel hidden" id="opponent-panel">
+          <h2>Opponent</h2>
+          <canvas id="opponent-board" width="150" height="300"></canvas>
+        </div>
+      </div>
+    </div>
+    <script src="tetris.js"></script>
+  </body>
+</html>
