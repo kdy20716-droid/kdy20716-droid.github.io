@@ -103,6 +103,16 @@
             <button id="btn-game-start-multi" class="menu-btn hidden">
               게임 시작
             </button>
+            <button
+              id="btn-game-start-item-multi"
+              class="menu-btn hidden"
+              style="
+                background: linear-gradient(45deg, #f39c12, #e74c3c);
+                border-color: #f39c12;
+              "
+            >
+              아이템전 시작
+            </button>
             <button id="btn-ready-multi" class="menu-btn hidden">준비</button>
             <button id="btn-back-lobby" class="menu-btn back-btn">
               나가기
@@ -204,12 +214,60 @@
             <p>⬇️ : 아래로 내리기</p>
             <p>스페이스바 : 수직 낙하</p>
           </div>
+          <!-- 2P 아이템전 인벤토리 UI -->
+          <div id="multi-item-ui" class="item-inventory hidden">
+            <h3>ITEMS</h3>
+            <div class="slot-row">
+              <div class="item-slot selected" id="slot-1">
+                <span class="key">1</span><span class="icon"></span>
+              </div>
+              <div class="item-slot" id="slot-2">
+                <span class="key">2</span><span class="icon"></span>
+              </div>
+              <div class="item-slot" id="slot-3">
+                <span class="key">3</span><span class="icon"></span>
+              </div>
+            </div>
+            <div class="slot-row">
+              <div class="item-slot" id="slot-4">
+                <span class="key">4</span><span class="icon"></span>
+              </div>
+              <div class="item-slot" id="slot-5">
+                <span class="key">5</span><span class="icon"></span>
+              </div>
+              <div class="item-slot" id="slot-6">
+                <span class="key">6</span><span class="icon"></span>
+              </div>
+            </div>
+            <div class="slot-row">
+              <div class="item-slot" id="slot-7">
+                <span class="key">7</span><span class="icon"></span>
+              </div>
+              <div class="item-slot" id="slot-8">
+                <span class="key">8</span><span class="icon"></span>
+              </div>
+              <div class="item-slot" id="slot-9">
+                <span class="key">9</span><span class="icon"></span>
+              </div>
+            </div>
+            <p
+              style="
+                font-size: 0.8rem;
+                color: #aaa;
+                margin-top: 10px;
+                margin-bottom: 0;
+              "
+            >
+              Z키: 공격
+            </p>
+          </div>
         </div>
         <div class="board-wrapper">
           <div id="my-space-indicator" class="my-space-arrow hidden">
             ⬇️ 내 공간
           </div>
           <canvas id="tetris-board" width="300" height="600"></canvas>
+          <div id="ink-overlay" class="ink-overlay hidden"></div>
         </div>
         <div class="right-panel">
           <div class="next-piece">

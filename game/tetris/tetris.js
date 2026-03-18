@@ -467,16 +467,26 @@ startBtn.addEventListener("click", () => {
 document.addEventListener("keydown", (event) => {
   if (!isPlaying) return;
 
+  let dir = window.isReversed ? -1 : 1; // 방향키 반전 아이템 체크
+
   if (event.key === "ArrowLeft") {
-    pieceMove(-1);
+    pieceMove(-1 * dir);
   } else if (event.key === "ArrowRight") {
-    pieceMove(1);
+    pieceMove(1 * dir);
   } else if (event.key === "ArrowDown") {
     pieceDrop();
   } else if (event.key === "ArrowUp") {
     pieceRotate();
   } else if (event.key === " ") {
     pieceHardDrop();
+  } else if (window.isMultiItemMode) {
+    // 2P 아이템전 조작
+    if (event.key >= "1" && event.key <= "9") {
+      if (typeof selectItemSlot === "function")
+        selectItemSlot(parseInt(event.key) - 1);
+    } else if (event.key.toLowerCase() === "z") {
+      if (typeof useSelectedItem === "function") useSelectedItem();
+    }
   }
 
   // 스페이스바나 화살표 키 기본 동작(스크롤) 방지
@@ -571,6 +581,9 @@ const btnJoinConfirm = document.getElementById("btn-join-confirm");
 const btnJoinCancel = document.getElementById("btn-join-cancel");
 const btnReadyMulti = document.getElementById("btn-ready-multi");
 const btnGameStartMulti = document.getElementById("btn-game-start-multi");
+const btnGameStartItemMulti = document.getElementById(
+  "btn-game-start-item-multi",
+);
 const btnBackLobby = document.getElementById("btn-back-lobby");
 const lobbyPlayerSlots = document.getElementById("lobby-player-slots");
 
@@ -892,6 +905,18 @@ function setupRoomListener(roomId) {
         }
 
         if (data.status === "playing" && !isPlaying) {
+          // 아이템전 모드 체크 및 UI 세팅
+          window.isMultiItemMode = data.mode === "item";
+          if (window.isMultiItemMode) {
+            document.body.classList.add("item-theme");
+            document.getElementById("multi-item-ui").classList.remove("hidden");
+            if (typeof resetMultiplayerInventory === "function")
+              resetMultiplayerInventory();
+          } else {
+            document.body.classList.remove("item-theme");
+            document.getElementById("multi-item-ui").classList.add("hidden");
+          }
+
           lobbyScreen.classList.add("hidden");
           multiMenuScreen.classList.add("hidden");
           startScreen.classList.add("hidden");
@@ -947,10 +972,13 @@ function renderLobbySlots(playersData) {
 
   if (amIHost) {
     btnGameStartMulti.classList.remove("hidden");
+    btnGameStartItemMulti.classList.remove("hidden");
     btnReadyMulti.classList.add("hidden");
     btnGameStartMulti.disabled = false; // 상대방 레디와 상관없이 항상 누를 수 있게 활성화
+    btnGameStartItemMulti.disabled = false;
   } else {
     btnGameStartMulti.classList.add("hidden");
+    btnGameStartItemMulti.classList.add("hidden");
     btnReadyMulti.classList.remove("hidden");
 
     if (myPlayer && myPlayer.isReady) {
@@ -979,7 +1007,30 @@ btnGameStartMulti.addEventListener("click", async () => {
       }
     }
 
-    await window.fs.updateDoc(roomRef, { status: "playing" });
+    await window.fs.updateDoc(roomRef, { status: "playing", mode: "normal" });
+  } catch (e) {
+    console.error(e);
+  }
+});
+
+btnGameStartItemMulti.addEventListener("click", async () => {
+  if (!db || !currentRoomId) return;
+  try {
+    const roomRef = window.fs.doc(db, "tetris_rooms", currentRoomId);
+    const roomSnap = await window.fs.getDoc(roomRef);
+
+    if (roomSnap.exists()) {
+      const players = roomSnap.data().players || [];
+      const otherPlayer = players.find((p) => p.nickname !== myNickname);
+
+      // 상대방이 없거나 레디하지 않은 경우
+      if (!otherPlayer || !otherPlayer.isReady) {
+        await sendChatMessage("준비 버튼을 눌러주세요.", true);
+        return;
+      }
+    }
+
+    await window.fs.updateDoc(roomRef, { status: "playing", mode: "item" });
   } catch (e) {
     console.error(e);
   }
@@ -1100,6 +1151,13 @@ function setupActionsListener(roomId) {
           isPlaying
         ) {
           receiveAttack(action.lines, action.hole);
+        } else if (
+          action.type === "itemAttack" &&
+          action.target === myIndex &&
+          isPlaying
+        ) {
+          if (typeof receiveItemAttack === "function")
+            receiveItemAttack(action.itemType);
         }
       }
     });

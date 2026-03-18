@@ -502,3 +502,68 @@ body.item-theme {
     transform: translate(-50%, -100%) scale(0.8);
   }
 }
+
+/* 2P 아이템전 인벤토리 스타일 */
+.item-inventory {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 15px;
+  border-radius: 8px;
+  text-align: center;
+}
+.item-inventory h3 {
+  margin: 0 0 10px 0;
+  font-size: 1rem;
+  color: #f39c12;
+  letter-spacing: 1px;
+}
+.slot-row {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  margin-bottom: 5px;
+}
+.item-slot {
+  width: 40px;
+  height: 40px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 2px solid #555;
+  border-radius: 5px;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.2rem;
+  transition: all 0.2s;
+}
+.item-slot.selected {
+  border-color: #e94057;
+  box-shadow: 0 0 10px rgba(233, 64, 87, 0.8);
+  transform: scale(1.1);
+  z-index: 2;
+}
+.item-slot .key {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  font-size: 0.6rem;
+  color: #aaa;
+  font-weight: bold;
+}
+
+/* 먹물 효과 오버레이 */
+.ink-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(0, 0, 0, 0.8) 15%,
+    rgba(0, 0, 0, 0.95) 45%,
+    #000 80%
+  );
+  z-index: 50;
+  pointer-events: none;
+  border-radius: 5px;
+}
