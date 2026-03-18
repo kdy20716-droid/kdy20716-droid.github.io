@@ -86,9 +86,10 @@
             class="lobby-buttons"
             style="display: flex; gap: 15px; margin-top: 30px"
           >
-            <button id="btn-game-start-multi" class="menu-btn" disabled>
+            <button id="btn-game-start-multi" class="menu-btn hidden">
               게임 시작
             </button>
+            <button id="btn-ready-multi" class="menu-btn hidden">준비</button>
             <button id="btn-back-lobby" class="menu-btn back-btn">
               나가기
             </button>
@@ -144,6 +145,29 @@
         <button id="btn-close-howto" class="menu-btn" style="margin-top: 20px">
           닫기
         </button>
+      </div>
+    </div>
+
+    <!-- 게임 결과 화면 모달 -->
+    <div id="result-modal" class="modal-layer hidden">
+      <div class="modal-content tetris-style-modal">
+        <h2 id="result-title">GAME OVER</h2>
+        <p id="result-desc" class="result-desc">최종 점수: 0</p>
+        <div
+          style="
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 30px;
+          "
+        >
+          <button id="btn-result-lobby" class="menu-btn hidden">
+            대기실로 돌아가기
+          </button>
+          <button id="btn-result-main" class="menu-btn back-btn">
+            메인 메뉴로
+          </button>
+        </div>
       </div>
     </div>
 

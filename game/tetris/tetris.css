@@ -147,6 +147,10 @@ body {
   border-color: #e94057;
   box-shadow: 0 0 10px rgba(233, 64, 87, 0.5);
 }
+.player-slot.ready {
+  border-color: #4caf50;
+  box-shadow: 0 0 15px rgba(76, 175, 80, 0.7);
+}
 .chat-header {
   padding: 15px;
   background: #111;
@@ -384,4 +388,40 @@ canvas {
   100% {
     transform: translate(-50%, -10px);
   }
+}
+
+/* 테트리스 레트로 스타일 결과 모달 */
+.tetris-style-modal {
+  border: 4px solid #555;
+  box-shadow:
+    inset 6px 6px 0px rgba(255, 255, 255, 0.2),
+    inset -6px -6px 0px rgba(0, 0, 0, 0.6),
+    0 15px 40px rgba(0, 0, 0, 0.8);
+  background: #1a1a2e;
+  padding: 50px 40px;
+  min-width: 400px;
+}
+
+.tetris-style-modal h2 {
+  font-family: "Noto Sans KR", monospace;
+  font-size: 3.5rem;
+  font-weight: 900;
+  letter-spacing: 3px;
+  margin-bottom: 20px;
+}
+
+.text-victory {
+  color: #ffd700 !important;
+  text-shadow: 4px 4px 0px #b8860b !important;
+}
+
+.text-defeat {
+  color: #ff3333 !important;
+  text-shadow: 4px 4px 0px #8b0000 !important;
+}
+
+.result-desc {
+  font-size: 1.5rem;
+  color: #ddd;
+  font-weight: bold;
 }
