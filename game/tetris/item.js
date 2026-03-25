@@ -146,11 +146,9 @@ drawMatrix = function (matrix, offset, targetCtx = ctx) {
       if (value >= 9 && value <= 19) {
         targetCtx.save();
 
-        // 블록 형태 유지를 위한 옅은 반투명 배경 및 테두리 추가
-        targetCtx.fillStyle = "rgba(0, 0, 0, 0.4)";
-        targetCtx.fillRect(x + offset.x, y + offset.y, 1, 1);
+        // 내부는 투명하게 비워두고 테두리만 그리기
         targetCtx.lineWidth = 0.05;
-        targetCtx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+        targetCtx.strokeStyle = "rgba(255, 255, 255, 0.8)";
         targetCtx.strokeRect(x + offset.x, y + offset.y, 1, 1);
 
         targetCtx.font = "0.7px Arial";
@@ -168,9 +166,9 @@ drawMatrix = function (matrix, offset, targetCtx = ctx) {
         if (value === 18) icon = "🦑";
         if (value === 19) icon = "🔄";
 
-        // 이모티콘 가시성을 위해 약간의 그림자 추가
-        targetCtx.shadowColor = "rgba(0, 0, 0, 0.8)";
-        targetCtx.shadowBlur = 3;
+        // 이모티콘 가시성을 위해 약간의 밝은 빛(글로우) 추가
+        targetCtx.shadowColor = "rgba(255, 255, 255, 0.5)";
+        targetCtx.shadowBlur = 5;
 
         targetCtx.fillText(icon, x + offset.x + 0.5, y + offset.y + 0.5);
         targetCtx.restore();

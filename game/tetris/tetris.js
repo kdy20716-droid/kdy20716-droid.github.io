@@ -632,8 +632,7 @@ function drawOpponent() {
 }
 
 function drawNextPiece() {
-  nextCtx.fillStyle = "#333";
-  nextCtx.fillRect(
+  nextCtx.clearRect(
     0,
     0,
     nextCanvas.width / BLOCK_SIZE,
