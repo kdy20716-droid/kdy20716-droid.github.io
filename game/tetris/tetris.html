@@ -11,20 +11,25 @@
     <link rel="stylesheet" href="tetris.css" />
   </head>
   <body>
+    <!-- 사운드 컨트롤 -->
+    <div id="sound-controls" class="sound-controls">
+      <button id="btn-mute" class="btn-icon">🔊</button>
+      <input
+        type="range"
+        id="volume-slider"
+        min="0"
+        max="1"
+        step="0.01"
+        value="0.5"
+      />
+    </div>
+
     <!-- 메인 화면 -->
     <div id="start-screen" class="screen-container">
       <h1 class="main-title">TETRIS</h1>
       <div class="menu-buttons">
         <button id="btn-1p" class="menu-btn">1P 시작</button>
-        <button
-          id="btn-item-mode"
-          class="menu-btn"
-          style="
-            background: linear-gradient(45deg, #f39c12, #e74c3c);
-            border-color: #f39c12;
-            color: #fff;
-          "
-        >
+        <button id="btn-item-mode" class="menu-btn item-mode-btn">
           아이템전
         </button>
         <button id="btn-2p" class="menu-btn">2P 멀티</button>
@@ -280,10 +285,12 @@
           </div>
           <!-- 스킵 UI -->
           <div class="skip-info">
-            <h2>SKIP <span style="font-size: 0.8rem; color: #aaa;">(Tab)</span></h2>
+            <h2>
+              SKIP <span style="font-size: 0.8rem; color: #aaa">(Tab)</span>
+            </h2>
             <div id="skip-status" class="status-ready">READY</div>
             <div class="skip-progress">
-              <div id="skip-bar" style="width: 100%;"></div>
+              <div id="skip-bar" style="width: 100%"></div>
             </div>
           </div>
           <button id="start-btn">게임 시작</button>

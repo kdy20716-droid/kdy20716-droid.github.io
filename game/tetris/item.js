@@ -2,6 +2,8 @@ let isItemMode = false;
 window.isMultiItemMode = false;
 window.isReversed = false;
 
+window.COLORS = window.COLORS || [];
+
 // 아이템 블록 색상 추가
 COLORS[9] = "#ff3333"; // 폭탄 (빨강)
 COLORS[10] = "#ffd700"; // 별 (노랑)
@@ -131,13 +133,26 @@ generateRandomPiece = function () {
 // 기존 그리기 함수 가로채기 (아이템 이모티콘 렌더링)
 const _oldDrawMatrix = drawMatrix;
 drawMatrix = function (matrix, offset, targetCtx = ctx) {
-  _oldDrawMatrix(matrix, offset, targetCtx); // 기본 블록 먼저 렌더링
+  // 아이템 블록(9~19)은 기본 색상이 칠해지지 않게 0으로 임시 변환하여 그리기
+  const bgMatrix = matrix.map((row) =>
+    row.map((val) => (val >= 9 && val <= 19 ? 0 : val)),
+  );
 
-  // 아이템 블록 위에는 텍스트(이모티콘) 추가
+  _oldDrawMatrix(bgMatrix, offset, targetCtx); // 기본 블록 먼저 렌더링
+
+  // 아이템 블록 렌더링 (배경색 없이 이모티콘 표시)
   matrix.forEach((row, y) => {
     row.forEach((value, x) => {
       if (value >= 9 && value <= 19) {
         targetCtx.save();
+
+        // 블록 형태 유지를 위한 옅은 반투명 배경 및 테두리 추가
+        targetCtx.fillStyle = "rgba(0, 0, 0, 0.4)";
+        targetCtx.fillRect(x + offset.x, y + offset.y, 1, 1);
+        targetCtx.lineWidth = 0.05;
+        targetCtx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+        targetCtx.strokeRect(x + offset.x, y + offset.y, 1, 1);
+
         targetCtx.font = "0.7px Arial";
         targetCtx.textAlign = "center";
         targetCtx.textBaseline = "middle";
@@ -152,6 +167,11 @@ drawMatrix = function (matrix, offset, targetCtx = ctx) {
         if (value === 17) icon = "💩";
         if (value === 18) icon = "🦑";
         if (value === 19) icon = "🔄";
+
+        // 이모티콘 가시성을 위해 약간의 그림자 추가
+        targetCtx.shadowColor = "rgba(0, 0, 0, 0.8)";
+        targetCtx.shadowBlur = 3;
+
         targetCtx.fillText(icon, x + offset.x + 0.5, y + offset.y + 0.5);
         targetCtx.restore();
       }
@@ -195,6 +215,10 @@ sweep = function () {
     if (window.isLuckyMode) earned *= 2; // 럭키 모드 점수 2배
     score += earned;
     scoreElement.textContent = score;
+
+    scoreElement.classList.remove("score-pulse");
+    void scoreElement.offsetWidth;
+    scoreElement.classList.add("score-pulse");
 
     const newLevel = Math.floor(score / 1000) + 1;
     if (newLevel > currentLevel) {
@@ -526,7 +550,12 @@ window.explodeBomb = function (cx, cy) {
   let totalEarned = lineScore + itemBonus;
   if (typeof score !== "undefined") {
     score += totalEarned;
-    if (typeof scoreElement !== "undefined") scoreElement.textContent = score;
+    if (typeof scoreElement !== "undefined") {
+      scoreElement.textContent = score;
+      scoreElement.classList.remove("score-pulse");
+      void scoreElement.offsetWidth;
+      scoreElement.classList.add("score-pulse");
+    }
 
     if (typeof currentLevel !== "undefined") {
       const newLevel = Math.floor(score / 1000) + 1;

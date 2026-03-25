@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+KR:wght@400;700;900&display=swap");
+
 * {
   box-sizing: border-box;
 }
@@ -9,7 +11,7 @@ body {
   animation: gradientBG 15s ease infinite;
   color: white;
   transition: filter 1.5s ease-in-out;
-  font-family: "Noto Sans KR", sans-serif;
+  font-family: "Orbitron", "Noto Sans KR", sans-serif;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -32,7 +34,64 @@ body {
   display: none !important;
 }
 
+/* 사운드 컨트롤 */
+.sound-controls {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 8px 15px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+.sound-controls .btn-icon {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.2s;
+}
+.sound-controls .btn-icon:hover {
+  transform: scale(1.1);
+}
+#volume-slider {
+  width: 100px;
+  cursor: pointer;
+  accent-color: #00ffff;
+}
+
 /* 메인 화면 스타일 */
+#start-screen {
+  background:
+    linear-gradient(rgba(10, 10, 26, 0.85), rgba(10, 10, 26, 0.95)),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 30px,
+      rgba(0, 255, 255, 0.1) 30px,
+      rgba(0, 255, 255, 0.1) 32px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 30px,
+      rgba(255, 0, 255, 0.1) 30px,
+      rgba(255, 0, 255, 0.1) 32px
+    );
+  padding: 60px 100px;
+  border-radius: 15px;
+  border: 4px solid #ff00ff;
+  box-shadow:
+    0 0 30px rgba(255, 0, 255, 0.6),
+    inset 0 0 50px rgba(0, 255, 255, 0.4);
+}
+
 .screen-container {
   display: flex;
   flex-direction: column;
@@ -42,45 +101,98 @@ body {
 }
 
 .main-title {
-  font-size: 5rem;
-  color: #e94057;
+  font-family: "Orbitron", sans-serif;
+  font-size: 6rem;
+  color: #fff;
+  text-transform: uppercase;
   font-weight: 900;
-  letter-spacing: 5px;
-  text-shadow: 0 5px 15px rgba(233, 64, 87, 0.5);
+  letter-spacing: 8px;
+  text-shadow:
+    0 0 10px #ff00ff,
+    0 0 20px #ff00ff,
+    0 0 40px #ff00ff,
+    0 0 80px #00ffff,
+    0 0 120px #00ffff;
   margin: 0;
+  animation: neonFlicker 1.5s infinite alternate;
+}
+
+@keyframes neonFlicker {
+  0%,
+  19%,
+  21%,
+  23%,
+  25%,
+  54%,
+  56%,
+  100% {
+    text-shadow:
+      0 0 10px #ff00ff,
+      0 0 20px #ff00ff,
+      0 0 40px #ff00ff,
+      0 0 80px #00ffff,
+      0 0 120px #00ffff;
+    color: #fff;
+  }
+  20%,
+  24%,
+  55% {
+    text-shadow: none;
+    color: #444;
+  }
 }
 
 .menu-buttons {
   display: flex;
   flex-direction: column;
-  gap: 15px;
-  width: 250px;
+  gap: 20px;
+  width: 300px;
 }
 
 .menu-btn {
+  font-family: "Orbitron", sans-serif;
   padding: 15px;
-  font-size: 1.2rem;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: white;
-  border-radius: 8px;
+  font-size: 1.5rem;
+  background: #111;
+  border: 3px solid #00ffff;
+  color: #00ffff;
+  border-radius: 0;
   cursor: pointer;
   font-weight: bold;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(5px);
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+  box-shadow: 4px 4px 0px rgba(0, 255, 255, 0.5);
 }
 
 .menu-btn:hover {
-  background: linear-gradient(45deg, #8a2387, #e94057);
-  border-color: transparent;
-  transform: scale(1.05);
-  box-shadow: 0 5px 15px rgba(233, 64, 87, 0.4);
+  background: #00ffff;
+  color: #000;
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0px rgba(255, 0, 255, 0.8);
+}
+
+.menu-btn:active {
+  transform: translate(4px, 4px);
+  box-shadow: 0px 0px 0px transparent;
+}
+
+.item-mode-btn {
+  border-color: #ffeb3b !important;
+  color: #ffeb3b !important;
+  box-shadow: 4px 4px 0px rgba(255, 235, 59, 0.5) !important;
+}
+
+.item-mode-btn:hover {
+  background: #ffeb3b !important;
+  color: #000 !important;
+  box-shadow: 6px 6px 0px rgba(255, 0, 255, 0.8) !important;
 }
 
 .back-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: transparent;
   box-shadow: none;
-  color: #ccc;
+  color: #aaa;
+  border-color: #aaa;
 }
 
 /* 공통 입력 필드 */
@@ -92,7 +204,7 @@ body {
   background: rgba(0, 0, 0, 0.6);
   color: white;
   outline: none;
-  font-family: "Noto Sans KR", sans-serif;
+  font-family: "Orbitron", "Noto Sans KR", sans-serif;
   transition: all 0.3s ease;
 }
 .input-field:focus {
@@ -215,12 +327,14 @@ body {
 }
 
 .game-container {
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(15, 15, 25, 0.7);
   padding: 30px;
   border-radius: 15px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
+  box-shadow:
+    0 15px 40px rgba(0, 0, 0, 0.8),
+    inset 0 0 20px rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(15px);
 }
 
 .header {
@@ -288,10 +402,14 @@ body {
 .next-piece,
 .controls-info,
 .skip-info {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.08);
   padding: 15px;
   border-radius: 8px;
   text-align: center;
+  box-shadow:
+    inset 0 0 10px rgba(255, 255, 255, 0.05),
+    0 5px 15px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .score-board h2,
@@ -302,10 +420,29 @@ body {
   color: #ccc;
 }
 #score {
-  font-size: 2.2rem;
+  font-family: "Orbitron", sans-serif;
+  font-size: 2.5rem;
   margin: 0;
   font-weight: bold;
   color: #4caf50;
+  text-shadow: 0 0 10px rgba(76, 175, 80, 0.6);
+}
+
+@keyframes scorePulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.3);
+    color: #fff;
+    text-shadow: 0 0 20px #4caf50;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.score-pulse {
+  animation: scorePulse 0.3s ease-out;
 }
 
 .board-wrapper {
@@ -316,8 +453,11 @@ body {
 
 canvas {
   background: rgba(0, 0, 0, 0.8);
-  border: 2px solid #555;
+  border: 2px solid rgba(233, 64, 87, 0.6);
   border-radius: 5px;
+  box-shadow:
+    0 0 15px rgba(233, 64, 87, 0.3),
+    inset 0 0 20px rgba(0, 0, 0, 0.8);
 }
 #start-btn {
   padding: 15px;
@@ -488,7 +628,7 @@ canvas {
 }
 
 .tetris-style-modal h2 {
-  font-family: "Noto Sans KR", monospace;
+  font-family: "Orbitron", "Noto Sans KR", sans-serif;
   font-size: 3.5rem;
   font-weight: 900;
   letter-spacing: 3px;
