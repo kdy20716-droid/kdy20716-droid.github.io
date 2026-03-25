@@ -204,7 +204,6 @@
   <body>
     <div class="container">
       <h1>🎮 GAME PROJECT</h1>
-      <p>수정 작업 중 입니다!</p>
       <div class="game-list">
         <a href="./suika/suika.html" class="game-card suika">
           <span class="icon">🍉</span>
@@ -228,25 +227,42 @@
             <span class="desc">정교한 샷으로 공을 넣으세요!</span>
           </div>
         </a>
-        <a href="./shooting/shooting.html" class="game-card shooting">
-          <span class="icon">🧟</span>
-          <div class="info">
-            <span class="title">3D Shooting Game</span>
-            <span class="desc">다가오는 적들을 처치하고 생존하세요!</span>
-          </div>
-        </a>
-        <a href="./vampire/survival.html" class="game-card vampire">
-          <span class="icon">💼</span>
-          <div class="info">
-            <span class="title">Office Survivor</span>
-            <span class="desc">쏟아지는 업무를 쳐내며 칼퇴하세요!</span>
-          </div>
-        </a>
         <a href="./tetris/tetris.html" class="game-card tetris">
           <span class="icon">🧱</span>
           <div class="info">
             <span class="title">테트리스</span>
             <span class="desc">블록을 맞춰 줄을 없애보세요!</span>
+          </div>
+        </a>
+      </div>
+
+      <h2
+        style="
+          margin-top: 50px;
+          font-size: 1.5rem;
+          color: #ff5252;
+          text-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+        "
+      >
+        🔒 비밀번호를 입력해서 플레이하시오
+      </h2>
+      <div class="game-list">
+        <a href="./shooting/shooting.html" class="game-card shooting protected">
+          <span class="icon">🧟</span>
+          <div class="info">
+            <span class="title">3D Shooting Game</span>
+            <span class="desc"
+              >(클로즈베타)다가오는 적들을 처치하고 생존하세요!</span
+            >
+          </div>
+        </a>
+        <a href="./vampire/survival.html" class="game-card vampire protected">
+          <span class="icon">💼</span>
+          <div class="info">
+            <span class="title">Office Survivor</span>
+            <span class="desc"
+              >(클로즈베타)쏟아지는 업무를 쳐내며 칼퇴하세요!</span
+            >
           </div>
         </a>
       </div>
@@ -294,12 +310,24 @@
         card.addEventListener("mouseenter", () => {
           playHoverSound();
         });
-        card.addEventListener("click", () => {
+        card.addEventListener("click", (e) => {
           e.preventDefault();
           playClickSound();
-          setTimeout(() => {
-            window.location.href = card.getAttribute("href");
-          }, 200);
+
+          if (card.classList.contains("protected")) {
+            const pw = prompt("비밀번호를 입력하세요:");
+            if (pw === "goddoyeon") {
+              setTimeout(() => {
+                window.location.href = card.getAttribute("href");
+              }, 200);
+            } else if (pw !== null) {
+              alert("비밀번호가 틀렸습니다.");
+            }
+          } else {
+            setTimeout(() => {
+              window.location.href = card.getAttribute("href");
+            }, 200);
+          }
         });
       });
     </script>
