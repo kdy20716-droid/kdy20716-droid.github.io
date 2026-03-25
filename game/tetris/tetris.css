@@ -255,6 +255,21 @@ body {
   background: rgba(255, 255, 255, 0.2);
 }
 
+#pause-btn {
+  position: absolute;
+  right: 0;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+#pause-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
 .main-content {
   display: flex;
   gap: 20px;
@@ -335,8 +350,13 @@ canvas {
   font-weight: bold;
   margin-bottom: 10px;
 }
-.status-ready { color: #4caf50; text-shadow: 0 0 5px rgba(76, 175, 80, 0.5); }
-.status-cooldown { color: #ff3333; }
+.status-ready {
+  color: #4caf50;
+  text-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+}
+.status-cooldown {
+  color: #ff3333;
+}
 
 .skip-progress {
   width: 100%;
@@ -349,7 +369,9 @@ canvas {
 #skip-bar {
   height: 100%;
   background: #4caf50;
-  transition: width 0.3s ease, background-color 0.3s ease;
+  transition:
+    width 0.3s ease,
+    background-color 0.3s ease;
 }
 
 /* 상대방 패널 스타일 */
@@ -576,22 +598,69 @@ body.item-theme {
   font-weight: bold;
 }
 
-/* 먹물 효과 오버레이 */
-.ink-overlay {
+/* 마리오 카트 스타일 먹물 효과 */
+.ink-splatter-container {
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
-  background: radial-gradient(
-    circle at 50% 50%,
-    rgba(0, 0, 0, 0.8) 15%,
-    rgba(0, 0, 0, 0.95) 45%,
-    #000 80%
-  );
-  z-index: 50;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
-  border-radius: 5px;
+  z-index: 90; /* 팝업 텍스트(100)보다 아래에 배치 */
+  overflow: hidden;
+}
+
+.ink-splatter {
+  position: absolute;
+  background-color: #000;
+  border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+  filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.8));
+  opacity: 0.95;
+  animation:
+    splatterAppear 0.2s ease-out forwards,
+    splatterFade 0.5s 4.5s forwards;
+}
+
+.ink-splatter::before {
+  content: "";
+  position: absolute;
+  background-color: #000;
+  border-radius: 50%;
+  width: 60%;
+  height: 60%;
+  top: -20%;
+  left: -10%;
+}
+
+.ink-splatter::after {
+  content: "";
+  position: absolute;
+  background-color: #000;
+  border-radius: 50%;
+  width: 40%;
+  height: 40%;
+  bottom: -15%;
+  right: -5%;
+}
+
+@keyframes splatterAppear {
+  0% {
+    transform: scale(0) rotate(var(--rot, 0deg));
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1) rotate(var(--rot, 0deg));
+    opacity: 0.95;
+  }
+}
+
+@keyframes splatterFade {
+  0% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+  }
 }
 
 /* 레벨업 팝업 텍스트 */
@@ -603,17 +672,31 @@ body.item-theme {
   color: #00ffff;
   font-size: 2.5rem;
   font-weight: 900;
-  text-shadow: 0 0 20px rgba(0, 255, 255, 0.8), 0 4px 10px rgba(0, 0, 0, 0.8);
+  text-shadow:
+    0 0 20px rgba(0, 255, 255, 0.8),
+    0 4px 10px rgba(0, 0, 0, 0.8);
   animation: levelUpFloat 2s ease-out forwards;
   pointer-events: none;
   z-index: 100;
   white-space: nowrap;
 }
 @keyframes levelUpFloat {
-  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
-  20% { opacity: 1; transform: translate(-50%, -60%) scale(1.2); }
-  80% { opacity: 1; transform: translate(-50%, -80%) scale(1); }
-  100% { opacity: 0; transform: translate(-50%, -100%) scale(0.8); }
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -60%) scale(1.2);
+  }
+  80% {
+    opacity: 1;
+    transform: translate(-50%, -80%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -100%) scale(0.8);
+  }
 }
 
 /* 싱글 아이템전 럭키 모드 테마 */
@@ -639,12 +722,16 @@ body.lucky-theme #next-board {
 
 @keyframes rainbowNextBlock {
   0% {
-    box-shadow: 0 0 20px #ff0000, inset 0 0 15px #ff0000;
+    box-shadow:
+      0 0 20px #ff0000,
+      inset 0 0 15px #ff0000;
     filter: hue-rotate(0deg) contrast(150%) saturate(200%);
     border-color: #ff0000;
   }
   100% {
-    box-shadow: 0 0 20px #ff0000, inset 0 0 15px #ff0000;
+    box-shadow:
+      0 0 20px #ff0000,
+      inset 0 0 15px #ff0000;
     filter: hue-rotate(360deg) contrast(150%) saturate(200%);
     border-color: #ff0000;
   }
@@ -659,15 +746,30 @@ body.lucky-theme #next-board {
   color: #ffd700;
   font-size: 6rem;
   font-weight: 900;
-  text-shadow: 0 0 30px rgba(255, 215, 0, 0.8), 0 5px 15px rgba(0, 0, 0, 0.9);
+  text-shadow:
+    0 0 30px rgba(255, 215, 0, 0.8),
+    0 5px 15px rgba(0, 0, 0, 0.9);
   animation: countdownPulse 1s ease-in-out forwards;
   pointer-events: none;
   z-index: 200;
   white-space: nowrap;
 }
 @keyframes countdownPulse {
-  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.2); }
-  20% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
-  50% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); filter: blur(5px); }
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.2);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.2);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.5);
+    filter: blur(5px);
+  }
 }

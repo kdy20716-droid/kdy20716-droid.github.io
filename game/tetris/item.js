@@ -35,8 +35,8 @@ window.resetMultiplayerInventory = function () {
   multiItemNextThreshold = Math.floor(Math.random() * 11) + 10; // 시작 시 첫 아이템 상자 기준: 10~20 블록
   window.isReversed = false;
   updateInventoryUI();
-  const ink = document.getElementById("ink-overlay");
-  if (ink) ink.classList.add("hidden");
+  const ink = document.getElementById("ink-splatter-container");
+  if (ink) ink.remove();
 };
 
 function addMultiplayerItem() {
@@ -109,13 +109,7 @@ window.receiveItemAttack = function (itemType) {
     }, 8000);
   } else if (itemType === 3) {
     showItemPopup("⚠️ 먹물 공격!");
-    const ink = document.getElementById("ink-overlay");
-    if (ink) {
-      ink.classList.remove("hidden");
-      setTimeout(() => {
-        ink.classList.add("hidden");
-      }, 8000);
-    }
+    window.triggerInkSplatter();
   } else if (itemType === 4) {
     showItemPopup("⚠️ 무작위 블록 투하!");
     dropRandomBlocks();
@@ -153,7 +147,7 @@ generateRandomPiece = function () {
       return {
         matrix: [[itemType]],
         pos: { x: Math.floor(COLS / 2), y: 0 },
-        type: itemType
+        type: itemType,
       };
     } else if (rand < 0.201) {
       // 약 20% 확률: 폭탄 또는 슬로우
@@ -162,7 +156,7 @@ generateRandomPiece = function () {
       return {
         matrix: [[itemType]],
         pos: { x: Math.floor(COLS / 2), y: 0 },
-        type: itemType
+        type: itemType,
       };
     } else if (rand < 0.401) {
       // 20% 확률: 일반 블록에 해로운 아이템 포함
@@ -176,7 +170,8 @@ generateRandomPiece = function () {
         const target = blocks[Math.floor(Math.random() * blocks.length)];
         const hRand = Math.random();
         let hItem = 17; // 똥
-        if (hRand > 0.33 && hRand <= 0.66) hItem = 18; // 먹물
+        if (hRand > 0.33 && hRand <= 0.66)
+          hItem = 18; // 먹물
         else if (hRand > 0.66) hItem = 19; // 반전
         piece.matrix[target.y][target.x] = hItem;
       }
@@ -193,7 +188,7 @@ drawMatrix = function (matrix, offset, targetCtx = ctx) {
   // 아이템 블록 위에는 텍스트(이모티콘) 추가
   matrix.forEach((row, y) => {
     row.forEach((value, x) => {
-      if ((value >= 9 && value <= 19)) {
+      if (value >= 9 && value <= 19) {
         targetCtx.save();
         targetCtx.font = "0.7px Arial";
         targetCtx.textAlign = "center";
@@ -351,22 +346,24 @@ let luckyTimer = null;
 let luckyScoreInterval = null;
 
 function applySingleItemEffect(itemType) {
-  if (itemType === 15) { // 슬로우 블록
+  if (itemType === 15) {
+    // 슬로우 블록
     showItemPopup("🐢 슬로우! (10초)");
     window.isSlowMode = true;
     let baseSpeed = Math.max(300, 1000 - (currentLevel - 1) * 150);
     dropInterval = baseSpeed + 500;
-    
+
     if (slowTimer) clearTimeout(slowTimer);
     slowTimer = setTimeout(() => {
       window.isSlowMode = false;
       dropInterval = Math.max(300, 1000 - (currentLevel - 1) * 150);
     }, 10000);
-  } else if (itemType === 16) { // 행운 블록
+  } else if (itemType === 16) {
+    // 행운 블록
     showItemPopup("🌈 럭키 타임! 닿으면 파괴 (10초)");
     window.isLuckyMode = true;
     document.body.classList.add("lucky-theme");
-    
+
     if (luckyTimer) clearTimeout(luckyTimer);
     if (luckyScoreInterval) clearInterval(luckyScoreInterval);
 
@@ -389,14 +386,15 @@ function applySingleItemEffect(itemType) {
       let wasPlaying = isPlaying;
       if (wasPlaying) isPlaying = false;
       showCountdownPopup("2");
-      
+
       setTimeout(() => showCountdownPopup("1"), 1000);
       setTimeout(() => {
         showCountdownPopup("GO!");
         if (wasPlaying && !isGameOver) isPlaying = true;
       }, 2000);
     }, 10000);
-  } else if (itemType === 17) { // 똥 블록 3개
+  } else if (itemType === 17) {
+    // 똥 블록 3개
     showItemPopup("💩 똥 블록 투하!");
     for (let i = 0; i < 3; i++) {
       let x = Math.floor(Math.random() * COLS);
@@ -407,19 +405,50 @@ function applySingleItemEffect(itemType) {
     gameScreen.classList.remove("damage-flash");
     void gameScreen.offsetWidth;
     gameScreen.classList.add("damage-flash");
-  } else if (itemType === 18) { // 먹물 가림
+  } else if (itemType === 18) {
+    // 먹물 가림
     showItemPopup("🦑 먹물 공격!");
-    const ink = document.getElementById("ink-overlay");
-    if (ink) {
-      ink.classList.remove("hidden");
-      setTimeout(() => ink.classList.add("hidden"), 5000); // 5초 뒤 해제
-    }
-  } else if (itemType === 19) { // 조작 반전
+    window.triggerInkSplatter();
+  } else if (itemType === 19) {
+    // 조작 반전
     showItemPopup("🔄 조작 반전! (10초)");
     window.isReversed = true;
-    setTimeout(() => { window.isReversed = false; }, 10000);
+    setTimeout(() => {
+      window.isReversed = false;
+    }, 10000);
   }
 }
+
+// 마리오 카트 스타일 먹물 흩뿌리기
+window.triggerInkSplatter = function () {
+  const boardWrapper = document.querySelector(".board-wrapper");
+  if (!boardWrapper) return;
+
+  let oldContainer = document.getElementById("ink-splatter-container");
+  if (oldContainer) oldContainer.remove();
+
+  const container = document.createElement("div");
+  container.id = "ink-splatter-container";
+  container.className = "ink-splatter-container";
+  boardWrapper.appendChild(container);
+
+  const numSplatters = Math.floor(Math.random() * 4) + 5; // 5~8개 무작위 배치
+  for (let i = 0; i < numSplatters; i++) {
+    const splatter = document.createElement("div");
+    splatter.className = "ink-splatter";
+    const size = Math.random() * 50 + 50; // 50px ~ 100px 크기 랜덤
+    splatter.style.width = `${size}px`;
+    splatter.style.height = `${size}px`;
+    splatter.style.top = `${Math.random() * 80}%`;
+    splatter.style.left = `${Math.random() * 80}%`;
+    splatter.style.setProperty("--rot", `${Math.random() * 360}deg`);
+    container.appendChild(splatter);
+  }
+
+  setTimeout(() => {
+    if (container.parentNode) container.remove();
+  }, 5000); // 5초 후 요소 삭제
+};
 
 // --- 멀티플레이 아이템 효과 로직 ---
 function placeTimeBomb() {
@@ -487,8 +516,15 @@ function showCountdownPopup(text) {
 function createDOMFirework() {
   const wrapper = document.querySelector(".board-wrapper");
   if (!wrapper) return;
-  const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
-  
+  const colors = [
+    "#ff0000",
+    "#00ff00",
+    "#0000ff",
+    "#ffff00",
+    "#ff00ff",
+    "#00ffff",
+  ];
+
   for (let i = 0; i < 40; i++) {
     const p = document.createElement("div");
     p.style.position = "absolute";
@@ -507,43 +543,41 @@ function createDOMFirework() {
     const tx = Math.cos(angle) * velocity;
     const ty = Math.sin(angle) * velocity;
 
-    p.animate([
-      { transform: `translate(-50%, -50%) scale(1)`, opacity: 1 },
-      { transform: `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px)) scale(0)`, opacity: 0 }
-    ], {
-      duration: 800 + Math.random() * 400,
-      easing: 'ease-out',
-      fill: 'forwards'
-    });
+    p.animate(
+      [
+        { transform: `translate(-50%, -50%) scale(1)`, opacity: 1 },
+        {
+          transform: `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px)) scale(0)`,
+          opacity: 0,
+        },
+      ],
+      {
+        duration: 800 + Math.random() * 400,
+        easing: "ease-out",
+        fill: "forwards",
+      },
+    );
 
     setTimeout(() => p.remove(), 1200);
   }
 }
 
 // --- 신규 싱글 아이템전 충돌/발동 로직 ---
-window.explodeBomb = function(cx, cy) {
-  showItemPopup("💣 랜덤 1줄 파괴!");
-  // 비어있지 않은 줄 중 하나를 무작위로 파괴
-  let notEmptyRows = [];
-  for (let y = 0; y < ROWS; y++) {
-    if (board[y].some(val => val !== 0)) {
-      notEmptyRows.push(y);
-    }
-  }
-  if (notEmptyRows.length > 0) {
-    let targetY = notEmptyRows[Math.floor(Math.random() * notEmptyRows.length)];
-    board.splice(targetY, 1);
-    board.unshift(new Array(COLS).fill(0));
-  } else {
-    board.pop();
+window.explodeBomb = function (cx, cy) {
+  showItemPopup("💣 해당 줄 파괴!");
+
+  // 1. 폭탄이 위치한 줄(자신이 속한 줄) 파괴
+  if (cy >= 0 && cy < ROWS) {
+    board.splice(cy, 1);
     board.unshift(new Array(COLS).fill(0));
   }
+
   gameScreen.classList.remove("damage-flash");
-  void gameScreen.offsetWidth; 
+  void gameScreen.offsetWidth;
   gameScreen.classList.add("damage-flash");
 };
 
-window.spawnNextAfterSpecial = function() {
+window.spawnNextAfterSpecial = function () {
   piece = nextPiece;
   nextPiece = generateRandomPiece();
   drawNextPiece();
@@ -557,7 +591,7 @@ window.spawnNextAfterSpecial = function() {
   dropCounter = 0;
 };
 
-window.handleItemPieceLanded = function() {
+window.handleItemPieceLanded = function () {
   if (isItemMode && !window.isMultiItemMode) {
     // 1. 폭탄(14) 바닥 도달 시 폭발
     if (piece.matrix.length === 1 && piece.matrix[0][0] === 14) {
@@ -565,7 +599,7 @@ window.handleItemPieceLanded = function() {
       window.spawnNextAfterSpecial();
       return true; // 머지 생략
     }
-    
+
     // 2. 럭키 모드 시, 닿자마자 블록 파괴 및 점수 획득
     if (window.isLuckyMode) {
       let destroyed = 0;
@@ -599,8 +633,14 @@ window.handleItemPieceLanded = function() {
   return false;
 };
 
-window.handleShiftPress = function() {
-  if (isItemMode && !window.isMultiItemMode && piece && piece.matrix.length === 1 && piece.matrix[0][0] === 14) {
+window.handleShiftPress = function () {
+  if (
+    isItemMode &&
+    !window.isMultiItemMode &&
+    piece &&
+    piece.matrix.length === 1 &&
+    piece.matrix[0][0] === 14
+  ) {
     window.explodeBomb(piece.pos.x, piece.pos.y);
     window.spawnNextAfterSpecial();
   }
@@ -639,13 +679,13 @@ if (btnItemMode && colorWipeLine) {
 const resetTheme = () => {
   document.body.classList.remove("item-theme");
   document.body.classList.remove("lucky-theme");
-  document.body.style.filter = 'hue-rotate(0deg)';
+  document.body.style.filter = "hue-rotate(0deg)";
   isItemMode = false;
   window.isSlowMode = false;
   window.isLuckyMode = false;
   window.isReversed = false;
-  const ink = document.getElementById("ink-overlay");
-  if (ink) ink.classList.add("hidden");
+  const ink = document.getElementById("ink-splatter-container");
+  if (ink) ink.remove();
   if (slowTimer) clearTimeout(slowTimer);
   if (luckyTimer) clearTimeout(luckyTimer);
   if (luckyScoreInterval) clearInterval(luckyScoreInterval);
