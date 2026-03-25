@@ -21,6 +21,15 @@ btnPause.id = "pause-btn";
 btnPause.textContent = "⏸ Pause";
 document.querySelector(".header")?.appendChild(btnPause);
 
+// 활성화된 아이템 타이머를 담을 UI 생성 (조작법 아래에 배치)
+const controlsInfo = document.querySelector(".controls-info");
+if (controlsInfo) {
+  const activeItemsUI = document.createElement("div");
+  activeItemsUI.id = "active-items-ui";
+  activeItemsUI.style.display = "none";
+  controlsInfo.parentNode.insertBefore(activeItemsUI, controlsInfo.nextSibling);
+}
+
 // 결과 모달 관련 변수
 const resultModal = document.getElementById("result-modal");
 const resultTitle = document.getElementById("result-title");
@@ -418,6 +427,12 @@ function update(time = 0) {
 
   const deltaTime = time - lastTime;
   lastTime = time;
+
+  // 아이템 타이머 갱신 (진행된 시간만큼 차감)
+  if (typeof window.updateItemTimers === "function") {
+    window.updateItemTimers(deltaTime);
+  }
+
   dropCounter += deltaTime;
 
   if (dropCounter > dropInterval) {

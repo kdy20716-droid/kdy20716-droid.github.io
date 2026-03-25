@@ -104,9 +104,7 @@ window.receiveItemAttack = function (itemType) {
   } else if (itemType === 2) {
     showItemPopup("⚠️ 방향키 반전!");
     window.isReversed = true;
-    setTimeout(() => {
-      window.isReversed = false;
-    }, 8000);
+    window.itemRemaining.reverse = 8000;
   } else if (itemType === 3) {
     showItemPopup("⚠️ 먹물 공격!");
     window.triggerInkSplatter();
@@ -141,6 +139,12 @@ generateRandomPiece = function () {
     }
   } else if (isItemMode && !window.isMultiItemMode) {
     const rand = Math.random();
+
+    // 확률 조정: 레벨이 오를수록 이로운 아이템 감소, 해로운 아이템 증가
+    let currentLvl = typeof currentLevel !== "undefined" ? currentLevel : 1;
+    let beneficialChance = Math.max(0.05, 0.2 - (currentLvl - 1) * 0.015); // 최소 5%
+    let harmfulChance = Math.min(0.5, 0.2 + (currentLvl - 1) * 0.02); // 최대 50%
+
     if (rand < 0.001) {
       // 0.1% 확률: 행운 블록
       let itemType = 16;
@@ -149,8 +153,8 @@ generateRandomPiece = function () {
         pos: { x: Math.floor(COLS / 2), y: 0 },
         type: itemType,
       };
-    } else if (rand < 0.201) {
-      // 약 20% 확률: 폭탄 또는 슬로우
+    } else if (rand < 0.001 + beneficialChance) {
+      // 이로운 아이템: 폭탄 또는 슬로우
       let itemType = 14; // 폭탄
       if (Math.random() > 0.5) itemType = 15; // 슬로우
       return {
@@ -158,8 +162,8 @@ generateRandomPiece = function () {
         pos: { x: Math.floor(COLS / 2), y: 0 },
         type: itemType,
       };
-    } else if (rand < 0.401) {
-      // 20% 확률: 일반 블록에 해로운 아이템 포함
+    } else if (rand < 0.001 + beneficialChance + harmfulChance) {
+      // 해로운 아이템: 똥, 먹물, 방향 반전
       let blocks = [];
       for (let y = 0; y < piece.matrix.length; y++) {
         for (let x = 0; x < piece.matrix[y].length; x++) {
@@ -341,58 +345,90 @@ sweep = function () {
 
 window.isSlowMode = false;
 window.isLuckyMode = false;
-let slowTimer = null;
-let luckyTimer = null;
-let luckyScoreInterval = null;
+window.itemRemaining = { slow: 0, lucky: 0, reverse: 0 };
+window.luckyTickCounter = 0;
+
+// 매 프레임 호출되어 아이템의 남은 시간을 깎고 UI를 업데이트하는 함수
+window.updateItemTimers = function (deltaTime) {
+  if (!isPlaying || isGameOver || isPaused) return;
+
+  let uiHtml = "";
+
+  if (window.itemRemaining.slow > 0) {
+    window.itemRemaining.slow -= deltaTime;
+    if (window.itemRemaining.slow <= 0) {
+      window.itemRemaining.slow = 0;
+      window.isSlowMode = false;
+      dropInterval = Math.max(300, 1000 - (currentLevel - 1) * 150);
+    } else {
+      uiHtml += `<div class="item-timer slow-timer">🐢 슬로우: ${(window.itemRemaining.slow / 1000).toFixed(1)}s</div>`;
+    }
+  }
+
+  if (window.itemRemaining.lucky > 0) {
+    window.itemRemaining.lucky -= deltaTime;
+    window.luckyTickCounter += deltaTime;
+
+    // 1초마다 점수 및 폭죽 부여
+    if (window.luckyTickCounter >= 1000) {
+      window.luckyTickCounter -= 1000;
+      score += 1000;
+      scoreElement.textContent = score;
+      showItemPopup("🎆 +1000 🎆");
+      createDOMFirework();
+    }
+
+    if (window.itemRemaining.lucky <= 0) {
+      window.itemRemaining.lucky = 0;
+      window.isLuckyMode = false;
+      document.body.classList.remove("lucky-theme");
+
+      // 행운 모드 종료 시 2초 정지 후 재개
+      let wasPlaying = isPlaying;
+      if (wasPlaying) isPlaying = false;
+      showCountdownPopup("2");
+      setTimeout(() => showCountdownPopup("1"), 1000);
+      setTimeout(() => {
+        showCountdownPopup("GO!");
+        if (wasPlaying && !isGameOver) isPlaying = true;
+      }, 2000);
+    } else {
+      uiHtml += `<div class="item-timer lucky-timer">🍀 럭키 타임: ${(window.itemRemaining.lucky / 1000).toFixed(1)}s</div>`;
+    }
+  }
+
+  if (window.itemRemaining.reverse > 0) {
+    window.itemRemaining.reverse -= deltaTime;
+    if (window.itemRemaining.reverse <= 0) {
+      window.itemRemaining.reverse = 0;
+      window.isReversed = false;
+    } else {
+      uiHtml += `<div class="item-timer reverse-timer">🔄 조작 반전: ${(window.itemRemaining.reverse / 1000).toFixed(1)}s</div>`;
+    }
+  }
+
+  const container = document.getElementById("active-items-ui");
+  if (container) {
+    container.innerHTML = uiHtml;
+    container.style.display = uiHtml ? "block" : "none";
+  }
+};
 
 function applySingleItemEffect(itemType) {
   if (itemType === 15) {
     // 슬로우 블록
     showItemPopup("🐢 슬로우! (10초)");
     window.isSlowMode = true;
+    window.itemRemaining.slow = 10000;
     let baseSpeed = Math.max(300, 1000 - (currentLevel - 1) * 150);
     dropInterval = baseSpeed + 500;
-
-    if (slowTimer) clearTimeout(slowTimer);
-    slowTimer = setTimeout(() => {
-      window.isSlowMode = false;
-      dropInterval = Math.max(300, 1000 - (currentLevel - 1) * 150);
-    }, 10000);
   } else if (itemType === 16) {
     // 행운 블록
     showItemPopup("🌈 럭키 타임! 닿으면 파괴 (10초)");
     window.isLuckyMode = true;
+    window.itemRemaining.lucky = 10000;
+    window.luckyTickCounter = 0;
     document.body.classList.add("lucky-theme");
-
-    if (luckyTimer) clearTimeout(luckyTimer);
-    if (luckyScoreInterval) clearInterval(luckyScoreInterval);
-
-    // 1초마다 폭죽 이펙트와 함께 1000점씩 획득
-    luckyScoreInterval = setInterval(() => {
-      if (isPlaying && !isGameOver) {
-        score += 1000;
-        scoreElement.textContent = score;
-        showItemPopup("🎆 +1000 🎆");
-        createDOMFirework();
-      }
-    }, 1000);
-
-    luckyTimer = setTimeout(() => {
-      window.isLuckyMode = false;
-      document.body.classList.remove("lucky-theme");
-      if (luckyScoreInterval) clearInterval(luckyScoreInterval);
-
-      // 행운 모드 종료 시 2초 정지 후 재개
-      let wasPlaying = isPlaying;
-      if (wasPlaying) isPlaying = false;
-      showCountdownPopup("2");
-
-      setTimeout(() => showCountdownPopup("1"), 1000);
-      setTimeout(() => {
-        showCountdownPopup("GO!");
-        if (wasPlaying && !isGameOver) isPlaying = true;
-      }, 2000);
-    }, 10000);
   } else if (itemType === 17) {
     // 똥 블록 3개
     showItemPopup("💩 똥 블록 투하!");
@@ -413,9 +449,7 @@ function applySingleItemEffect(itemType) {
     // 조작 반전
     showItemPopup("🔄 조작 반전! (10초)");
     window.isReversed = true;
-    setTimeout(() => {
-      window.isReversed = false;
-    }, 10000);
+    window.itemRemaining.reverse = 10000;
   }
 }
 
@@ -684,11 +718,16 @@ const resetTheme = () => {
   window.isSlowMode = false;
   window.isLuckyMode = false;
   window.isReversed = false;
+  window.itemRemaining = { slow: 0, lucky: 0, reverse: 0 };
+
+  const container = document.getElementById("active-items-ui");
+  if (container) {
+    container.innerHTML = "";
+    container.style.display = "none";
+  }
+
   const ink = document.getElementById("ink-splatter-container");
   if (ink) ink.remove();
-  if (slowTimer) clearTimeout(slowTimer);
-  if (luckyTimer) clearTimeout(luckyTimer);
-  if (luckyScoreInterval) clearInterval(luckyScoreInterval);
 };
 
 document.getElementById("back-btn")?.addEventListener("click", resetTheme);
