@@ -810,3 +810,85 @@ body.lucky-theme #next-board {
     filter: blur(5px);
   }
 }
+
+/* 보너스 점수 플로팅 효과 */
+.floating-score {
+  position: absolute;
+  color: #ffeb3b;
+  font-size: 2rem;
+  font-weight: 900;
+  text-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.8),
+    0 0 15px rgba(255, 235, 59, 0.8);
+  animation: scoreFloatUp 1.2s ease-out forwards;
+  pointer-events: none;
+  z-index: 150;
+  white-space: nowrap;
+}
+@keyframes scoreFloatUp {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -100%) scale(1.2);
+  }
+  80% {
+    opacity: 1;
+    transform: translate(-50%, -250%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -300%) scale(0.8);
+  }
+}
+
+/* 폭탄 흔들림 효과 */
+@keyframes cameraShake {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate(-5px, 5px) rotate(-1deg);
+  }
+  50% {
+    transform: translate(5px, -5px) rotate(1deg);
+  }
+  75% {
+    transform: translate(-5px, -5px) rotate(-1deg);
+  }
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+}
+.shake-effect {
+  animation: cameraShake 0.4s ease-in-out;
+}
+
+/* 똥 비 내리기 이펙트 */
+.poop-rain-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 9999;
+  overflow: hidden;
+}
+.falling-poop {
+  position: absolute;
+  top: -10%;
+  animation: poopFall linear forwards;
+}
+@keyframes poopFall {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh) rotate(360deg);
+    opacity: 0;
+  }
+}

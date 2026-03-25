@@ -15,69 +15,23 @@ COLORS[17] = "#8b4513"; // 신규 싱글: 똥 블록 (해로움)
 COLORS[18] = "#000000"; // 신규 싱글: 먹물 (해로움)
 COLORS[19] = "#800080"; // 신규 싱글: 방향 반전 (해로움)
 
-// --- 2P 멀티 아이템전 시스템 ---
-const ITEM_TYPES = {
-  1: { name: "TimeBomb", icon: "💣" },
-  2: { name: "Reverse", icon: "🔄" },
-  3: { name: "Ink", icon: "🦑" },
-  4: { name: "RandomBlocks", icon: "🧱" },
-};
-
-let multiplayerInventory = new Array(9).fill(null);
-let selectedSlotIndex = 0;
-let multiItemSpawnCounter = 0;
-let multiItemNextThreshold = 10;
-
+// --- 멀티플레이 아이템전 시스템 (싱글 아이템 기반 연동) ---
 window.resetMultiplayerInventory = function () {
-  multiplayerInventory.fill(null);
-  selectedSlotIndex = 0;
-  multiItemSpawnCounter = 0;
-  multiItemNextThreshold = Math.floor(Math.random() * 11) + 10; // 시작 시 첫 아이템 상자 기준: 10~20 블록
   window.isReversed = false;
-  updateInventoryUI();
+  window.isSlowMode = false;
+  window.isLuckyMode = false;
+  window.itemRemaining = { slow: 0, lucky: 0, reverse: 0 };
   const ink = document.getElementById("ink-splatter-container");
   if (ink) ink.remove();
-};
 
-function addMultiplayerItem() {
-  const emptySlot = multiplayerInventory.findIndex((item) => item === null);
-  if (emptySlot !== -1) {
-    const randomItemType = Math.floor(Math.random() * 4) + 1; // 1~4번 아이템
-    multiplayerInventory[emptySlot] = randomItemType;
-    updateInventoryUI();
+  const container = document.getElementById("active-items-ui");
+  if (container) {
+    container.innerHTML = "";
+    container.style.display = "none";
   }
-}
 
-function updateInventoryUI() {
-  for (let i = 0; i < 9; i++) {
-    const slot = document.getElementById(`slot-${i + 1}`);
-    if (slot) {
-      const iconSpan = slot.querySelector(".icon");
-      if (multiplayerInventory[i]) {
-        iconSpan.textContent = ITEM_TYPES[multiplayerInventory[i]].icon;
-      } else {
-        iconSpan.textContent = "";
-      }
-      if (i === selectedSlotIndex) slot.classList.add("selected");
-      else slot.classList.remove("selected");
-    }
-  }
-}
-
-window.selectItemSlot = function (index) {
-  if (index >= 0 && index < 9) {
-    selectedSlotIndex = index;
-    updateInventoryUI();
-  }
-};
-
-window.useSelectedItem = function () {
-  const item = multiplayerInventory[selectedSlotIndex];
-  if (item) {
-    multiplayerInventory[selectedSlotIndex] = null;
-    updateInventoryUI();
-    sendItemAttack(item);
-  }
+  const multiUI = document.getElementById("multi-item-ui");
+  if (multiUI) multiUI.classList.add("hidden");
 };
 
 window.sendItemAttack = async function (itemType) {
@@ -94,23 +48,31 @@ window.sendItemAttack = async function (itemType) {
     itemType: itemType,
     timestamp: window.fs.serverTimestamp(),
   });
-  showItemPopup(`공격 아이템 사용!`);
 };
 
 window.receiveItemAttack = function (itemType) {
-  if (itemType === 1) {
-    showItemPopup("⚠️ 15초 폭탄 블록 경고!");
-    placeTimeBomb();
-  } else if (itemType === 2) {
-    showItemPopup("⚠️ 방향키 반전!");
-    window.isReversed = true;
-    window.itemRemaining.reverse = 8000;
-  } else if (itemType === 3) {
-    showItemPopup("⚠️ 먹물 공격!");
+  // 어떤 아이템이든 공격을 받으면 화면 붉은 깜빡임 피격 이펙트 발생
+  gameScreen.classList.remove("damage-flash");
+  void gameScreen.offsetWidth;
+  gameScreen.classList.add("damage-flash");
+
+  window.triggerPoopRain(); // 똥 비 내리기 이펙트
+
+  if (itemType === 17) {
+    showItemPopup("💩 상대의 똥 블록 공격!");
+    for (let i = 0; i < 3; i++) {
+      let x = Math.floor(Math.random() * COLS);
+      let y = 0;
+      while (y < ROWS - 1 && board[y + 1][x] === 0) y++;
+      board[y][x] = 8;
+    }
+  } else if (itemType === 18) {
+    showItemPopup("🦑 상대의 먹물 공격!");
     window.triggerInkSplatter();
-  } else if (itemType === 4) {
-    showItemPopup("⚠️ 무작위 블록 투하!");
-    dropRandomBlocks();
+  } else if (itemType === 19) {
+    showItemPopup("🔄 상대의 조작 반전 공격! (5초)");
+    window.isReversed = true;
+    window.itemRemaining.reverse = 5000;
   }
 };
 
@@ -119,25 +81,7 @@ const _oldGenerateRandomPiece = generateRandomPiece;
 generateRandomPiece = function () {
   const piece = _oldGenerateRandomPiece();
 
-  if (window.isMultiItemMode) {
-    multiItemSpawnCounter++;
-    // 10~20개 블록마다 아이템 상자 하나를 무작위로 심어줌
-    if (multiItemSpawnCounter >= multiItemNextThreshold) {
-      multiItemSpawnCounter = 0;
-      multiItemNextThreshold = Math.floor(Math.random() * 11) + 10; // 다음 기준도 10~20 재설정
-
-      let blocks = [];
-      for (let y = 0; y < piece.matrix.length; y++) {
-        for (let x = 0; x < piece.matrix[y].length; x++) {
-          if (piece.matrix[y][x] !== 0) blocks.push({ x, y });
-        }
-      }
-      if (blocks.length > 0) {
-        const target = blocks[Math.floor(Math.random() * blocks.length)];
-        piece.matrix[target.y][target.x] = 13; // 13: 🎁 멀티플레이 아이템 박스
-      }
-    }
-  } else if (isItemMode && !window.isMultiItemMode) {
+  if (isItemMode || window.isMultiItemMode) {
     const rand = Math.random();
 
     // 확률 조정: 레벨이 오를수록 이로운 아이템 감소, 해로운 아이템 증가
@@ -218,65 +162,7 @@ drawMatrix = function (matrix, offset, targetCtx = ctx) {
 // 기존 라인 클리어 함수 가로채기 (아이템 발동 처리)
 const _oldSweep = sweep;
 sweep = function () {
-  // 멀티플레이 아이템전 로직
-  if (window.isMultiItemMode) {
-    let linesCleared = 0;
-    let multiItemsCollected = 0; // 줄을 지울 때 포함된 아이템 상자 수
-
-    outer: for (let y = board.length - 1; y >= 0; --y) {
-      for (let x = 0; x < board[y].length; ++x) {
-        if (board[y][x] === 0) continue outer;
-      }
-
-      // 지워지는 줄에 아이템 상자(13)가 박혀 있는지 검사
-      for (let x = 0; x < board[y].length; ++x) {
-        if (board[y][x] === 13) multiItemsCollected++;
-      }
-
-      const row = board.splice(y, 1)[0].fill(0);
-      board.unshift(row);
-      ++y;
-      linesCleared++;
-    }
-
-    if (linesCleared > 0) {
-      const points = [0, 100, 300, 500, 800];
-      score += points[linesCleared];
-      scoreElement.textContent = score;
-
-      const newLevel = Math.floor(score / 1000) + 1;
-      if (newLevel > currentLevel) {
-        currentLevel = newLevel;
-        dropInterval = Math.max(300, 1000 - (currentLevel - 1) * 150);
-        document.body.style.filter = `hue-rotate(${(currentLevel - 1) * 60}deg)`;
-        showLevelUpPopup("LEVEL UP! ⚡");
-      }
-
-      // 없앤 아이템 상자 개수만큼 인벤토리에 지급
-      for (let i = 0; i < multiItemsCollected; i++) {
-        addMultiplayerItem();
-        showItemPopup("🎁 아이템 획득!");
-      }
-
-      // 기본 공격(쓰레기 블록)도 같이 날리기
-      if (isMultiplayer && linesCleared >= 2) {
-        const attackLines = linesCleared - 1;
-        let holeIndex;
-        do {
-          holeIndex = Math.floor(Math.random() * COLS);
-        } while (
-          typeof lastHoleIndex !== "undefined" &&
-          holeIndex === lastHoleIndex
-        );
-        if (typeof lastHoleIndex !== "undefined") lastHoleIndex = holeIndex;
-        if (typeof sendAttack === "function")
-          sendAttack(attackLines, holeIndex);
-      }
-    }
-    return;
-  }
-
-  if (!isItemMode) {
+  if (!isItemMode && !window.isMultiItemMode) {
     _oldSweep();
     return;
   }
@@ -415,18 +301,32 @@ window.updateItemTimers = function (deltaTime) {
 };
 
 function applySingleItemEffect(itemType) {
+  const isDebuff = itemType === 17 || itemType === 18 || itemType === 19;
+
+  // 멀티플레이 아이템전에서 해로운 아이템이면 상대에게 전송하고 종료
+  if (window.isMultiItemMode && isDebuff) {
+    sendItemAttack(itemType);
+    let icon = itemType === 17 ? "💩" : itemType === 18 ? "🦑" : "🔄";
+    showItemPopup(`공격 전송! ${icon}`);
+    return;
+  }
+
+  if (isDebuff) {
+    window.triggerPoopRain(); // 싱글에서 디버프 맞았을 때도 효과 발동
+  }
+
   if (itemType === 15) {
     // 슬로우 블록
-    showItemPopup("🐢 슬로우! (10초)");
+    showItemPopup("🐢 슬로우! (5초)");
     window.isSlowMode = true;
-    window.itemRemaining.slow = 10000;
+    window.itemRemaining.slow = 5000;
     let baseSpeed = Math.max(300, 1000 - (currentLevel - 1) * 150);
     dropInterval = baseSpeed + 500;
   } else if (itemType === 16) {
     // 행운 블록
-    showItemPopup("🌈 럭키 타임! 닿으면 파괴 (10초)");
+    showItemPopup("🌈 럭키 타임! 닿으면 파괴 (7초)");
     window.isLuckyMode = true;
-    window.itemRemaining.lucky = 10000;
+    window.itemRemaining.lucky = 7000;
     window.luckyTickCounter = 0;
     document.body.classList.add("lucky-theme");
   } else if (itemType === 17) {
@@ -447,9 +347,9 @@ function applySingleItemEffect(itemType) {
     window.triggerInkSplatter();
   } else if (itemType === 19) {
     // 조작 반전
-    showItemPopup("🔄 조작 반전! (10초)");
+    showItemPopup("🔄 조작 반전! (5초)");
     window.isReversed = true;
-    window.itemRemaining.reverse = 10000;
+    window.itemRemaining.reverse = 5000;
   }
 }
 
@@ -484,46 +384,32 @@ window.triggerInkSplatter = function () {
   }, 5000); // 5초 후 요소 삭제
 };
 
-// --- 멀티플레이 아이템 효과 로직 ---
-function placeTimeBomb() {
-  let placed = false;
-  let attempts = 0;
-  while (!placed && attempts < 50) {
-    let x = Math.floor(Math.random() * COLS);
-    let y = Math.floor(Math.random() * (ROWS / 2)); // 위쪽에 생성
-    if (board[y][x] === 0) {
-      board[y][x] = 12; // 12: 시한폭탄 블록
-      placed = true;
-    }
-    attempts++;
+// 똥 비 내리기 애니메이션
+window.triggerPoopRain = function () {
+  let oldContainer = document.getElementById("poop-rain-container");
+  if (oldContainer) oldContainer.remove();
+
+  const container = document.createElement("div");
+  container.id = "poop-rain-container";
+  container.className = "poop-rain-container";
+  document.body.appendChild(container);
+
+  const numPoops = 20; // 20개
+  for (let i = 0; i < numPoops; i++) {
+    const poop = document.createElement("div");
+    poop.className = "falling-poop";
+    poop.textContent = "💩";
+    poop.style.left = `${Math.random() * 100}vw`;
+    poop.style.animationDuration = `${Math.random() * 1.5 + 1.5}s`;
+    poop.style.fontSize = `${Math.random() * 2 + 1.5}rem`;
+    poop.style.animationDelay = `${Math.random() * 0.5}s`;
+    container.appendChild(poop);
   }
-  if (!placed) board[0][Math.floor(COLS / 2)] = 12; // 빈자리 없으면 맨 위 가운데 강제 배치
 
   setTimeout(() => {
-    const bombStillExists = board.some((row) => row.includes(12));
-    if (bombStillExists) {
-      // 보드에 남아있다면 섞기
-      showItemPopup("💥 폭탄 폭발! 진형 붕괴!");
-      for (let r = 0; r < ROWS; r++) {
-        if (board[r].some((val) => val !== 0))
-          board[r].sort(() => Math.random() - 0.5);
-        for (let c = 0; c < COLS; c++) if (board[r][c] === 12) board[r][c] = 8; // 터진 폭탄은 회색 블록으로
-      }
-    }
-  }, 15000);
-}
-
-function dropRandomBlocks() {
-  for (let i = 0; i < 2; i++) {
-    let x = Math.floor(Math.random() * COLS);
-    let y = 0;
-    while (y < ROWS - 1 && board[y + 1][x] === 0) y++;
-    board[y][x] = 8; // 낙하한 위치에 회색 블록 고정
-  }
-  gameScreen.classList.remove("damage-flash");
-  void gameScreen.offsetWidth;
-  gameScreen.classList.add("damage-flash");
-}
+    if (container.parentNode) container.remove();
+  }, 4000);
+};
 
 // 아이템 발동 알림 텍스트 효과
 function showItemPopup(text) {
@@ -544,6 +430,24 @@ function showCountdownPopup(text) {
   let wrapper = document.querySelector(".board-wrapper");
   if (wrapper) wrapper.appendChild(popup);
   setTimeout(() => popup.remove(), 1000); // 1초마다 애니메이션과 함께 삭제
+}
+
+// 폭탄 보너스 점수 플로팅 텍스트
+function showFloatingScore(bonus, cx, cy) {
+  let scoreEl = document.createElement("div");
+  scoreEl.className = "floating-score";
+  scoreEl.textContent = `+${bonus}`;
+
+  // 보드판 내 폭탄의 상대적 위치를 퍼센트로 계산하여 스타일 적용
+  const leftPercent = ((cx + 0.5) / COLS) * 100;
+  const topPercent = ((cy + 0.5) / ROWS) * 100;
+  scoreEl.style.left = `${leftPercent}%`;
+  scoreEl.style.top = `${topPercent}%`;
+
+  let wrapper = document.querySelector(".board-wrapper");
+  if (wrapper) wrapper.appendChild(scoreEl);
+
+  setTimeout(() => scoreEl.remove(), 1200);
 }
 
 // --- 폭죽 파티클 이펙트 시스템 ---
@@ -598,17 +502,63 @@ function createDOMFirework() {
 
 // --- 신규 싱글 아이템전 충돌/발동 로직 ---
 window.explodeBomb = function (cx, cy) {
-  showItemPopup("💣 해당 줄 파괴!");
+  let lineScore = 300; // 1줄 기본 점수(100)의 3배
+  let itemBonus = 0;
+  let itemsDestroyed = 0;
 
-  // 1. 폭탄이 위치한 줄(자신이 속한 줄) 파괴
+  // 1. 폭탄이 위치한 줄(자신이 속한 줄) 파괴 및 아이템 카운트
   if (cy >= 0 && cy < ROWS) {
+    for (let x = 0; x < COLS; x++) {
+      let val = board[cy][x];
+      // 9~19번 인덱스는 아이템 블록
+      if (val >= 9 && val <= 19) {
+        itemsDestroyed++;
+      }
+    }
+    itemBonus = itemsDestroyed * 500;
+
     board.splice(cy, 1);
     board.unshift(new Array(COLS).fill(0));
   }
 
+  // 점수 반영 및 레벨업 처리
+  let totalEarned = lineScore + itemBonus;
+  if (typeof score !== "undefined") {
+    score += totalEarned;
+    if (typeof scoreElement !== "undefined") scoreElement.textContent = score;
+
+    if (typeof currentLevel !== "undefined") {
+      const newLevel = Math.floor(score / 1000) + 1;
+      if (newLevel > currentLevel) {
+        currentLevel = newLevel;
+        let baseSpeed = Math.max(300, 1000 - (currentLevel - 1) * 150);
+        if (window.isSlowMode) baseSpeed += 500;
+        dropInterval = baseSpeed;
+        document.body.style.filter = `hue-rotate(${(currentLevel - 1) * 60}deg)`;
+        if (typeof showLevelUpPopup === "function")
+          showLevelUpPopup("LEVEL UP! ⚡");
+      }
+    }
+  }
+
+  let popupMsg = "💣 줄 파괴! (3배)";
+  if (itemsDestroyed > 0) {
+    popupMsg += ` + 아이템 ${itemsDestroyed}개 보너스(${itemBonus}점)`;
+    showFloatingScore(itemBonus, cx, cy);
+  }
+  showItemPopup(popupMsg);
+
   gameScreen.classList.remove("damage-flash");
   void gameScreen.offsetWidth;
   gameScreen.classList.add("damage-flash");
+
+  // 폭탄 폭발 시 게임 영역 화면 전체 흔들림
+  const gameContainer = document.querySelector(".game-container");
+  if (gameContainer) {
+    gameContainer.classList.remove("shake-effect");
+    void gameContainer.offsetWidth;
+    gameContainer.classList.add("shake-effect");
+  }
 };
 
 window.spawnNextAfterSpecial = function () {
@@ -626,7 +576,7 @@ window.spawnNextAfterSpecial = function () {
 };
 
 window.handleItemPieceLanded = function () {
-  if (isItemMode && !window.isMultiItemMode) {
+  if (isItemMode || window.isMultiItemMode) {
     // 1. 폭탄(14) 바닥 도달 시 폭발
     if (piece.matrix.length === 1 && piece.matrix[0][0] === 14) {
       window.explodeBomb(piece.pos.x, piece.pos.y);
@@ -669,8 +619,7 @@ window.handleItemPieceLanded = function () {
 
 window.handleShiftPress = function () {
   if (
-    isItemMode &&
-    !window.isMultiItemMode &&
+    (isItemMode || window.isMultiItemMode) &&
     piece &&
     piece.matrix.length === 1 &&
     piece.matrix[0][0] === 14

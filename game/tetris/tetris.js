@@ -363,8 +363,31 @@ function drawMatrix(matrix, offset, targetCtx = ctx) {
 }
 
 function draw() {
-  ctx.fillStyle = "#111";
-  ctx.fillRect(0, 0, COLS, ROWS); // 스케일이 적용된 상태이므로 칸 단위로 배경 지우기 (블록 사라짐 버그 수정)
+  // 배경색 동적 설정 (럭키모드 무지개, 아이템전 어두운 빨강, 일반전 어두운 파랑)
+  if (typeof window.isLuckyMode !== "undefined" && window.isLuckyMode) {
+    const hue = (performance.now() / 10) % 360;
+    ctx.fillStyle = `hsla(${hue}, 80%, 20%, 1)`;
+  } else {
+    const itemTheme =
+      (typeof isItemMode !== "undefined" && isItemMode) ||
+      (typeof window.isMultiItemMode !== "undefined" && window.isMultiItemMode);
+    ctx.fillStyle = itemTheme ? "#2a0a0a" : "#0a0a2a";
+  }
+  ctx.fillRect(0, 0, COLS, ROWS); // 스케일이 적용된 상태이므로 칸 단위로 배경 지우기
+
+  // 블록 크기의 희미한 선 (그리드) 그리기
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
+  ctx.lineWidth = 0.05;
+  ctx.beginPath();
+  for (let x = 0; x <= COLS; x++) {
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, ROWS);
+  }
+  for (let y = 0; y <= ROWS; y++) {
+    ctx.moveTo(0, y);
+    ctx.lineTo(COLS, y);
+  }
+  ctx.stroke();
 
   drawMatrix(board, { x: 0, y: 0 });
   if (piece) {
@@ -392,8 +415,26 @@ function draw() {
 
 function drawOpponent() {
   if (!oppCtx) return;
-  oppCtx.fillStyle = "#111";
+  oppCtx.fillStyle =
+    typeof window.isMultiItemMode !== "undefined" && window.isMultiItemMode
+      ? "#2a0a0a"
+      : "#0a0a2a";
   oppCtx.fillRect(0, 0, COLS, ROWS);
+
+  // 그리드 그리기
+  oppCtx.strokeStyle = "rgba(255, 255, 255, 0.05)";
+  oppCtx.lineWidth = 0.05;
+  oppCtx.beginPath();
+  for (let x = 0; x <= COLS; x++) {
+    oppCtx.moveTo(x, 0);
+    oppCtx.lineTo(x, ROWS);
+  }
+  for (let y = 0; y <= ROWS; y++) {
+    oppCtx.moveTo(0, y);
+    oppCtx.lineTo(COLS, y);
+  }
+  oppCtx.stroke();
+
   if (opponentBoard.length > 0) {
     drawMatrix(opponentBoard, { x: 0, y: 0 }, oppCtx);
   }
@@ -625,14 +666,6 @@ document.addEventListener("keydown", (event) => {
   } else if (event.key === "Shift") {
     if (typeof window.handleShiftPress === "function")
       window.handleShiftPress();
-  } else if (window.isMultiItemMode) {
-    // 2P 아이템전 조작
-    if (event.key >= "1" && event.key <= "9") {
-      if (typeof selectItemSlot === "function")
-        selectItemSlot(parseInt(event.key) - 1);
-    } else if (event.key.toLowerCase() === "z") {
-      if (typeof useSelectedItem === "function") useSelectedItem();
-    }
   }
 
   // 스페이스바나 화살표 키 기본 동작(스크롤) 방지
@@ -1059,13 +1092,12 @@ function setupRoomListener(roomId) {
           window.isMultiItemMode = data.mode === "item";
           if (window.isMultiItemMode) {
             document.body.classList.add("item-theme");
-            document.getElementById("multi-item-ui").classList.remove("hidden");
             if (typeof resetMultiplayerInventory === "function")
               resetMultiplayerInventory();
           } else {
             document.body.classList.remove("item-theme");
-            document.getElementById("multi-item-ui").classList.add("hidden");
           }
+          document.getElementById("multi-item-ui")?.classList.add("hidden");
 
           lobbyScreen.classList.add("hidden");
           multiMenuScreen.classList.add("hidden");
