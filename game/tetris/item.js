@@ -388,10 +388,11 @@ function applySingleItemEffect(itemType) {
       // 행운 모드 종료 시 2초 정지 후 재개
       let wasPlaying = isPlaying;
       if (wasPlaying) isPlaying = false;
-      showItemPopup("종료 대기... 2");
+      showCountdownPopup("2");
       
-      setTimeout(() => showItemPopup("종료 대기... 1"), 1000);
+      setTimeout(() => showCountdownPopup("1"), 1000);
       setTimeout(() => {
+        showCountdownPopup("GO!");
         if (wasPlaying && !isGameOver) isPlaying = true;
       }, 2000);
     }, 10000);
@@ -470,6 +471,16 @@ function showItemPopup(text) {
   if (wrapper) wrapper.appendChild(popup);
 
   setTimeout(() => popup.remove(), 1500);
+}
+
+// 대형 중앙 카운트다운 팝업
+function showCountdownPopup(text) {
+  let popup = document.createElement("div");
+  popup.className = "countdown-popup";
+  popup.textContent = text;
+  let wrapper = document.querySelector(".board-wrapper");
+  if (wrapper) wrapper.appendChild(popup);
+  setTimeout(() => popup.remove(), 1000); // 1초마다 애니메이션과 함께 삭제
 }
 
 // --- 폭죽 파티클 이펙트 시스템 ---

@@ -649,3 +649,25 @@ body.lucky-theme #next-board {
     border-color: #ff0000;
   }
 }
+
+/* 화면 중앙 대형 카운트다운 텍스트 */
+.countdown-popup {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #ffd700;
+  font-size: 6rem;
+  font-weight: 900;
+  text-shadow: 0 0 30px rgba(255, 215, 0, 0.8), 0 5px 15px rgba(0, 0, 0, 0.9);
+  animation: countdownPulse 1s ease-in-out forwards;
+  pointer-events: none;
+  z-index: 200;
+  white-space: nowrap;
+}
+@keyframes countdownPulse {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.2); }
+  20% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); filter: blur(5px); }
+}
