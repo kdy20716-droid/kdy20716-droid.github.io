@@ -217,7 +217,7 @@ sweep = function () {
       const points = [0, 100, 300, 500, 800];
       score += points[linesCleared];
       scoreElement.textContent = score;
-      dropInterval = Math.max(100, 1000 - Math.floor(score / 500) * 100);
+      dropInterval = Math.max(300, 1000 - Math.floor(score / 500) * 100);
 
       // 없앤 아이템 상자 개수만큼 인벤토리에 지급
       for (let i = 0; i < multiItemsCollected; i++) {
@@ -274,7 +274,7 @@ sweep = function () {
     const points = [0, 100, 300, 500, 800];
     score += points[linesCleared];
     scoreElement.textContent = score;
-    dropInterval = Math.max(100, 1000 - Math.floor(score / 500) * 100);
+    dropInterval = Math.max(300, 1000 - Math.floor(score / 500) * 100);
 
     // 멀티플레이 연동용 코드
     if (

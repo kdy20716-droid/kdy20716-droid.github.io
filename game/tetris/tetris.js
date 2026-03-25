@@ -173,7 +173,7 @@ function sweep() {
     score += points[linesCleared];
     scoreElement.textContent = score;
     // 레벨업에 따른 속도 증가
-    dropInterval = Math.max(100, 1000 - Math.floor(score / 500) * 100);
+    dropInterval = Math.max(300, 1000 - Math.floor(score / 500) * 100);
 
     // 멀티플레이 공격 로직
     if (isMultiplayer && linesCleared >= 2) {
