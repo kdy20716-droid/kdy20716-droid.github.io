@@ -99,12 +99,15 @@ let board = [];
 let piece = null;
 let nextPiece = null;
 let score = 0;
+let currentLevel = 1;
 let isGameOver = false;
 let isPlaying = false;
 let dropCounter = 0;
 let dropInterval = 1000; // 1초마다 하강
 let lastTime = 0;
 let animationId = null;
+let skipCooldown = 0;
+const MAX_SKIP_COOLDOWN = 10;
 
 // 게임 보드 초기화
 function createBoard() {
@@ -172,8 +175,16 @@ function sweep() {
     const points = [0, 100, 300, 500, 800];
     score += points[linesCleared];
     scoreElement.textContent = score;
-    // 레벨업에 따른 속도 증가
-    dropInterval = Math.max(300, 1000 - Math.floor(score / 500) * 100);
+
+    // 레벨업 기믹: 점수 1000점 단위로 레벨 상승, 배경색 변경 및 속도 점프
+    const newLevel = Math.floor(score / 1000) + 1;
+    if (newLevel > currentLevel) {
+      currentLevel = newLevel;
+      // 레벨업 시 속도 한 번에 증가 (최대 속도 300ms)
+      dropInterval = Math.max(300, 1000 - (currentLevel - 1) * 150);
+      document.body.style.filter = `hue-rotate(${(currentLevel - 1) * 60}deg)`;
+      showLevelUpPopup("LEVEL UP! ⚡");
+    }
 
     // 멀티플레이 공격 로직
     if (isMultiplayer && linesCleared >= 2) {
@@ -188,6 +199,40 @@ function sweep() {
   }
 }
 
+// 스킵 UI 업데이트
+function updateSkipUI() {
+  const skipStatus = document.getElementById("skip-status");
+  const skipBar = document.getElementById("skip-bar");
+  if (!skipStatus || !skipBar) return;
+
+  if (skipCooldown === 0) {
+    skipStatus.textContent = "READY";
+    skipStatus.className = "status-ready";
+    skipBar.style.width = "100%";
+    skipBar.style.backgroundColor = "#4caf50";
+  } else {
+    skipStatus.textContent = `${skipCooldown} LEFT`;
+    skipStatus.className = "status-cooldown";
+    skipBar.style.width = `${((MAX_SKIP_COOLDOWN - skipCooldown) / MAX_SKIP_COOLDOWN) * 100}%`;
+    skipBar.style.backgroundColor = "#ff3333";
+  }
+}
+
+// 블록 스킵 액션
+function skipPieceAction() {
+  if (skipCooldown > 0) return;
+  piece = nextPiece;
+  nextPiece = generateRandomPiece();
+  drawNextPiece();
+  skipCooldown = MAX_SKIP_COOLDOWN;
+  updateSkipUI();
+  
+  if (collide(board, piece)) {
+    gameOver();
+  }
+  dropCounter = 0;
+}
+
 // 블록 떨어지기
 function pieceDrop() {
   piece.pos.y++;
@@ -198,6 +243,10 @@ function pieceDrop() {
     piece = nextPiece;
     nextPiece = generateRandomPiece();
     drawNextPiece();
+    if (skipCooldown > 0) {
+      skipCooldown--;
+      updateSkipUI();
+    }
     if (collide(board, piece)) {
       gameOver();
     }
@@ -216,6 +265,10 @@ function pieceHardDrop() {
   piece = nextPiece;
   nextPiece = generateRandomPiece();
   drawNextPiece();
+  if (skipCooldown > 0) {
+    skipCooldown--;
+    updateSkipUI();
+  }
   if (collide(board, piece)) {
     gameOver();
   }
@@ -361,12 +414,16 @@ function startGame() {
   createBoard();
   score = 0;
   scoreElement.textContent = score;
+  currentLevel = 1;
+  document.body.style.filter = 'hue-rotate(0deg)';
   dropInterval = 1000;
   isGameOver = false;
   isPlaying = true;
   piece = generateRandomPiece();
   nextPiece = generateRandomPiece();
   drawNextPiece();
+  skipCooldown = 0;
+  updateSkipUI();
   startBtn.textContent = "다시 시작";
 
   if (animationId) cancelAnimationFrame(animationId);
@@ -450,6 +507,7 @@ btnBackToMenu.addEventListener("click", () => {
   }
 
   mySpaceIndicator.classList.add("hidden");
+  document.body.style.filter = 'hue-rotate(0deg)';
 
   if (animationId) cancelAnimationFrame(animationId);
 
@@ -479,6 +537,8 @@ document.addEventListener("keydown", (event) => {
     pieceRotate();
   } else if (event.key === " ") {
     pieceHardDrop();
+  } else if (event.key === "Tab") {
+    skipPieceAction();
   } else if (window.isMultiItemMode) {
     // 2P 아이템전 조작
     if (event.key >= "1" && event.key <= "9") {
@@ -491,7 +551,7 @@ document.addEventListener("keydown", (event) => {
 
   // 스페이스바나 화살표 키 기본 동작(스크롤) 방지
   if (
-    [" ", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)
+    [" ", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Tab"].includes(event.key)
   ) {
     event.preventDefault();
   }
@@ -502,6 +562,7 @@ btnResultMain.addEventListener("click", () => {
   resultModal.classList.add("hidden");
   gameScreen.classList.add("hidden");
   startScreen.classList.remove("hidden");
+  document.body.style.filter = 'hue-rotate(0deg)';
 
   if (isMultiplayer) {
     isMultiplayer = false;
@@ -1044,6 +1105,8 @@ function startGameMulti() {
   createBoard();
   opponentBoard = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
   score = 0;
+  currentLevel = 1;
+  document.body.style.filter = 'hue-rotate(0deg)';
   scoreElement.textContent = score;
   dropInterval = 1000;
   isGameOver = false;
@@ -1051,6 +1114,8 @@ function startGameMulti() {
   piece = generateRandomPiece();
   nextPiece = generateRandomPiece();
   drawNextPiece();
+  skipCooldown = 0;
+  updateSkipUI();
 
   startBtn.classList.add("hidden");
   opponentPanel.classList.remove("hidden");
@@ -1162,4 +1227,14 @@ function setupActionsListener(roomId) {
       }
     });
   });
+}
+
+// 레벨업 팝업 효과
+function showLevelUpPopup(text) {
+  let popup = document.createElement("div");
+  popup.className = "level-up-popup";
+  popup.textContent = text;
+  let wrapper = document.querySelector(".board-wrapper");
+  if (wrapper) wrapper.appendChild(popup);
+  setTimeout(() => popup.remove(), 2000);
 }

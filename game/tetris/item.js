@@ -217,7 +217,14 @@ sweep = function () {
       const points = [0, 100, 300, 500, 800];
       score += points[linesCleared];
       scoreElement.textContent = score;
-      dropInterval = Math.max(300, 1000 - Math.floor(score / 500) * 100);
+
+      const newLevel = Math.floor(score / 1000) + 1;
+      if (newLevel > currentLevel) {
+        currentLevel = newLevel;
+        dropInterval = Math.max(300, 1000 - (currentLevel - 1) * 150);
+        document.body.style.filter = `hue-rotate(${(currentLevel - 1) * 60}deg)`;
+        showLevelUpPopup("LEVEL UP! ⚡");
+      }
 
       // 없앤 아이템 상자 개수만큼 인벤토리에 지급
       for (let i = 0; i < multiItemsCollected; i++) {
@@ -274,7 +281,14 @@ sweep = function () {
     const points = [0, 100, 300, 500, 800];
     score += points[linesCleared];
     scoreElement.textContent = score;
-    dropInterval = Math.max(300, 1000 - Math.floor(score / 500) * 100);
+
+    const newLevel = Math.floor(score / 1000) + 1;
+    if (newLevel > currentLevel) {
+      currentLevel = newLevel;
+      dropInterval = Math.max(300, 1000 - (currentLevel - 1) * 150);
+      document.body.style.filter = `hue-rotate(${(currentLevel - 1) * 60}deg)`;
+      showLevelUpPopup("LEVEL UP! ⚡");
+    }
 
     // 멀티플레이 연동용 코드
     if (
@@ -418,6 +432,7 @@ if (btnItemMode && colorWipeLine) {
 // 뒤로가기 버튼 등을 눌렀을 때 아이템전 테마 해제
 const resetTheme = () => {
   document.body.classList.remove("item-theme");
+  document.body.style.filter = 'hue-rotate(0deg)';
   isItemMode = false;
 };
 

@@ -165,6 +165,7 @@
           <p>⬆️ : 블록 회전</p>
           <p>⬇️ : 아래로 내리기</p>
           <p>스페이스바 : 수직 낙하(하드 드롭)</p>
+          <p>Tab : 현재 블록 스킵 (10블록 쿨타임)</p>
         </div>
         <button id="btn-close-howto" class="menu-btn" style="margin-top: 20px">
           닫기
@@ -213,6 +214,7 @@
             <p>⬆️ : 회전</p>
             <p>⬇️ : 아래로 내리기</p>
             <p>스페이스바 : 수직 낙하</p>
+            <p>Tab : 블록 스킵</p>
           </div>
           <!-- 2P 아이템전 인벤토리 UI -->
           <div id="multi-item-ui" class="item-inventory hidden">
@@ -273,6 +275,14 @@
           <div class="next-piece">
             <h2>NEXT</h2>
             <canvas id="next-board" width="120" height="120"></canvas>
+          </div>
+          <!-- 스킵 UI -->
+          <div class="skip-info">
+            <h2>SKIP <span style="font-size: 0.8rem; color: #aaa;">(Tab)</span></h2>
+            <div id="skip-status" class="status-ready">READY</div>
+            <div class="skip-progress">
+              <div id="skip-bar" style="width: 100%;"></div>
+            </div>
           </div>
           <button id="start-btn">게임 시작</button>
         </div>
