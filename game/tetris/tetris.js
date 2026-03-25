@@ -415,6 +415,9 @@ function startGame() {
   opponentPanel.classList.add("hidden");
   mySpaceIndicator.classList.add("hidden");
   startBtn.classList.remove("hidden");
+  const ink = document.getElementById("ink-overlay");
+  if (ink) ink.classList.add("hidden");
+  window.isReversed = false;
   if (syncInterval) clearInterval(syncInterval);
   if (unsubscribeActions) {
     unsubscribeActions();
@@ -542,9 +545,9 @@ document.addEventListener("keydown", (event) => {
   } else if (event.key === "ArrowRight") {
     pieceMove(1 * dir);
   } else if (event.key === "ArrowDown") {
-    pieceDrop();
+    window.isReversed ? pieceRotate() : pieceDrop();
   } else if (event.key === "ArrowUp") {
-    pieceRotate();
+    window.isReversed ? pieceDrop() : pieceRotate();
   } else if (event.key === " ") {
     pieceHardDrop();
   } else if (event.key === "Tab") {
