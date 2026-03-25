@@ -121,6 +121,8 @@ let isPaused = false;
 let dropCounter = 0;
 let dropInterval = 1000; // 1초마다 하강
 let lastTime = 0;
+let lockDelayCounter = 0;
+const LOCK_DELAY_LIMIT = 3000; // 바닥 도달 후 최대 3초 유예 (티스핀 등)
 let animationId = null;
 let skipCooldown = 0;
 const MAX_SKIP_COOLDOWN = 10;
@@ -247,44 +249,11 @@ function skipPieceAction() {
     gameOver();
   }
   dropCounter = 0;
+  lockDelayCounter = 0;
 }
 
-// 블록 떨어지기
-function pieceDrop() {
-  piece.pos.y++;
-  if (collide(board, piece)) {
-    piece.pos.y--;
-
-    if (
-      typeof window.handleItemPieceLanded === "function" &&
-      window.handleItemPieceLanded()
-    ) {
-      return;
-    }
-
-    merge(board, piece);
-    sweep();
-    piece = nextPiece;
-    nextPiece = generateRandomPiece();
-    drawNextPiece();
-    if (skipCooldown > 0) {
-      skipCooldown--;
-      updateSkipUI();
-    }
-    if (collide(board, piece)) {
-      gameOver();
-    }
-  }
-  dropCounter = 0;
-}
-
-// 즉시 하강 (하드 드롭)
-function pieceHardDrop() {
-  while (!collide(board, piece)) {
-    piece.pos.y++;
-  }
-  piece.pos.y--;
-
+// 블록 고정 (Lock) 처리 함수
+function lockPiece() {
   if (
     typeof window.handleItemPieceLanded === "function" &&
     window.handleItemPieceLanded()
@@ -304,7 +273,27 @@ function pieceHardDrop() {
   if (collide(board, piece)) {
     gameOver();
   }
+  lockDelayCounter = 0;
   dropCounter = 0;
+}
+
+// 블록 떨어지기 (소프트 드롭 & 자연 하강)
+function pieceDrop() {
+  piece.pos.y++;
+  if (collide(board, piece)) {
+    piece.pos.y--;
+  } else {
+    dropCounter = 0;
+  }
+}
+
+// 즉시 하강 (하드 드롭)
+function pieceHardDrop() {
+  while (!collide(board, piece)) {
+    piece.pos.y++;
+  }
+  piece.pos.y--;
+  lockPiece();
 }
 
 // 좌우 이동
@@ -474,10 +463,22 @@ function update(time = 0) {
     window.updateItemTimers(deltaTime);
   }
 
-  dropCounter += deltaTime;
+  // 바닥 충돌 여부 체크 (Lock Delay 로직)
+  piece.pos.y++;
+  const isTouchingFloor = collide(board, piece);
+  piece.pos.y--;
 
-  if (dropCounter > dropInterval) {
-    pieceDrop();
+  if (isTouchingFloor) {
+    lockDelayCounter += deltaTime;
+    if (lockDelayCounter >= LOCK_DELAY_LIMIT) {
+      lockPiece();
+    }
+  } else {
+    lockDelayCounter = 0; // 공중에 있으면 유예 시간 초기화
+    dropCounter += deltaTime;
+    if (dropCounter > dropInterval) {
+      pieceDrop();
+    }
   }
 
   draw();
@@ -512,6 +513,7 @@ function startGame() {
   nextPiece = generateRandomPiece();
   drawNextPiece();
   skipCooldown = 0;
+  lockDelayCounter = 0;
   updateSkipUI();
   startBtn.textContent = "다시 시작";
 

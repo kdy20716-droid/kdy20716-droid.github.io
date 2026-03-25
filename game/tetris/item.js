@@ -370,9 +370,10 @@ window.triggerInkSplatter = function () {
   for (let i = 0; i < numSplatters; i++) {
     const splatter = document.createElement("div");
     splatter.className = "ink-splatter";
-    const size = Math.random() * 50 + 50; // 50px ~ 100px 크기 랜덤
-    splatter.style.width = `${size}px`;
-    splatter.style.height = `${size}px`;
+    const widthSize = Math.random() * 50 + 60; // 60px ~ 110px 가로 크기 랜덤
+    const heightSize = widthSize * 1.3; // 위아래로 살짝 더 넓게 (세로 1.3배)
+    splatter.style.width = `${widthSize}px`;
+    splatter.style.height = `${heightSize}px`;
     splatter.style.top = `${Math.random() * 80}%`;
     splatter.style.left = `${Math.random() * 80}%`;
     splatter.style.setProperty("--rot", `${Math.random() * 360}deg`);
@@ -572,6 +573,8 @@ window.spawnNextAfterSpecial = function () {
   if (collide(board, piece)) {
     gameOver();
   }
+  // 아이템 발동 후 새 블록의 락 딜레이 초기화
+  if (typeof lockDelayCounter !== "undefined") lockDelayCounter = 0;
   dropCounter = 0;
 };
 
