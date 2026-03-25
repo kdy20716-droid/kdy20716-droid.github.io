@@ -615,3 +615,37 @@ body.item-theme {
   80% { opacity: 1; transform: translate(-50%, -80%) scale(1); }
   100% { opacity: 0; transform: translate(-50%, -100%) scale(0.8); }
 }
+
+/* 싱글 아이템전 럭키 모드 테마 */
+body.lucky-theme {
+  background: linear-gradient(
+    -45deg,
+    #ff0000,
+    #ff7f00,
+    #ffff00,
+    #00ff00,
+    #0000ff,
+    #4b0082,
+    #9400d3
+  ) !important;
+  background-size: 800% 800%;
+  animation: gradientBG 3s ease infinite;
+}
+
+/* 럭키 모드 시 NEXT 블록 화려한 반짝임 효과 */
+body.lucky-theme #next-board {
+  animation: rainbowNextBlock 0.8s linear infinite;
+}
+
+@keyframes rainbowNextBlock {
+  0% {
+    box-shadow: 0 0 20px #ff0000, inset 0 0 15px #ff0000;
+    filter: hue-rotate(0deg) contrast(150%) saturate(200%);
+    border-color: #ff0000;
+  }
+  100% {
+    box-shadow: 0 0 20px #ff0000, inset 0 0 15px #ff0000;
+    filter: hue-rotate(360deg) contrast(150%) saturate(200%);
+    border-color: #ff0000;
+  }
+}

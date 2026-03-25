@@ -238,6 +238,11 @@ function pieceDrop() {
   piece.pos.y++;
   if (collide(board, piece)) {
     piece.pos.y--;
+
+    if (typeof window.handleItemPieceLanded === "function" && window.handleItemPieceLanded()) {
+      return;
+    }
+
     merge(board, piece);
     sweep();
     piece = nextPiece;
@@ -260,6 +265,11 @@ function pieceHardDrop() {
     piece.pos.y++;
   }
   piece.pos.y--;
+
+  if (typeof window.handleItemPieceLanded === "function" && window.handleItemPieceLanded()) {
+    return;
+  }
+
   merge(board, piece);
   sweep();
   piece = nextPiece;
@@ -539,6 +549,8 @@ document.addEventListener("keydown", (event) => {
     pieceHardDrop();
   } else if (event.key === "Tab") {
     skipPieceAction();
+  } else if (event.key === "Shift") {
+    if (typeof window.handleShiftPress === "function") window.handleShiftPress();
   } else if (window.isMultiItemMode) {
     // 2P 아이템전 조작
     if (event.key >= "1" && event.key <= "9") {

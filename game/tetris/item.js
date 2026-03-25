@@ -8,6 +8,9 @@ COLORS[10] = "#ffd700"; // 별 (노랑)
 COLORS[11] = "#33ff33"; // 하트 (초록)
 COLORS[12] = "#ff00ff"; // 시한폭탄 (마젠타)
 COLORS[13] = "#ffffff"; // 멀티플레이 아이템 박스 (흰색)
+COLORS[14] = "#111111"; // 신규 싱글: 폭탄
+COLORS[15] = "#00bfff"; // 신규 싱글: 슬로우
+COLORS[16] = "#ff69b4"; // 신규 싱글: 행운
 
 // --- 2P 멀티 아이템전 시스템 ---
 const ITEM_TYPES = {
@@ -140,25 +143,17 @@ generateRandomPiece = function () {
       }
     }
   } else if (isItemMode && Math.random() < 0.2) {
-    // 싱글플레이 아이템 모드일 때 20% 확률로 아이템 블록 등장
-    let blocks = [];
-    for (let y = 0; y < piece.matrix.length; y++) {
-      for (let x = 0; x < piece.matrix[y].length; x++) {
-        if (piece.matrix[y][x] !== 0) blocks.push({ x, y });
-      }
-    }
-    if (blocks.length > 0) {
-      // 블록 조각 중 무작위 한 칸을 아이템으로 변경
-      const target = blocks[Math.floor(Math.random() * blocks.length)];
-      const rand = Math.random();
-      let itemType = 9; // 기본 폭탄
-
-      if (rand > 0.33 && rand <= 0.66)
-        itemType = 10; // 별
-      else if (rand > 0.66) itemType = 11; // 하트
-
-      piece.matrix[target.y][target.x] = itemType;
-    }
+    // 싱글 아이템전 전용 1x1 아이템 블록
+    const rand = Math.random();
+    let itemType = 14; // 폭탄
+    if (rand > 0.33 && rand <= 0.66) itemType = 15; // 슬로우
+    else if (rand > 0.66) itemType = 16; // 행운
+    
+    return {
+      matrix: [[itemType]],
+      pos: { x: Math.floor(COLS / 2), y: 0 },
+      type: itemType
+    };
   }
   return piece;
 };
@@ -171,17 +166,19 @@ drawMatrix = function (matrix, offset, targetCtx = ctx) {
   // 아이템 블록 위에는 텍스트(이모티콘) 추가
   matrix.forEach((row, y) => {
     row.forEach((value, x) => {
-      if ((value >= 9 && value <= 11) || value === 12 || value === 13) {
+      if ((value >= 9 && value <= 16)) {
         targetCtx.save();
         targetCtx.font = "0.7px Arial";
         targetCtx.textAlign = "center";
         targetCtx.textBaseline = "middle";
         let icon = "";
-        if (value === 9) icon = "💣";
-        if (value === 10) icon = "⭐";
-        if (value === 11) icon = "❤️";
+        if (value === 9 || value === 14) icon = "💣";
+        if (value === 10) icon = "⭐"; // 구 싱글
+        if (value === 11) icon = "❤️"; // 구 싱글
         if (value === 12) icon = "⏱️";
         if (value === 13) icon = "🎁";
+        if (value === 15) icon = "🐢";
+        if (value === 16) icon = "🍀";
         targetCtx.fillText(icon, x + offset.x + 0.5, y + offset.y + 0.5);
         targetCtx.restore();
       }
@@ -267,7 +264,7 @@ sweep = function () {
     // 꽉 찬 줄에서 아이템 수집
     for (let x = 0; x < board[y].length; ++x) {
       let val = board[y][x];
-      if (val >= 9 && val <= 11) itemsTriggered.push(val);
+      if (val === 15 || val === 16) itemsTriggered.push(val);
     }
 
     // 줄 삭제 및 빈 줄 추가
@@ -279,13 +276,17 @@ sweep = function () {
 
   if (linesCleared > 0) {
     const points = [0, 100, 300, 500, 800];
-    score += points[linesCleared];
+    let earned = points[linesCleared];
+    if (window.isLuckyMode) earned *= 2; // 럭키 모드 점수 2배
+    score += earned;
     scoreElement.textContent = score;
 
     const newLevel = Math.floor(score / 1000) + 1;
     if (newLevel > currentLevel) {
       currentLevel = newLevel;
-      dropInterval = Math.max(300, 1000 - (currentLevel - 1) * 150);
+      let baseSpeed = Math.max(300, 1000 - (currentLevel - 1) * 150);
+      if (window.isSlowMode) baseSpeed += 500; // 슬로우 효과 적용
+      dropInterval = baseSpeed;
       document.body.style.filter = `hue-rotate(${(currentLevel - 1) * 60}deg)`;
       showLevelUpPopup("LEVEL UP! ⚡");
     }
@@ -309,42 +310,37 @@ sweep = function () {
     }
 
     // 수집된 아이템 효과 발동!
-    itemsTriggered.forEach((item) => applyItemEffect(item));
+    itemsTriggered.forEach((item) => applySingleItemEffect(item));
   }
 };
 
-// 아이템 효과 적용 함수
-function applyItemEffect(itemType) {
-  if (itemType === 9) {
-    // 💣 폭탄: 맨 아래 3줄을 무조건 삭제
-    for (let i = 0; i < 3; i++) {
-      board.pop();
-      board.unshift(new Array(COLS).fill(0));
-    }
-    gameScreen.classList.remove("damage-flash");
-    void gameScreen.offsetWidth; // 리플로우 강제 발생 (애니메이션 재시작)
-    gameScreen.classList.add("damage-flash");
-    showItemPopup("💣 폭탄 발동! 3줄 제거");
-  } else if (itemType === 10) {
-    // ⭐ 별: 즉시 점수 +1000
-    score += 1000;
-    scoreElement.textContent = score;
-    showItemPopup("⭐ 보너스 +1000점!");
-  } else if (itemType === 11) {
-    // ❤️ 하트: 가장 밑에 있는 회색 쓰레기 블록 2줄 정화
-    let removed = 0;
-    for (let y = board.length - 1; y >= 0; y--) {
-      if (board[y].includes(8)) {
-        // 8 = 멀티플레이 공격받은 쓰레기 블록
-        board.splice(y, 1);
-        board.unshift(new Array(COLS).fill(0));
-        removed++;
-        y++;
-        if (removed >= 2) break;
-      }
-    }
-    if (removed > 0) showItemPopup(`❤️ 방어! 쓰레기 ${removed}줄 정화`);
-    else showItemPopup("❤️ 하트 (정화할 블록 없음)");
+window.isSlowMode = false;
+window.isLuckyMode = false;
+let slowTimer = null;
+let luckyTimer = null;
+
+function applySingleItemEffect(itemType) {
+  if (itemType === 15) { // 슬로우 블록
+    showItemPopup("🐢 슬로우! (10초)");
+    window.isSlowMode = true;
+    let baseSpeed = Math.max(300, 1000 - (currentLevel - 1) * 150);
+    dropInterval = baseSpeed + 500;
+    
+    if (slowTimer) clearTimeout(slowTimer);
+    slowTimer = setTimeout(() => {
+      window.isSlowMode = false;
+      dropInterval = Math.max(300, 1000 - (currentLevel - 1) * 150);
+    }, 10000);
+  } else if (itemType === 16) { // 행운 블록
+    showItemPopup("🌈 럭키 타임! 닿으면 파괴 (10초)");
+    window.isLuckyMode = true;
+    document.body.classList.add("lucky-theme");
+    
+    if (luckyTimer) clearTimeout(luckyTimer);
+    luckyTimer = setTimeout(() => {
+      window.isLuckyMode = false;
+      document.body.classList.remove("lucky-theme");
+    }, 10000);
   }
 }
 
@@ -400,6 +396,66 @@ function showItemPopup(text) {
   setTimeout(() => popup.remove(), 1500);
 }
 
+// --- 신규 싱글 아이템전 충돌/발동 로직 ---
+window.explodeBomb = function(cx, cy) {
+  showItemPopup("💣 폭발!");
+  // 주변 3x3 범위 파괴
+  for (let y = cy - 1; y <= cy + 1; y++) {
+    for (let x = cx - 1; x <= cx + 1; x++) {
+      if (y >= 0 && y < ROWS && x >= 0 && x < COLS) {
+        board[y][x] = 0; // 블록 삭제
+      }
+    }
+  }
+  gameScreen.classList.remove("damage-flash");
+  void gameScreen.offsetWidth; 
+  gameScreen.classList.add("damage-flash");
+};
+
+window.spawnNextAfterSpecial = function() {
+  piece = nextPiece;
+  nextPiece = generateRandomPiece();
+  drawNextPiece();
+  if (typeof skipCooldown !== "undefined" && skipCooldown > 0) {
+    skipCooldown--;
+    if (typeof updateSkipUI === "function") updateSkipUI();
+  }
+  if (collide(board, piece)) {
+    gameOver();
+  }
+  dropCounter = 0;
+};
+
+window.handleItemPieceLanded = function() {
+  if (isItemMode && !window.isMultiItemMode) {
+    // 1. 폭탄(14) 바닥 도달 시 폭발
+    if (piece.matrix.length === 1 && piece.matrix[0][0] === 14) {
+      window.explodeBomb(piece.pos.x, piece.pos.y);
+      window.spawnNextAfterSpecial();
+      return true; // 머지 생략
+    }
+    
+    // 2. 럭키 모드 시, 닿자마자 블록 파괴 및 점수 획득
+    if (window.isLuckyMode) {
+      let blocks = 0;
+      piece.matrix.forEach(r => r.forEach(v => {if(v!==0) blocks++}));
+      score += blocks * 50 * 2; // 한 칸당 기본 50점 * 2배 = 100점
+      scoreElement.textContent = score;
+      showItemPopup(`💥 즉시 파괴! +${blocks * 100}점`);
+      window.spawnNextAfterSpecial();
+      return true; // 머지 생략
+    }
+  }
+  return false;
+};
+
+window.handleShiftPress = function() {
+  if (isItemMode && !window.isMultiItemMode && piece && piece.matrix.length === 1 && piece.matrix[0][0] === 14) {
+    window.explodeBomb(piece.pos.x, piece.pos.y);
+    window.spawnNextAfterSpecial();
+  }
+};
+
 // --- 메뉴 및 버튼 이벤트 연동 ---
 const btnItemMode = document.getElementById("btn-item-mode");
 const colorWipeLine = document.getElementById("color-wipe-line");
@@ -432,8 +488,13 @@ if (btnItemMode && colorWipeLine) {
 // 뒤로가기 버튼 등을 눌렀을 때 아이템전 테마 해제
 const resetTheme = () => {
   document.body.classList.remove("item-theme");
+  document.body.classList.remove("lucky-theme");
   document.body.style.filter = 'hue-rotate(0deg)';
   isItemMode = false;
+  window.isSlowMode = false;
+  window.isLuckyMode = false;
+  if (slowTimer) clearTimeout(slowTimer);
+  if (luckyTimer) clearTimeout(luckyTimer);
 };
 
 document.getElementById("back-btn")?.addEventListener("click", resetTheme);
