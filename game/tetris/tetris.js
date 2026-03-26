@@ -122,11 +122,16 @@ let isPaused = false;
 let dropCounter = 0;
 let dropInterval = 1000; // 1초마다 하강
 let lastTime = 0;
-let lockDelayCounter = 0;
-const LOCK_DELAY_LIMIT = 3000; // 바닥 도달 후 최대 3초 유예 (티스핀 등)
 let animationId = null;
 let skipCooldown = 0;
 const MAX_SKIP_COOLDOWN = 10;
+
+// 락 딜레이 (티스핀 / 조작 대기 시간) 관련 변수
+let isLocking = false;
+let lockCounter = 0;
+let totalLockCounter = 0;
+const lockDelay = 500; // 0.5초 동안 움직임이 없으면 고정
+const maxLockDelay = 3000; // 최대 3초까지만 조작 연장 가능
 
 // --- 사운드 시스템 (Web Audio API) ---
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -421,11 +426,39 @@ function skipPieceAction() {
     gameOver();
   }
   dropCounter = 0;
-  lockDelayCounter = 0;
+  isLocking = false;
+  lockCounter = 0;
+  totalLockCounter = 0;
+}
+
+// 바닥에 닿았는지 지속적으로 체크하는 헬퍼 함수
+function checkLocking() {
+  piece.pos.y++;
+  if (collide(board, piece)) {
+    if (!isLocking) {
+      isLocking = true;
+      lockCounter = 0;
+    }
+  } else {
+    isLocking = false;
+    lockCounter = 0;
+    totalLockCounter = 0; // 공중으로 뜨면 락 카운터 완전 초기화
+  }
+  piece.pos.y--;
+}
+
+function resetLockDelay() {
+  if (isLocking) {
+    lockCounter = 0;
+  }
 }
 
 // 블록 고정 (Lock) 처리 함수
 function lockPiece() {
+  isLocking = false;
+  lockCounter = 0;
+  totalLockCounter = 0;
+
   if (
     typeof window.handleItemPieceLanded === "function" &&
     window.handleItemPieceLanded()
@@ -446,7 +479,6 @@ function lockPiece() {
   if (collide(board, piece)) {
     gameOver();
   }
-  lockDelayCounter = 0;
   dropCounter = 0;
 }
 
@@ -455,7 +487,14 @@ function pieceDrop() {
   piece.pos.y++;
   if (collide(board, piece)) {
     piece.pos.y--;
+    if (!isLocking) {
+      isLocking = true;
+      lockCounter = 0;
+    }
   } else {
+    isLocking = false;
+    lockCounter = 0;
+    totalLockCounter = 0;
     dropCounter = 0;
   }
 }
@@ -475,6 +514,8 @@ function pieceMove(offset) {
   if (collide(board, piece)) {
     piece.pos.x -= offset;
   } else {
+    resetLockDelay();
+    checkLocking();
     SoundManager.playSFX("move");
   }
 }
@@ -507,6 +548,8 @@ function pieceRotate() {
       return;
     }
   }
+  resetLockDelay();
+  checkLocking();
   SoundManager.playSFX("rotate");
 }
 
@@ -664,24 +707,20 @@ function update(time = 0) {
     window.updateItemTimers(deltaTime);
   }
 
-  // 바닥 충돌 여부 체크 (Lock Delay 로직)
-  piece.pos.y++;
-  const isTouchingFloor = collide(board, piece);
-  piece.pos.y--;
+  if (isLocking) {
+    lockCounter += deltaTime;
+    totalLockCounter += deltaTime;
 
-  if (isTouchingFloor) {
-    lockDelayCounter += deltaTime;
-    if (lockDelayCounter >= LOCK_DELAY_LIMIT) {
+    // 움직임이 0.5초 없거나 전체 대기 시간이 3초를 초과하면 강제 고정
+    if (lockCounter > lockDelay || totalLockCounter > maxLockDelay) {
       lockPiece();
-    }
-  } else {
-    lockDelayCounter = 0; // 공중에 있으면 유예 시간 초기화
-    dropCounter += deltaTime;
-    if (dropCounter > dropInterval) {
-      pieceDrop();
     }
   }
 
+  dropCounter += deltaTime;
+  if (dropCounter > dropInterval) {
+    pieceDrop();
+  }
   draw();
   animationId = requestAnimationFrame(update);
 }
@@ -714,7 +753,9 @@ function startGame() {
   nextPiece = generateRandomPiece();
   drawNextPiece();
   skipCooldown = 0;
-  lockDelayCounter = 0;
+  isLocking = false;
+  lockCounter = 0;
+  totalLockCounter = 0;
   updateSkipUI();
   startBtn.textContent = "다시 시작";
 
@@ -1454,6 +1495,9 @@ function startGameMulti() {
   piece = generateRandomPiece();
   nextPiece = generateRandomPiece();
   drawNextPiece();
+  isLocking = false;
+  lockCounter = 0;
+  totalLockCounter = 0;
   skipCooldown = 0;
   updateSkipUI();
 

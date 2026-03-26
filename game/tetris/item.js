@@ -58,8 +58,6 @@ window.receiveItemAttack = function (itemType) {
   void gameScreen.offsetWidth;
   gameScreen.classList.add("damage-flash");
 
-  window.triggerPoopRain(); // 똥 비 내리기 이펙트
-
   if (itemType === 17) {
     showItemPopup("💩 상대의 똥 블록 공격!");
     for (let i = 0; i < 3; i++) {
@@ -330,11 +328,9 @@ function applySingleItemEffect(itemType) {
     sendItemAttack(itemType);
     let icon = itemType === 17 ? "💩" : itemType === 18 ? "🦑" : "🔄";
     showItemPopup(`공격 전송! ${icon}`);
+    // 공격 아이템 발사 애니메이션
+    createFlyingItemAnimation(itemType);
     return;
-  }
-
-  if (isDebuff) {
-    window.triggerPoopRain(); // 싱글에서 디버프 맞았을 때도 효과 발동
   }
 
   if (itemType === 15) {
@@ -557,6 +553,113 @@ function createPoopRainAnimation() {
   }
 }
 
+// --- 신규: 멀티플레이 공격 애니메이션 ---
+
+/**
+ * 상대에게 날아가는 아이템 공격 애니메이션을 생성합니다.
+ * @param {number} itemType - 공격 아이템 종류 (17: 똥, 18: 먹물, 19: 반전)
+ */
+function createFlyingItemAnimation(itemType) {
+  const gameContainer = document.querySelector('.game-container');
+  const myBoard = document.getElementById('tetris-board');
+  const opponentBoard = document.getElementById('opponent-board');
+
+  // 멀티플레이가 아니거나, 상대 보드가 없으면 실행하지 않음
+  if (!gameContainer || !myBoard || !opponentBoard || opponentBoard.classList.contains('hidden')) return;
+
+  const flyingItem = document.createElement('div');
+  flyingItem.style.position = 'absolute';
+  flyingItem.style.zIndex = '2000';
+  flyingItem.style.fontSize = '30px';
+  flyingItem.style.textShadow = '0 0 10px rgba(0,0,0,0.5)';
+  flyingItem.style.pointerEvents = 'none';
+
+  let icon = '';
+  if (itemType === 17) icon = "💩";
+  else if (itemType === 18) icon = "🦑";
+  else if (itemType === 19) icon = "🔄";
+  else return; // 공격 아이템이 아니면 중단
+
+  flyingItem.textContent = icon;
+  gameContainer.appendChild(flyingItem);
+
+  const startRect = myBoard.getBoundingClientRect();
+  const endRect = opponentBoard.getBoundingClientRect();
+  const containerRect = gameContainer.getBoundingClientRect();
+
+  // gameContainer를 기준으로 상대 좌표 계산
+  const startX = startRect.left + startRect.width / 2 - containerRect.left;
+  const startY = startRect.top + startRect.height / 2 - containerRect.top;
+  const endX = endRect.left + endRect.width / 2 - containerRect.left;
+  const endY = endRect.top + endRect.height / 2 - containerRect.top;
+
+  const animation = flyingItem.animate([
+    { 
+      transform: `translate(${startX - 15}px, ${startY - 15}px) scale(1.5) rotate(0deg)`,
+      opacity: 1 
+    },
+    { 
+      transform: `translate(${(startX + endX) / 2 - 15}px, ${Math.min(startY, endY) - 150}px) scale(2) rotate(360deg)`,
+      opacity: 1,
+      offset: 0.5
+    },
+    { 
+      transform: `translate(${endX - 15}px, ${endY - 15}px) scale(0.5) rotate(720deg)`,
+      opacity: 0 
+    }
+  ], {
+    duration: 800, // 0.8초
+    easing: 'cubic-bezier(0.4, 0, 0.6, 1)' // 부드러운 가속/감속
+  });
+
+  animation.onfinish = () => {
+    createAttackExplosion(endX, endY);
+    flyingItem.remove();
+  };
+}
+
+/**
+ * 상대 보드에 공격이 명중했을 때 폭발 효과를 생성합니다.
+ * @param {number} x - 폭발 x 좌표 (컨테이너 기준)
+ * @param {number} y - 폭발 y 좌표 (컨테이너 기준)
+ */
+function createAttackExplosion(x, y) {
+  const gameContainer = document.querySelector('.game-container');
+  if (!gameContainer) return;
+
+  const particleCount = 30;
+  const colors = ['#ff4757', '#ffa502', '#ffffff'];
+
+  for (let i = 0; i < particleCount; i++) {
+    const p = document.createElement('div');
+    p.style.position = 'absolute';
+    p.style.left = `${x}px`;
+    p.style.top = `${y}px`;
+    p.style.width = `${Math.random() * 6 + 3}px`;
+    p.style.height = p.style.width;
+    p.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+    p.style.borderRadius = '50%';
+    p.style.pointerEvents = 'none';
+    p.style.zIndex = '2001';
+    gameContainer.appendChild(p);
+
+    const angle = Math.random() * Math.PI * 2;
+    const velocity = Math.random() * 100 + 50;
+    const tx = Math.cos(angle) * velocity;
+    const ty = Math.sin(angle) * velocity;
+
+    p.animate([
+      { transform: 'translate(-50%, -50%) scale(1)', opacity: 1 },
+      { transform: `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px)) scale(0)`, opacity: 0 }
+    ], {
+      duration: 500 + Math.random() * 300,
+      easing: 'cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+    });
+
+    setTimeout(() => p.remove(), 800);
+  }
+}
+
 // --- 신규 싱글 아이템전 충돌/발동 로직 ---
 window.explodeBomb = function (cx, cy) {
   let lineScore = 300; // 1줄 기본 점수(100)의 3배
@@ -635,7 +738,11 @@ window.spawnNextAfterSpecial = function () {
     gameOver();
   }
   // 아이템 발동 후 새 블록의 락 딜레이 초기화
-  if (typeof lockDelayCounter !== "undefined") lockDelayCounter = 0;
+  if (typeof isLocking !== "undefined") {
+    isLocking = false;
+    lockCounter = 0;
+    totalLockCounter = 0;
+  }
   dropCounter = 0;
 };
 
