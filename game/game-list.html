@@ -85,7 +85,7 @@
         box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
         backdrop-filter: blur(4px);
         border: 1px solid rgba(255, 255, 255, 0.1);
-        max-width: 600px;
+        max-width: 1200px;
         width: 90%;
       }
 
@@ -100,36 +100,43 @@
       }
 
       .game-list {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 25px;
+        padding: 20px;
+        width: 100%;
       }
 
       .game-card {
         display: flex;
+        flex-direction: column;
+        justify-content: center;
         align-items: center;
         text-decoration: none;
         color: white;
         padding: 20px;
         border-radius: 15px;
         transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
         border: 1px solid rgba(255, 255, 255, 0.1);
+        height: 250px;
+        opacity: 0.85;
       }
 
       .game-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+        transform: translateY(-10px);
+        opacity: 1;
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
+        border-color: rgba(255, 255, 255, 0.8);
       }
 
       .game-card .icon {
-        font-size: 40px;
-        margin-right: 20px;
+        font-size: 60px;
+        margin-right: 0;
+        margin-bottom: 20px;
       }
 
       .game-card .info {
-        text-align: left;
+        text-align: center;
       }
 
       .game-card .title {
@@ -184,12 +191,19 @@
       .vampire:hover {
         border-color: #f39c12;
       }
+
+      /* 테트리스 스타일 */
+      .tetris {
+        background: linear-gradient(45deg, #8a2387, #e94057, #f27121);
+      }
+      .tetris:hover {
+        border-color: #f27121;
+      }
     </style>
   </head>
   <body>
     <div class="container">
       <h1>🎮 GAME PROJECT</h1>
-      <p>수정 작업 중 입니다!</p>
       <div class="game-list">
         <a href="./suika/suika.html" class="game-card suika">
           <span class="icon">🍉</span>
@@ -213,18 +227,42 @@
             <span class="desc">정교한 샷으로 공을 넣으세요!</span>
           </div>
         </a>
-        <a href="./shooting/shooting.html" class="game-card shooting">
+        <a href="./tetris/tetris.html" class="game-card tetris">
+          <span class="icon">🧱</span>
+          <div class="info">
+            <span class="title">테트리스</span>
+            <span class="desc">블록을 맞춰 줄을 없애보세요!</span>
+          </div>
+        </a>
+      </div>
+
+      <h2
+        style="
+          margin-top: 50px;
+          font-size: 1.5rem;
+          color: #ff5252;
+          text-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+        "
+      >
+        🔒 비밀번호를 입력해서 플레이하시오
+      </h2>
+      <div class="game-list">
+        <a href="./shooting/shooting.html" class="game-card shooting protected">
           <span class="icon">🧟</span>
           <div class="info">
             <span class="title">3D Shooting Game</span>
-            <span class="desc">다가오는 적들을 처치하고 생존하세요!</span>
+            <span class="desc"
+              >(클로즈베타)다가오는 적들을 처치하고 생존하세요!</span
+            >
           </div>
         </a>
-        <a href="./vampire/survival.html" class="game-card vampire">
+        <a href="./vampire/survival.html" class="game-card vampire protected">
           <span class="icon">💼</span>
           <div class="info">
             <span class="title">Office Survivor</span>
-            <span class="desc">쏟아지는 업무를 쳐내며 칼퇴하세요!</span>
+            <span class="desc"
+              >(클로즈베타)쏟아지는 업무를 쳐내며 칼퇴하세요!</span
+            >
           </div>
         </a>
       </div>
@@ -265,13 +303,31 @@
         playTone(600, "triangle", 0.15);
       }
 
-      // 이벤트 리스너 등록
-      document.querySelectorAll(".game-card").forEach((card) => {
+      const cards = document.querySelectorAll(".game-card");
+
+      // 마우스 오버 및 클릭 시 사운드 재생 효과만 유지
+      cards.forEach((card) => {
         card.addEventListener("mouseenter", () => {
           playHoverSound();
         });
-        card.addEventListener("click", () => {
+        card.addEventListener("click", (e) => {
+          e.preventDefault();
           playClickSound();
+
+          if (card.classList.contains("protected")) {
+            const pw = prompt("비밀번호를 입력하세요:");
+            if (pw === "goddoyeon") {
+              setTimeout(() => {
+                window.location.href = card.getAttribute("href");
+              }, 200);
+            } else if (pw !== null) {
+              alert("비밀번호가 틀렸습니다.");
+            }
+          } else {
+            setTimeout(() => {
+              window.location.href = card.getAttribute("href");
+            }, 200);
+          }
         });
       });
     </script>
