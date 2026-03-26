@@ -354,6 +354,7 @@ function applySingleItemEffect(itemType) {
   } else if (itemType === 17) {
     // 똥 블록 3개
     showItemPopup("💩 똥 블록 투하!");
+    createPoopRainAnimation();
     for (let i = 0; i < 3; i++) {
       let x = Math.floor(Math.random() * COLS);
       let y = 0;
@@ -520,6 +521,39 @@ function createDOMFirework() {
     );
 
     setTimeout(() => p.remove(), 1200);
+  }
+}
+
+// 똥 비 애니메이션
+function createPoopRainAnimation() {
+  const wrapper = document.querySelector(".board-wrapper");
+  if (!wrapper) return;
+
+  for (let i = 0; i < 30; i++) { // 30개 정도의 똥
+    const p = document.createElement("div");
+    p.textContent = "💩";
+    p.style.position = "absolute";
+    p.style.fontSize = `${Math.random() * 20 + 15}px`;
+    p.style.left = `${Math.random() * 100}%`;
+    p.style.top = "-50px"; // 화면 위에서 시작
+    p.style.pointerEvents = "none";
+    p.style.zIndex = "1000";
+    p.style.userSelect = "none"; // 텍스트 선택 방지
+    wrapper.appendChild(p);
+
+    const duration = Math.random() * 1000 + 1000; // 1~2초 동안 떨어짐
+    const delay = Math.random() * 800; // 시작 시간 지연
+
+    p.animate([
+      { transform: `translateY(0px) rotate(0deg)`, opacity: 1 },
+      { transform: `translateY(${wrapper.offsetHeight + 50}px) rotate(720deg)`, opacity: 1 }
+    ], {
+      duration: duration,
+      delay: delay,
+      easing: 'linear',
+    });
+
+    setTimeout(() => p.remove(), duration + delay + 100);
   }
 }
 
