@@ -349,7 +349,7 @@ function applySingleItemEffect(itemType) {
     document.body.classList.add("lucky-theme");
   } else if (itemType === 17) {
     // 똥 블록 3개
-    showItemPopup("💩 똥 블록 투하!");
+    showItemPopup("💩 앗! 똥 블록 디버프!");
     createPoopRainAnimation();
     for (let i = 0; i < 3; i++) {
       let x = Math.floor(Math.random() * COLS);
@@ -362,11 +362,11 @@ function applySingleItemEffect(itemType) {
     gameScreen.classList.add("damage-flash");
   } else if (itemType === 18) {
     // 먹물 가림
-    showItemPopup("🦑 먹물 공격!");
+    showItemPopup("🦑 앗! 먹물 디버프!");
     window.triggerInkSplatter();
   } else if (itemType === 19) {
     // 조작 반전
-    showItemPopup("🔄 조작 반전! (5초)");
+    showItemPopup("🔄 앗! 조작 반전 디버프! (5초)");
     window.isReversed = true;
     window.itemRemaining.reverse = 5000;
   }
@@ -817,6 +817,7 @@ if (btnItemMode && colorWipeLine) {
       gameScreen.classList.remove("hidden");
 
       isItemMode = true;
+      window.isMultiItemMode = false; // 싱글 아이템전이므로 멀티 상태 확실히 해제
       startGame();
       canvas.focus();
     }, 600);
@@ -835,6 +836,7 @@ const resetTheme = () => {
   document.body.classList.remove("lucky-theme");
   document.body.style.filter = "hue-rotate(0deg)";
   isItemMode = false;
+  window.isMultiItemMode = false; // 메뉴로 나갈 때도 상태 완벽 초기화
   window.isSlowMode = false;
   window.isLuckyMode = false;
   window.isReversed = false;

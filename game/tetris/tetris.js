@@ -327,8 +327,17 @@ function collide(board, piece) {
   const o = piece.pos;
   for (let y = 0; y < m.length; ++y) {
     for (let x = 0; x < m[y].length; ++x) {
-      if (m[y][x] !== 0 && (board[y + o.y] && board[y + o.y][x + o.x]) !== 0) {
-        return true;
+      if (m[y][x] !== 0) {
+        const boardY = y + o.y;
+        const boardX = x + o.x;
+        // 좌우 벽 및 바닥 충돌
+        if (boardY >= ROWS || boardX < 0 || boardX >= COLS) {
+          return true;
+        }
+        // 다른 블록과 겹친 경우 (보드 위쪽인 공중 구간은 무시)
+        if (boardY >= 0 && board[boardY][boardX] !== 0) {
+          return true;
+        }
       }
     }
   }
@@ -340,7 +349,12 @@ function merge(board, piece) {
   piece.matrix.forEach((row, y) => {
     row.forEach((value, x) => {
       if (value !== 0) {
-        board[y + piece.pos.y][x + piece.pos.x] = value;
+        const boardY = y + piece.pos.y;
+        const boardX = x + piece.pos.x;
+        // 보드 범위 내에 있을 때만 블록 고정
+        if (boardY >= 0 && boardY < ROWS && boardX >= 0 && boardX < COLS) {
+          board[boardY][boardX] = value;
+        }
       }
     });
   });
