@@ -1,0 +1,159 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: linear-gradient(135deg, #1b262c, #0f3460, #16213e);
+  color: white;
+  font-family: "Noto Sans KR", sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  user-select: none;
+}
+
+.hidden {
+  display: none !important;
+}
+
+#game-container {
+  width: 100%;
+  max-width: 800px;
+  height: 100vh;
+  max-height: 900px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 15px;
+  padding: 30px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+  position: relative;
+  overflow: hidden;
+}
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.main-title {
+  font-size: 4rem;
+  color: #f1c40f;
+  text-shadow: 4px 4px 0 #d35400;
+  margin-bottom: 30px;
+}
+
+.sub-title {
+  font-size: 2.5rem;
+  margin-bottom: 20px;
+}
+
+.menu-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: 280px;
+}
+
+.btn {
+  padding: 15px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  background: #3498db;
+  color: white;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s;
+}
+.btn:hover { background: #2980b9; transform: scale(1.05); }
+
+.back-btn { background: #e74c3c; }
+.back-btn:hover { background: #c0392b; }
+
+.sub-btn { background: #2ecc71; padding: 12px; font-size: 1.1rem; }
+.sub-btn:hover { background: #27ae60; }
+
+.input-field { padding: 12px; font-size: 1.2rem; border-radius: 8px; border: none; text-align: center; }
+
+/* 게임 헤더 */
+.game-header { width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.small { padding: 8px 15px; font-size: 1rem; }
+
+/* 보드 레이아웃 */
+.board-container { display: flex; width: 100%; height: 100%; gap: 20px; }
+
+/* 점수판 */
+.scoreboard { flex: 1; background: rgba(0, 0, 0, 0.7); border-radius: 10px; padding: 10px; overflow-y: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 1rem; text-align: center; }
+th, td { border: 1px solid #555; padding: 8px; }
+th { background: #34495e; }
+.score-cell { cursor: pointer; transition: background 0.2s; }
+.score-cell:hover { background: rgba(255, 255, 255, 0.2); }
+.score-cell.active-turn { background: rgba(52, 152, 219, 0.3); }
+.score-cell.preview-score {
+  color: #9e9e9e; /* 회색 */
+  font-style: italic;
+}
+.score-cell.filled { color: #f1c40f; font-weight: bold; cursor: default; }
+
+/* 플레이 영역 */
+.play-area { flex: 1.5; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 40px; background: rgba(0, 0, 0, 0.5); border-radius: 10px; padding: 20px; }
+.dice-container { display: flex; gap: 15px; }
+
+/* 3D 주사위 래퍼 */
+.die-wrapper {
+  transition: transform 0.2s, filter 0.2s;
+  cursor: pointer;
+  user-select: none;
+}
+.die-wrapper.held {
+  transform: translateY(-15px);
+  filter: drop-shadow(0 15px 15px rgba(241, 196, 15, 0.6));
+}
+.die-wrapper.held .cube__face {
+  border-color: #d35400;
+  background-color: #fff8e1;
+}
+.die-wrapper:hover { transform: scale(1.05); }
+.die-wrapper.held:hover { transform: translateY(-15px) scale(1.05); }
+
+/* 3D 씬 및 큐브 */
+.scene {
+  width: 70px;
+  height: 70px;
+  perspective: 400px;
+}
+.cube {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 1s cubic-bezier(0.2, 0.8, 0.2, 1); /* 부드럽게 감속하며 굴러감 */
+}
+.cube__face {
+  position: absolute;
+  width: 70px;
+  height: 70px;
+  background: white;
+  border: 3px solid #ccc;
+  border-radius: 12px;
+  box-shadow: inset 0 0 15px rgba(0,0,0,0.1);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+/* 6면의 3D 공간 배치 (주사위 크기 70px / 2 = 35px 띄움) */
+.face-1 { transform: rotateY(  0deg) translateZ(35px); }
+.face-6 { transform: rotateY(180deg) translateZ(35px); }
+.face-2 { transform: rotateY( 90deg) translateZ(35px); }
+.face-5 { transform: rotateY(-90deg) translateZ(35px); }
+.face-3 { transform: rotateX( 90deg) translateZ(35px); }
+.face-4 { transform: rotateX(-90deg) translateZ(35px); }
+
+#btn-roll:disabled { background: #7f8c8d; cursor: not-allowed; transform: none; }

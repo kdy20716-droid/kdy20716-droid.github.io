@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Yacht Dice</title>
+  <link rel="stylesheet" href="yacht.css">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="game-container">
+    <!-- 메인 화면 -->
+    <div id="start-screen" class="screen">
+      <h1 class="main-title">YACHT DICE</h1>
+      <div class="menu-buttons">
+        <button id="btn-start" class="btn">게임 시작</button>
+        <div id="local-mode-select" class="hidden">
+            <button id="btn-1p" class="btn sub-btn">1인용 (vs AI)</button>
+            <button id="btn-2p-local" class="btn sub-btn">2인용 (로컬)</button>
+        </div>
+        <button id="btn-multi" class="btn">멀티플레이</button>
+        <button id="btn-back-menu" class="btn back-btn">뒤로 가기</button>
+      </div>
+    </div>
+
+    <!-- 멀티플레이 메뉴 화면 -->
+    <div id="multi-menu-screen" class="screen hidden">
+        <h2 class="sub-title">멀티플레이 대기실</h2>
+        <div class="menu-buttons">
+            <button id="btn-create-room" class="btn">방 만들기</button>
+            <input type="text" id="room-code-input" class="input-field" placeholder="방 코드 입력 (4자리)" maxlength="4">
+            <button id="btn-join-room" class="btn">방 참가</button>
+            <p id="multi-status" class="status-text"></p>
+            <button id="btn-back-multi" class="btn back-btn">돌아가기</button>
+        </div>
+    </div>
+
+    <!-- 인게임 화면 -->
+    <div id="game-screen" class="screen hidden">
+      <div class="game-header">
+        <h2 id="turn-indicator">1P 턴 (1/12 라운드)</h2>
+        <button id="btn-ingame-back" class="btn back-btn small">나가기</button>
+      </div>
+      <div class="board-container">
+        <!-- 점수판 -->
+        <div class="scoreboard">
+          <table>
+            <thead>
+              <tr><th>카테고리</th><th id="p1-header">1P</th><th id="p2-header">2P</th></tr>
+            </thead>
+            <tbody id="score-tbody">
+              <!-- JS에서 동적으로 생성됨 -->
+            </tbody>
+          </table>
+        </div>
+        <!-- 플레이 영역 -->
+        <div class="play-area">
+          <div class="dice-container" id="dice-container">
+            <!-- 주사위 5개가 생성됨 -->
+          </div>
+          <button id="btn-roll" class="btn">주사위 굴리기 (3)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="yacht.js"></script>
+</body>
+</html>
