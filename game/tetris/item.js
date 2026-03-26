@@ -84,10 +84,9 @@ generateRandomPiece = function () {
   if (isItemMode || window.isMultiItemMode) {
     const rand = Math.random();
 
-    // 확률 조정: 레벨이 오를수록 이로운 아이템 감소, 해로운 아이템 증가
-    let currentLvl = typeof currentLevel !== "undefined" ? currentLevel : 1;
-    let beneficialChance = Math.max(0.05, 0.2 - (currentLvl - 1) * 0.015); // 최소 5%
-    let harmfulChance = Math.min(0.5, 0.2 + (currentLvl - 1) * 0.02); // 최대 50%
+    // 확률 고정: 시간이 지나도 이로운/해로운 아이템 확률 동일하게 유지
+    let beneficialChance = 0.2; // 20% 고정
+    let harmfulChance = 0.2; // 20% 고정
 
     if (rand < 0.001) {
       // 0.1% 확률: 행운 블록
