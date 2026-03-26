@@ -17,158 +17,15 @@ const btnCreateRoom = document.getElementById("btn-create-room");
 const btnJoinRoom = document.getElementById("btn-join-room");
 const multiStatus = document.getElementById("multi-status");
 
-// 보드게임 감성 스타일 동적 추가 (하얀 배경 & 클래식 보드게임 테마)
-const boardGameStyle = document.createElement("style");
-boardGameStyle.innerHTML = `
-  body {
-    background-color: #e6d8b8 !important; /* Parchment paper base */
-    background-image:
-        linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px) !important;
-    background-size: 40px 40px !important;
-    color: #5a3e2b !important;
-    font-family: 'Garamond', 'Times New Roman', serif !important;
-  }
-  
-  /* --- Layout Changes --- */
-  #game-screen {
-    flex-direction: row !important;
-    justify-content: center !important;
-    align-items: flex-start !important;
-    gap: 40px !important;
-    width: 90% !important;
-    max-width: 950px !important; /* Wider layout */
-    padding: 30px !important;
-  }
-
-  #game-controls {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 25px;
-    flex-basis: 400px; /* Give dice area a fixed base width */
-  }
-
-  #score-board {
-    flex-shrink: 0; /* Prevent scoreboard from shrinking */
-  }
-
-  /* --- Vintage Parchment Theme --- */
-  #start-screen, #multi-menu-screen, #game-screen {
-    background-color: #f5eeda !important; /* Lighter parchment */
-    border: 2px solid #c8bca8 !important;
-    border-radius: 8px !important;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2), inset 0 0 30px rgba(0,0,0,0.1) !important;
-  }
-
-  h1, h2, h3 {
-    color: #6d4c41 !important;
-    text-shadow: 1px 1px 1px rgba(255,255,255,0.5) !important;
-    font-family: 'Garamond', 'Times New Roman', serif !important;
-    letter-spacing: 1px;
-  }
-
-  button {
-    background-color: #8a3324 !important; /* Dark red / 'sealing wax' color */
-    color: #f5eeda !important;
-    border: 1px solid #5c2218 !important;
-    border-radius: 5px !important;
-    box-shadow: 0 3px 0 #5c2218, 0 4px 8px rgba(0,0,0,0.3) !important;
-    font-family: 'Garamond', 'Times New Roman', serif !important;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    transition: all 0.1s ease-in-out !important;
-  }
-
-  button:hover {
-    background-color: #a0402c !important;
-    transform: translateY(1px) !important;
-    box-shadow: 0 2px 0 #5c2218, 0 3px 6px rgba(0,0,0,0.3) !important;
-  }
-
-  button:active {
-    transform: translateY(3px) !important;
-    box-shadow: none !important;
-  }
-
-  button:disabled {
-    background-color: #ab8e79 !important;
-    border-color: #8c7362 !important;
-    color: #d1c0b1 !important;
-    box-shadow: none !important;
-    transform: none !important;
-  }
-
-  table {
-    background-color: transparent !important;
-    border: 2px solid #a1887f !important;
-    border-collapse: separate;
-    border-spacing: 0;
-  }
-
-  th, td {
-    border: 1px solid #d7ccc8 !important;
-    color: #5a3e2b !important;
-  }
-
-  .score-cell {
-    background-color: rgba(255, 255, 255, 0.2) !important;
-  }
-
-  .score-cell.preview-score {
-    background-color: #dcedc8 !important; /* Light green */
-    color: #33691e !important;
-    font-weight: bold !important;
-    box-shadow: 0 0 5px #a5d6a7;
-  }
-
-  .score-cell.filled {
-    background-color: #fffde7 !important; /* Light yellow */
-    color: #827717 !important;
-    font-weight: bold !important;
-    font-style: italic;
-  }
-
-  .cube__face {
-    background-color: #fffbe9 !important; /* Ivory */
-    border: 2px solid #a1887f !important;
-    border-radius: 8px !important;
-  }
-
-  .cube__face circle {
-    fill: #8a3324 !important; /* Dark red dots */
-  }
-
-  .cube__face.face-1 circle {
-    fill: #c62828 !important; /* Special red for 1 */
-  }
-
-  .die-wrapper.held .cube__face {
-    background-color: #e0e0e0 !important;
-    border: 3px solid #6d4c41 !important;
-    box-shadow: 0 0 10px rgba(0,0,0,0.5) inset;
-  }
-
-  #turn-indicator {
-    background-color: rgba(0,0,0,0.05) !important;
-    border: 1px solid #c8bca8 !important;
-    color: #6d4c41 !important;
-    font-weight: bold !important;
-    border-radius: 10px !important;
-    box-shadow: none !important;
-    padding: 8px 16px !important;
-  }
-`;
-document.head.appendChild(boardGameStyle);
-
-// 게임 시작 클릭 시 1P/2P 선택창 없이 바로 2P 로컬 모드로 시작
+// 게임 시작 클릭 시 2인용 로컬 모드로 바로 시작
 btnStart.addEventListener("click", () => {
-  if (localModeSelect) localModeSelect.style.display = "none";
   startGame("2p_local");
 });
 
-if (btn1p) btn1p.style.display = "none"; // 1P(AI전) 버튼 숨김
-if (btn2pLocal) btn2pLocal.style.display = "none"; // 2P 버튼 숨김
+// 2P 게임 시작
+btn2pLocal.addEventListener("click", () => {
+  startGame("2p_local");
+});
 
 // 멀티플레이 메뉴 진입
 btnMulti.addEventListener("click", () => {
@@ -273,10 +130,10 @@ function initBoard() {
   categories.forEach(cat => {
     const tr = document.createElement("tr");
     const isBonus = cat.id === "bonus";
-    const initText = isBonus ? "0 / 63" : "";
-    const extraStyle = isBonus ? "style='color: #6d4c41; font-size: 0.9em; font-weight: bold;'" : "";
+    const initText = isBonus ? "0/63" : "";
+    const extraStyle = isBonus ? "style='color: #9e9e9e; font-size: 0.9em;'" : "";
     if (isBonus) {
-        tr.style.backgroundColor = "rgba(0, 0, 0, 0.05)";
+        tr.style.backgroundColor = "rgba(255, 255, 255, 0.05)";
     }
     tr.innerHTML = `
       <td>${cat.name}</td>
@@ -290,9 +147,6 @@ function initBoard() {
 // 점수판 클릭 이벤트 (이벤트 위임)
 if (scoreTbody) {
   scoreTbody.addEventListener("click", (e) => {
-    // 주사위가 구르는 중에는 선택 불가
-    if (btnRoll.disabled && rollsLeft < 3) return;
-
     const cell = e.target;
     if (!cell.classList.contains("score-cell") || !cell.classList.contains("preview-score")) return;
     
