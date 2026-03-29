@@ -143,18 +143,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const updateModal = (index) => {
       const item = portfolioItems[index];
-      const img = item.querySelector("img").src;
+      const imgTag = item.querySelector("img");
+      const img = imgTag ? imgTag.src : ""; // 이미지가 없는 경우 대비
       const title = item.getAttribute("data-title");
       const desc = item.getAttribute("data-desc");
       const url = item.getAttribute("data-url");
 
-      if (modalImg) modalImg.src = img;
+      if (modalImg) {
+        modalImg.src = img;
+        // 이미지가 없으면 공간을 차지하지 않도록 숨김
+        modalImg.style.display = img ? "block" : "none";
+      }
       if (modalTitle) modalTitle.innerText = title;
       if (modalText) modalText.innerText = desc;
 
       if (url && url !== "#") {
         if (modalLink) {
           modalLink.href = url;
+          modalLink.target = "_blank"; // 모달 내 버튼도 새 탭으로 설정
           modalLink.style.display = "inline-block";
         }
       } else {
@@ -164,10 +170,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
     portfolioItems.forEach((item, index) => {
       item.addEventListener("click", () => {
-        currentIndex = index;
-        updateModal(currentIndex);
-        modal.style.display = "block";
-        document.body.style.overflow = "hidden";
+        const url = item.getAttribute("data-url");
+        // URL이 있으면 새 탭에서 열기
+        if (url && url !== "#") {
+          window.open(url, "_blank");
+        } else {
+          // URL이 없으면(Coming Soon 등) 상세 설명 모달 띄우기
+          currentIndex = index;
+          updateModal(currentIndex);
+          modal.style.display = "block";
+          document.body.style.overflow = "hidden";
+        }
       });
     });
 
