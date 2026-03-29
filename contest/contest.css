@@ -1,0 +1,73 @@
+/* 2026 겜브과 x VALORANT 디자인 시스템 */
+:root {
+    --val-red: #FF4655;
+    --val-dark: #0F1923;
+    --val-blue: #00F5FF;
+    --val-grey: #ECE8E1;
+    --val-border: rgba(236, 232, 225, 0.1);
+}
+
+/* 전역 폰트 및 배경 설정 */
+body {
+    background-color: var(--val-dark);
+    color: var(--val-grey);
+    font-family: 'Noto Sans KR', sans-serif;
+    overflow-x: hidden;
+}
+
+.font-gaming { font-family: 'Orbitron', sans-serif; }
+
+/* 발로란트 스타일 클립 패스 (날카로운 모서리) */
+.clip-val {
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%);
+}
+
+.clip-btn {
+    clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%);
+}
+
+/* 배경 스캔라인 효과 */
+.scanlines {
+    background: linear-gradient(
+        to bottom,
+        rgba(18, 16, 16, 0) 50%,
+        rgba(0, 0, 0, 0.25) 50%
+    );
+    background-size: 100% 4px;
+    pointer-events: none;
+    opacity: 0.3;
+}
+
+/* 애니메이션 키프레임 */
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+.animate-float { 
+    animation: float 4s ease-in-out infinite; 
+}
+
+/* 카드 호버 효과 */
+.bracket-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid var(--val-border);
+}
+
+.bracket-card:hover {
+    border-color: rgba(255, 70, 85, 0.5);
+    box-shadow: 0 0 20px rgba(255, 70, 85, 0.15);
+    transform: scale(1.02);
+}
+
+/* 대진표 요소 초기 상태 (JS Observer용) */
+.reveal-item {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.reveal-item.active {
+    opacity: 1;
+    transform: translateY(0);
+}
