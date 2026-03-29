@@ -134,13 +134,13 @@
                             <button id="update-price-btn" class="val-btn blue" onclick="updateCurrentPrice()" style="display: none; width: auto; padding: 0 20px; font-size: 1rem;">등록</button>
                         </div>
                         <button id="place-bid-btn" class="bid-btn val-btn blue w-full" onclick="placeBid()" style="grid-column: 1 / -1;">입찰하기</button>
-                        <button id="confirm-bid-btn" class="bid-btn val-btn red w-full" onclick="confirmBid()" style="grid-column: 1 / -1;">낙찰 확정</button>
-                        <button id="cancel-placement-btn" class="bid-btn val-btn w-full" onclick="cancelPlacement()" style="display: none; grid-column: 1 / -1; background-color: #444; border: none;">배치 취소</button>
+                        <button id="confirm-bid-btn" class="bid-btn val-btn red w-full" onclick="confirmBid()" style="grid-column: 1 / -1;">낙찰 확정</button>                        
                     </div>
                     <!-- Draggable Player Card (Host Only) -->
                     <div id="current-player-card-draggable" class="current-player-card-draggable" draggable="false" style="display: none;">
                         <span id="draggable-player-name"></span>
                         <span id="draggable-player-role"></span>
+                        <button id="cancel-placement-btn" class="val-btn w-full" onclick="cancelPlacement()" style="display: none; background-color: #444; border: none; margin-top: 20px; max-width: 200px;">배치 취소</button>
                     </div>
                 </div>
             </main>
