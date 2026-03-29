@@ -484,12 +484,6 @@ window.confirmBid = function() {
         return;
     }
 
-    // 낙찰 확정 시 입력창의 점수를 최종가로 반영 (방장이 수동 입력한 경우 대비)
-    const finalScore = parseInt(bidInputEl.value);
-    if (!isNaN(finalScore) && finalScore >= currentPrice) {
-        currentPrice = finalScore;
-    }
-
     const winnerName = highestBidder ? `${highestBidder.name}팀` : "방장 지정";
     addLog(`[낙찰 확정] ${winnerName}이 ${currentPrice}pt로 낙찰되었습니다.`, 'system');
     addLog(`[안내] 방장님, 배정할 팀의 EMPTY 슬롯을 클릭해주세요.`, 'system');
