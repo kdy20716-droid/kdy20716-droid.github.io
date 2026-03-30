@@ -1,243 +1,366 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/contest/asset/logo.png" />
     <title>2026 겜브과 x VALORANT 대회</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=Orbitron:wght@400;700;900&display=swap"
+      rel="stylesheet"
+    />
     <!-- head에 추가 -->
-<link rel="stylesheet" href="contest.css">
-    
+    <link rel="stylesheet" href="contest.css" />
+
     <style>
-        :root {
-            --val-dark: #0F1923;
-            --val-red: #FF4655;
-            --val-blue: #00F5FF;
-            --val-grey: #ECE8E1;
-        }
+      :root {
+        --val-dark: #0f1923;
+        --val-red: #ff4655;
+        --val-blue: #00f5ff;
+        --val-grey: #ece8e1;
+      }
 
-        body {
-            background-color: var(--val-dark);
-            font-family: 'Noto Sans KR', sans-serif;
-            color: var(--val-grey);
-            overflow-x: hidden;
-        }
+      body {
+        background-color: var(--val-dark);
+        font-family: "Noto Sans KR", sans-serif;
+        color: var(--val-grey);
+        overflow-x: hidden;
+      }
 
-        .font-valorant { font-family: 'Orbitron', sans-serif; }
+      .font-valorant {
+        font-family: "Orbitron", sans-serif;
+      }
 
-        /* 발로란트 스타일의 날카로운 테두리 커스텀 */
-        .val-border {
-            clip-path: polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%);
-            border-left: 4px solid var(--val-red);
-        }
+      /* 발로란트 스타일의 날카로운 테두리 커스텀 */
+      .val-border {
+        clip-path: polygon(
+          0 0,
+          100% 0,
+          100% calc(100% - 15px),
+          calc(100% - 15px) 100%,
+          0 100%
+        );
+        border-left: 4px solid var(--val-red);
+      }
 
-        .val-btn-clip {
-            clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%);
-        }
+      .val-btn-clip {
+        clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%);
+      }
 
-        /* 대진표 연결선 스타일 */
-        .bracket-line {
-            background: rgba(236, 232, 225, 0.2);
-        }
+      /* 대진표 연결선 스타일 */
+      .bracket-line {
+        background: rgba(236, 232, 225, 0.2);
+      }
 
-        /* 배경 글리치 효과 애니메이션 */
-        @keyframes bg-move {
-            0% { transform: translate(0, 0); }
-            50% { transform: translate(-1%, -1%); }
-            100% { transform: translate(0, 0); }
+      /* 배경 글리치 효과 애니메이션 */
+      @keyframes bg-move {
+        0% {
+          transform: translate(0, 0);
         }
-        .hero-bg {
-            animation: bg-move 10s ease-in-out infinite;
-            background: linear-gradient(rgba(15, 25, 35, 0.8), rgba(15, 25, 35, 0.8)), url('https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&q=80');
-            background-size: cover;
+        50% {
+          transform: translate(-1%, -1%);
         }
+        100% {
+          transform: translate(0, 0);
+        }
+      }
+      .hero-bg {
+        animation: bg-move 10s ease-in-out infinite;
+        background:
+          linear-gradient(rgba(15, 25, 35, 0.8), rgba(15, 25, 35, 0.8)),
+          url("https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&q=80");
+        background-size: cover;
+      }
     </style>
-</head>
-<body class="bg-[#0F1923]">
-
+  </head>
+  <body class="bg-[#0F1923]">
     <!-- Navigation -->
-    <nav class="fixed w-full z-50 bg-[#0F1923]/90 border-b border-white/10 backdrop-blur-md">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-20 items-center">
-                <div class="flex items-center space-x-2">
-                    <img src="../contest/asset/logo.png" alt="겜브과 로고" class="h-14 w-auto">
-                    <h1 class="text-xl font-black tracking-tighter font-valorant">
-                        GAME VR <span class="text-[#FF4655]">x</span> VALORANT
-                    </h1>
-                </div>
-                <div class="hidden md:flex space-x-8 font-bold text-sm tracking-widest uppercase">
-                    <a href="#info" class="hover:text-[#FF4655] transition-colors">대회 정보</a>
-                    <a href="#bracket" class="hover:text-[#FF4655] transition-colors">대진표</a>
-                    <a href="#auction" class="hover:text-[#FF4655] transition-colors">경매 현황</a>
-                    <a href="#teams" class="hover:text-[#FF4655] transition-colors">팀 명단</a>
-                </div>
-                <div class="md:hidden text-2xl">
-                    <i class="fa-solid fa-bars"></i>
-                </div>
-            </div>
+    <nav
+      class="fixed w-full z-50 bg-[#0F1923]/90 border-b border-white/10 backdrop-blur-md"
+    >
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-20 items-center">
+          <div class="flex items-center space-x-2">
+            <img
+              src="../contest/asset/logo.png"
+              alt="겜브과 로고"
+              class="h-14 w-auto"
+            />
+            <h1 class="text-xl font-black tracking-tighter font-valorant">
+              GAME VR <span class="text-[#FF4655]">x</span> VALORANT
+            </h1>
+          </div>
+          <div
+            class="hidden md:flex space-x-8 font-bold text-sm tracking-widest uppercase"
+          >
+            <a href="#info" class="hover:text-[#FF4655] transition-colors"
+              >대회 정보</a
+            >
+            <a href="#bracket" class="hover:text-[#FF4655] transition-colors"
+              >대진표</a
+            >
+            <a href="#auction" class="hover:text-[#FF4655] transition-colors"
+              >경매 현황</a
+            >
+            <a href="#teams" class="hover:text-[#FF4655] transition-colors"
+              >팀 명단</a
+            >
+          </div>
+          <div class="md:hidden text-2xl">
+            <i class="fa-solid fa-bars"></i>
+          </div>
         </div>
+      </div>
     </nav>
 
     <!-- Hero Section -->
-    <header class="relative h-screen flex items-center justify-center pt-20 overflow-hidden hero-bg">
-        <div class="relative z-10 text-center px-4">
-            <div class="inline-block bg-[#FF4655] text-white px-4 py-1 mb-6 text-xs font-bold tracking-[0.3em] uppercase animate-pulse">
-                LIVE: 그룹 스테이지 진행 중
-            </div>
-            <h2 class="text-5xl md:text-8xl font-black mb-4 font-valorant tracking-tighter">
-                2026 겜브과<br/>
-                <span class="text-transparent bg-clip-text bg-gradient-to-r from-[#FF4655] to-[#00F5FF]">VALORANT E-SPORTS</span> 
-            </h2>
-            <p class="text-gray-400 max-w-2xl mx-auto mb-10 text-lg">
-                게임/VR 콘텐츠 디자인 전공 최강의 자리를 가리는 진검승부.<br/>
-                전략과 피지컬, 그리고 자본의 결합이 만들어내는 전율의 매치.
-            </p>
-            <div class="flex flex-col sm:flex-row justify-center gap-4 uppercase font-bold">
-                <button class="bg-[#FF4655] hover:bg-[#ff5e6a] text-white px-10 py-4 val-btn-clip transition-all transform hover:scale-105">
-                    대진표 확인하기
-                </button>
-                <button class="border border-white/30 hover:bg-white/10 text-white px-10 py-4 val-btn-clip transition-all">
-                    승부 예측하기
-                </button>
-            </div>
+    <header
+      class="relative h-screen flex items-center justify-center pt-20 overflow-hidden hero-bg"
+    >
+      <div class="relative z-10 text-center px-4">
+        <div
+          class="inline-block bg-[#FF4655] text-white px-4 py-1 mb-6 text-xs font-bold tracking-[0.3em] uppercase animate-pulse"
+        >
+          LIVE: 그룹 스테이지 진행 중
         </div>
-        
-        <!-- Decoration Elements -->
-        <div class="absolute bottom-10 left-10 text-[10rem] font-black opacity-5 select-none font-valorant">VLRNT</div>
-        <div class="absolute top-40 right-10 w-32 h-32 border-r-2 border-t-2 border-[#FF4655] opacity-20"></div>
+        <h2
+          class="text-5xl md:text-8xl font-black mb-4 font-valorant tracking-tighter"
+        >
+          2026 겜브과<br />
+          <span
+            class="text-transparent bg-clip-text bg-gradient-to-r from-[#FF4655] to-[#00F5FF]"
+            >VALORANT E-SPORTS</span
+          >
+        </h2>
+        <p class="text-gray-400 max-w-2xl mx-auto mb-10 text-lg">
+          게임/VR 콘텐츠 디자인 전공 최강의 자리를 가리는 진검승부.<br />
+          전략과 피지컬, 그리고 자본의 결합이 만들어내는 전율의 매치.
+        </p>
+        <div
+          class="flex flex-col sm:flex-row justify-center gap-4 uppercase font-bold"
+        >
+          <button
+            class="bg-[#FF4655] hover:bg-[#ff5e6a] text-white px-10 py-4 val-btn-clip transition-all transform hover:scale-105"
+          >
+            대진표 확인하기
+          </button>
+          <button
+            class="border border-white/30 hover:bg-white/10 text-white px-10 py-4 val-btn-clip transition-all"
+          >
+            승부 예측하기
+          </button>
+        </div>
+      </div>
+
+      <!-- Decoration Elements -->
+      <div
+        class="absolute bottom-10 left-10 text-[10rem] font-black opacity-5 select-none font-valorant"
+      >
+        VLRNT
+      </div>
+      <div
+        class="absolute top-40 right-10 w-32 h-32 border-r-2 border-t-2 border-[#FF4655] opacity-20"
+      ></div>
     </header>
 
     <!-- Tournament Bracket Section -->
     <section id="bracket" class="py-24 bg-[#0F1923] relative">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-20">
-                <h3 class="text-3xl font-black font-valorant mb-2">PLAYOFF BRACKET</h3>
-                <div class="w-20 h-1 bg-[#FF4655] mx-auto"></div>
-            </div>
-
-            <!-- Bracket Grid -->
-            <div class="flex flex-col md:flex-row items-center justify-center gap-0 md:gap-4 overflow-x-auto pb-10">
-                
-                <!-- Semifinals -->
-                <div class="flex flex-col space-y-12 w-full max-w-[300px]">
-                    <div class="text-center text-xs font-bold tracking-widest text-gray-500 mb-4 uppercase">Semi-Finals</div>
-                    
-                    <!-- Match 1 -->
-                    <div class="relative">
-                        <div class="bg-[#1a2531] p-4 val-border group cursor-pointer hover:bg-[#242f3d] transition-all">
-                            <div class="flex justify-between items-center mb-3">
-                                <div class="flex items-center space-x-3">
-                                    <div class="w-8 h-8 bg-blue-500 rounded-sm flex items-center justify-center font-bold">A</div>
-                                    <span class="font-bold">팀 도연</span>
-                                </div>
-                                <span class="text-[#FF4655] font-black">2</span>
-                            </div>
-                            <div class="flex justify-between items-center opacity-50">
-                                <div class="flex items-center space-x-3">
-                                    <div class="w-8 h-8 bg-gray-600 rounded-sm flex items-center justify-center font-bold">B</div>
-                                    <span class="font-bold">팀 지민</span>
-                                </div>
-                                <span class="font-black">1</span>
-                            </div>
-                        </div>
-                        <!-- Connector -->
-                        <div class="hidden md:block absolute -right-4 top-1/2 w-4 h-[2px] bracket-line"></div>
-                    </div>
-
-                    <!-- Match 2 -->
-                    <div class="relative">
-                        <div class="bg-[#1a2531] p-4 val-border group cursor-pointer hover:bg-[#242f3d] transition-all">
-                            <div class="flex justify-between items-center mb-3 opacity-50">
-                                <div class="flex items-center space-x-3">
-                                    <div class="w-8 h-8 bg-green-500 rounded-sm flex items-center justify-center font-bold">C</div>
-                                    <span class="font-bold">팀 민수</span>
-                                </div>
-                                <span class="font-black">0</span>
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <div class="flex items-center space-x-3">
-                                    <div class="w-8 h-8 bg-orange-500 rounded-sm flex items-center justify-center font-bold">D</div>
-                                    <span class="font-bold">팀 서연</span>
-                                </div>
-                                <span class="text-[#FF4655] font-black">2</span>
-                            </div>
-                        </div>
-                        <!-- Connector -->
-                        <div class="hidden md:block absolute -right-4 top-1/2 w-4 h-[2px] bracket-line"></div>
-                    </div>
-                </div>
-
-                <!-- Vertical Bridge -->
-                <div class="hidden md:flex flex-col justify-center">
-                    <div class="w-[2px] h-[180px] bracket-line relative">
-                        <div class="absolute right-0 top-1/2 w-8 h-[2px] bracket-line"></div>
-                    </div>
-                </div>
-
-                <!-- Grand Final -->
-                <div class="flex flex-col justify-center w-full max-w-[320px] mt-12 md:mt-0">
-                    <div class="text-center text-xs font-bold tracking-widest text-[#FF4655] mb-4 uppercase">Grand Final</div>
-                    <div class="bg-[#1a2531] p-6 border-2 border-[#FF4655] shadow-[0_0_20px_rgba(255,70,85,0.2)] relative">
-                        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#FF4655] text-white text-[10px] px-3 py-1 font-black">CHAMPIONSHIP MATCH</div>
-                        
-                        <div class="space-y-6">
-                            <div class="flex justify-between items-center">
-                                <div class="flex items-center space-x-4">
-                                    <div class="w-10 h-10 bg-blue-500 flex items-center justify-center font-black text-xl">A</div>
-                                    <span class="text-xl font-black">팀 도연</span>
-                                </div>
-                                <div class="text-2xl font-black text-gray-600">-</div>
-                            </div>
-                            <div class="text-center text-gray-500 font-valorant py-2">VS</div>
-                            <div class="flex justify-between items-center">
-                                <div class="flex items-center space-x-4">
-                                    <div class="w-10 h-10 bg-orange-500 flex items-center justify-center font-black text-xl">D</div>
-                                    <span class="text-xl font-black">팀 서연</span>
-                                </div>
-                                <div class="text-2xl font-black text-gray-600">-</div>
-                            </div>
-                        </div>
-                        
-                        <div class="mt-8 pt-6 border-t border-white/10 text-center">
-                            <p class="text-xs text-gray-400 mb-2">2026.03.15 19:00 KST</p>
-                            <button class="w-full bg-white text-[#0F1923] py-2 font-bold hover:bg-[#00F5FF] transition-colors uppercase text-sm">경기 알림 설정</button>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-20">
+          <h3 class="text-3xl font-black font-valorant mb-2">
+            PLAYOFF BRACKET
+          </h3>
+          <div class="w-20 h-1 bg-[#FF4655] mx-auto"></div>
         </div>
+
+        <!-- Bracket Grid -->
+        <div
+          class="flex flex-col md:flex-row items-center justify-center gap-0 md:gap-4 overflow-x-auto pb-10"
+        >
+          <!-- Semifinals -->
+          <div class="flex flex-col space-y-12 w-full max-w-[300px]">
+            <div
+              class="text-center text-xs font-bold tracking-widest text-gray-500 mb-4 uppercase"
+            >
+              Semi-Finals
+            </div>
+
+            <!-- Match 1 -->
+            <div class="relative">
+              <div
+                class="bg-[#1a2531] p-4 val-border group cursor-pointer hover:bg-[#242f3d] transition-all"
+              >
+                <div class="flex justify-between items-center mb-3">
+                  <div class="flex items-center space-x-3">
+                    <div
+                      class="w-8 h-8 bg-blue-500 rounded-sm flex items-center justify-center font-bold"
+                    >
+                      A
+                    </div>
+                    <span class="font-bold">팀 도연</span>
+                  </div>
+                  <span class="text-[#FF4655] font-black">2</span>
+                </div>
+                <div class="flex justify-between items-center opacity-50">
+                  <div class="flex items-center space-x-3">
+                    <div
+                      class="w-8 h-8 bg-gray-600 rounded-sm flex items-center justify-center font-bold"
+                    >
+                      B
+                    </div>
+                    <span class="font-bold">팀 지민</span>
+                  </div>
+                  <span class="font-black">1</span>
+                </div>
+              </div>
+              <!-- Connector -->
+              <div
+                class="hidden md:block absolute -right-4 top-1/2 w-4 h-[2px] bracket-line"
+              ></div>
+            </div>
+
+            <!-- Match 2 -->
+            <div class="relative">
+              <div
+                class="bg-[#1a2531] p-4 val-border group cursor-pointer hover:bg-[#242f3d] transition-all"
+              >
+                <div class="flex justify-between items-center mb-3 opacity-50">
+                  <div class="flex items-center space-x-3">
+                    <div
+                      class="w-8 h-8 bg-green-500 rounded-sm flex items-center justify-center font-bold"
+                    >
+                      C
+                    </div>
+                    <span class="font-bold">팀 민수</span>
+                  </div>
+                  <span class="font-black">0</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <div class="flex items-center space-x-3">
+                    <div
+                      class="w-8 h-8 bg-orange-500 rounded-sm flex items-center justify-center font-bold"
+                    >
+                      D
+                    </div>
+                    <span class="font-bold">팀 서연</span>
+                  </div>
+                  <span class="text-[#FF4655] font-black">2</span>
+                </div>
+              </div>
+              <!-- Connector -->
+              <div
+                class="hidden md:block absolute -right-4 top-1/2 w-4 h-[2px] bracket-line"
+              ></div>
+            </div>
+          </div>
+
+          <!-- Vertical Bridge -->
+          <div class="hidden md:flex flex-col justify-center">
+            <div class="w-[2px] h-[180px] bracket-line relative">
+              <div
+                class="absolute right-0 top-1/2 w-8 h-[2px] bracket-line"
+              ></div>
+            </div>
+          </div>
+
+          <!-- Grand Final -->
+          <div
+            class="flex flex-col justify-center w-full max-w-[320px] mt-12 md:mt-0"
+          >
+            <div
+              class="text-center text-xs font-bold tracking-widest text-[#FF4655] mb-4 uppercase"
+            >
+              Grand Final
+            </div>
+            <div
+              class="bg-[#1a2531] p-6 border-2 border-[#FF4655] shadow-[0_0_20px_rgba(255,70,85,0.2)] relative"
+            >
+              <div
+                class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#FF4655] text-white text-[10px] px-3 py-1 font-black"
+              >
+                CHAMPIONSHIP MATCH
+              </div>
+
+              <div class="space-y-6">
+                <div class="flex justify-between items-center">
+                  <div class="flex items-center space-x-4">
+                    <div
+                      class="w-10 h-10 bg-blue-500 flex items-center justify-center font-black text-xl"
+                    >
+                      A
+                    </div>
+                    <span class="text-xl font-black">팀 도연</span>
+                  </div>
+                  <div class="text-2xl font-black text-gray-600">-</div>
+                </div>
+                <div class="text-center text-gray-500 font-valorant py-2">
+                  VS
+                </div>
+                <div class="flex justify-between items-center">
+                  <div class="flex items-center space-x-4">
+                    <div
+                      class="w-10 h-10 bg-orange-500 flex items-center justify-center font-black text-xl"
+                    >
+                      D
+                    </div>
+                    <span class="text-xl font-black">팀 서연</span>
+                  </div>
+                  <div class="text-2xl font-black text-gray-600">-</div>
+                </div>
+              </div>
+
+              <div class="mt-8 pt-6 border-t border-white/10 text-center">
+                <p class="text-xs text-gray-400 mb-2">2026.03.15 19:00 KST</p>
+                <button
+                  class="w-full bg-white text-[#0F1923] py-2 font-bold hover:bg-[#00F5FF] transition-colors uppercase text-sm"
+                >
+                  경기 알림 설정
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- Footer -->
     <footer class="bg-black py-12 border-t border-white/5">
-        <div class="max-w-7xl mx-auto px-4 text-center">
-            <p class="text-gray-600 text-sm mb-4">
-                &copy; 2026 GAME/VR CONTENTS DESIGN. This is a non-official tournament fan page.
-            </p>
-            <div class="flex justify-center space-x-6 text-gray-400">
-                <a href="#" class="hover:text-white"><i class="fa-brands fa-discord text-xl"></i></a>
-                <a href="#" class="hover:text-white"><i class="fa-brands fa-youtube text-xl"></i></a>
-                <a href="#" class="hover:text-white"><i class="fa-brands fa-twitch text-xl"></i></a>
-            </div>
+      <div class="max-w-7xl mx-auto px-4 text-center">
+        <p class="text-gray-600 text-sm mb-4">
+          &copy; 2026 GAME/VR CONTENTS DESIGN. This is a non-official tournament
+          fan page.
+        </p>
+        <div class="flex justify-center space-x-6 text-gray-400">
+          <a href="#" class="hover:text-white"
+            ><i class="fa-brands fa-discord text-xl"></i
+          ></a>
+          <a href="#" class="hover:text-white"
+            ><i class="fa-brands fa-youtube text-xl"></i
+          ></a>
+          <a href="#" class="hover:text-white"
+            ><i class="fa-brands fa-twitch text-xl"></i
+          ></a>
         </div>
+      </div>
     </footer>
 
     <script>
-        // 간단한 스크롤 애니메이션 효과
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                document.querySelector(this.getAttribute('href')).scrollIntoView({
-                    behavior: 'smooth'
-                });
-            });
+      // 간단한 스크롤 애니메이션 효과
+      document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
+        anchor.addEventListener("click", function (e) {
+          e.preventDefault();
+          document.querySelector(this.getAttribute("href")).scrollIntoView({
+            behavior: "smooth",
+          });
         });
-        
+      });
     </script>
     <!-- body 끝나기 전 추가 -->
-<script src="contest.js"></script>
-</body>
+    <script src="contest.js"></script>
+  </body>
 </html>

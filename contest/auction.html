@@ -1,166 +1,296 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VALORANT 자낳대 실시간 경매</title>
-    <link rel="stylesheet" href="auction.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/contest/asset/logo.png" />
+    <title>인덕대 X VALORANT 실시간 경매</title>
+    <link rel="stylesheet" href="auction.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+  </head>
+  <body>
     <div class="auction-app">
-        <!-- Bid Log Sidebar -->
-        <div id="log-sidebar" class="log-sidebar">
-            <div class="sidebar-header">
-                <h3><i class="fa-solid fa-clock-rotate-left"></i> 입찰 로그</h3>
-                <button class="close-sidebar" onclick="toggleLog()">&times;</button>
-            </div>
-            <div class="log-container" id="bid-logs">
-                <div class="log-entry system">경매 시스템이 시작되었습니다.</div>
-            </div>
+      <!-- Bid Log Sidebar -->
+      <div id="log-sidebar" class="log-sidebar">
+        <div class="sidebar-header">
+          <h3><i class="fa-solid fa-clock-rotate-left"></i> 입찰 로그</h3>
+          <button class="close-sidebar" onclick="toggleLog()">&times;</button>
         </div>
-
-        <!-- Bidder Join Room Modal -->
-        <div id="join-room-modal" class="modal-overlay" style="display: none;">
-            <div class="modal-card clip-val">
-                <h2 class="font-gaming">JOIN AUCTION ROOM</h2>
-                <p>참여할 방의 코드를 입력해주세요.</p>
-                <div class="input-group mt-6">
-                    <label for="room-code-input">방 코드</label>
-                    <input type="text" id="room-code-input" placeholder="4자리 코드 입력" maxlength="4">
-                </div>
-                <div class="flex gap-4 mt-8">
-                    <button class="val-btn blue w-full" onclick="joinRoom()">참여하기</button>
-                    <button class="val-btn w-full" onclick="cancelJoin()">취소</button>
-                </div>
-            </div>
+        <div class="log-container" id="bid-logs">
+          <div class="log-entry system">경매 시스템이 시작되었습니다.</div>
         </div>
+      </div>
 
-        <!-- Host Room Code Display -->
-        <div id="host-room-code-display" class="host-code-display" style="display: none;">
-            <span class="label">ROOM CODE:</span> <span id="display-room-code" class="code font-gaming"></span> <i class="fa-solid fa-copy copy-code-btn" onclick="copyRoomCode()"></i>
+      <!-- Bidder Join Room Modal -->
+      <div id="join-room-modal" class="modal-overlay" style="display: none">
+        <div class="modal-card clip-val">
+          <h2 class="font-gaming">JOIN AUCTION ROOM</h2>
+          <p>참여할 방의 코드를 입력해주세요.</p>
+          <div class="input-group mt-6">
+            <label for="room-code-input">방 코드</label>
+            <input
+              type="text"
+              id="room-code-input"
+              placeholder="4자리 코드 입력"
+              maxlength="4"
+            />
+          </div>
+          <div class="flex gap-4 mt-8">
+            <button class="val-btn blue w-full" onclick="joinRoom()">
+              참여하기
+            </button>
+            <button class="val-btn w-full" onclick="cancelJoin()">취소</button>
+          </div>
         </div>
+      </div>
 
-        <!-- 1. Role Selection Screen (Initial) -->
-        <div id="entry-screen" class="role-selection-overlay">
-            <div class="role-panel host-side" onclick="selectRole('host')">
-                <div class="role-content">
-                    <i class="fa-solid fa-crown"></i>
-                    <h2 class="font-gaming">HOST</h2>
-                    <p>방 만들기 및 선수 명단 관리</p>
-                </div>
-            </div>
-            <div class="role-panel bidder-side" onclick="selectRole('bidder')">
-                <div class="role-content">
-                    <i class="fa-solid fa-hand-pointer"></i>
-                    <h2 class="font-gaming">BIDDER</h2>
-                    <p>경매 참여 및 실시간 입찰</p>
-                </div>
-            </div>
-            <div class="center-divider"></div>
+      <!-- Waiting for Host Screen (Overlay for Bidders) -->
+      <div
+        id="waiting-for-host-screen"
+        class="waiting-overlay"
+        style="display: none"
+      >
+        <div class="waiting-card clip-val">
+          <h2 class="font-gaming">AUCTION ROOM</h2>
+          <p>방장님이 경매를 준비 중입니다. 잠시만 기다려주세요...</p>
+          <div class="loading-spinner"></div>
+          <p class="mt-4 text-sm text-gray-400">
+            방 코드: <span id="waiting-room-code"></span>
+          </p>
         </div>
+      </div>
 
-        <!-- Setup Screen (Overlay) -->
-        <div id="setup-screen" class="setup-overlay" style="display: none;">
-            <div class="setup-card clip-val">
-                <h2 class="font-gaming">AUCTION SETUP</h2>
-                <p>방장님, 경매에 올릴 선수 명단을 작성해주세요.</p>
-                
-                <div class="setup-content-wrapper">
-                    <div class="setup-form-section">
-                        <div class="setup-form">
-                            <div class="input-group">
-                                <label>선수 이름</label>
-                                <input type="text" id="input-player-name" placeholder="선수명 입력" autocomplete="off" onkeydown="if(event.key==='Enter') addPlayerToSetup()">
-                            </div>
-                            <div class="input-group">
-                                <label>포지션</label>
-                                <select id="input-player-role">
-                                    <option value="1선">1선</option>
-                                    <option value="2선">2선</option>
-                                    <option value="전략가">전략가</option>
-                                    <option value="척후대">척후대</option>
-                                    <option value="감시자">감시자</option>
-                                </select>
-                            </div>
-                            <button class="val-btn red w-full" onclick="addPlayerToSetup()">품목 추가</button>
-                        </div>
-                        <button id="start-auction-btn" class="val-btn blue w-full" onclick="startAuction()" disabled>경매 시작 (준비 완료)</button>
-                    </div>
-                    <div class="setup-list-section">
-                        <div class="setup-list-wrapper">
-                            <h3>등록된 선수 목록 (<span id="setup-count">0</span>명)</h3>
-                            <ul id="setup-player-list"></ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
+      <!-- Host Room Code Display -->
+      <div
+        id="host-room-code-display"
+        class="host-code-display"
+        style="display: none"
+      >
+        <span class="label">ROOM CODE:</span>
+        <span id="display-room-code" class="code font-gaming"></span>
+        <i class="fa-solid fa-copy copy-code-btn" onclick="copyRoomCode()"></i>
+      </div>
+
+      <!-- 1. Role Selection Screen (Initial) -->
+      <div id="entry-screen" class="role-selection-overlay">
+        <div class="role-panel host-side" onclick="selectRole('host')">
+          <div class="role-content">
+            <i class="fa-solid fa-crown"></i>
+            <h2 class="font-gaming">HOST</h2>
+            <p>방 만들기 및 선수 명단 관리</p>
+          </div>
         </div>
-
-        <!-- Header -->
-        <header class="main-header">
-            <div class="logo">
-                <img src="../asset/logo.png" alt="겜브과 로고" class="h-10 w-auto inline-block align-middle mr-2">
-                <span>겜브과 x VALORANT AUCTION</span>
-            </div>            
-            <div class="header-controls">
-                <div class="status-bar">LIVE AUCTION IN PROGRESS</div>
-            </div>
-        </header>
-        
-        <div class="grid-layout" style="display: none;">
-            <!-- Left Teams Column -->
-            <div id="left-teams" class="team-column"></div>
-
-            <!-- Center: Auction Main -->            
-            <main class="auction-main">
-                <div class="current-player-card">
-                    <div class="card-header">현재 경매 대상</div>
-                    <div class="player-info">
-                        <h2 id="target-player-name">PLAYER_NAME</h2>
-                        <p id="target-player-role">1선 / PARTICIPANT</p>
-                    </div>
-                    <div class="bid-display">
-                        <span class="label">CURRENT BID</span>
-                        <div class="price">
-                            <span id="current-price">0</span>
-                            <span class="unit">pt</span>
-                        </div>
-                        <div class="highest-bidder" id="highest-bidder-info">입찰자 없음</div>
-                    </div>
-                    <div class="bid-controls">
-                        <div class="flex gap-2 w-full" style="grid-column: 1 / -1;">
-                            <input type="number" id="bid-input" class="bid-input flex-1" placeholder="입찰 금액 입력" min="10" step="10" onkeydown="if(event.key==='Enter') (window.isHost ? window.updateCurrentPrice() : window.placeBid())">
-                            <button id="update-price-btn" class="val-btn blue" onclick="updateCurrentPrice()" style="display: none; width: auto; padding: 0 20px; font-size: 1rem;">등록</button>
-                        </div>
-                        <button id="place-bid-btn" class="bid-btn val-btn blue w-full" onclick="placeBid()" style="grid-column: 1 / -1;">입찰하기</button>
-                        <button id="confirm-bid-btn" class="bid-btn val-btn red w-full" onclick="confirmBid()" style="grid-column: 1 / -1;">낙찰 확정</button>                        
-                    </div>
-                    <!-- Draggable Player Card (Host Only) -->
-                    <div id="current-player-card-draggable" class="current-player-card-draggable" draggable="false" style="display: none;">
-                        <span id="draggable-player-name"></span>
-                        <span id="draggable-player-role"></span>
-                        <button id="cancel-placement-btn" class="val-btn w-full" onclick="cancelPlacement()" style="display: none; background-color: #444; border: none; margin-top: 20px; max-width: 200px;">배치 취소</button>
-                    </div>
-                </div>
-            </main>
-
-            <!-- Right Teams Column -->
-            <div id="right-teams" class="team-column"></div>
+        <div class="role-panel bidder-side" onclick="selectRole('bidder')">
+          <div class="role-content">
+            <i class="fa-solid fa-hand-pointer"></i>
+            <h2 class="font-gaming">BIDDER</h2>
+            <p>경매 참여 및 실시간 입찰</p>
+          </div>
         </div>
+        <div class="center-divider"></div>
+      </div>
 
-        <!-- Bottom: Waiting List -->
-        <section id="bottom-waiting-area" class="waiting-list-section" style="display: none;">
-            <div class="section-title-bar">
-                <h3><i class="fa-solid fa-users"></i> 대기 명단</h3>
-                <button class="log-toggle-btn" onclick="toggleLog()"><i class="fa-solid fa-list-ul"></i> LOG</button>
-                <span id="waiting-list-count" class="text-gray-400 text-sm">0명</span>
+      <!-- Setup Screen (Overlay) -->
+      <div id="setup-screen" class="setup-overlay" style="display: none">
+        <div class="setup-card clip-val">
+          <h2 class="font-gaming">AUCTION SETUP</h2>
+          <p>방장님, 경매에 올릴 선수 명단을 작성해주세요.</p>
+
+          <div class="setup-content-wrapper">
+            <div class="setup-form-section">
+              <div class="setup-form">
+                <div class="input-group">
+                  <label>선수 이름</label>
+                  <input
+                    type="text"
+                    id="input-player-name"
+                    placeholder="선수명 입력"
+                    autocomplete="off"
+                    onkeydown="if (event.key === 'Enter') addPlayerToSetup();"
+                  />
+                </div>
+                <div class="input-group">
+                  <label>포지션</label>
+                  <select id="input-player-role">
+                    <option value="1선">1선</option>
+                    <option value="2선">2선</option>
+                    <option value="전략가">전략가</option>
+                    <option value="척후대">척후대</option>
+                    <option value="감시자">감시자</option>
+                  </select>
+                </div>
+                <button class="val-btn red w-full" onclick="addPlayerToSetup()">
+                  품목 추가
+                </button>
+              </div>
+              <button
+                id="start-auction-btn"
+                class="val-btn blue w-full"
+                onclick="startAuction()"
+                disabled
+              >
+                경매 시작 (준비 완료)
+              </button>
             </div>
-            <ul class="waiting-list-horizontal" id="waiting-list">
-                <!-- JS에서 대기 명단 생성 -->
-            </ul>
-        </section>
+            <div class="setup-list-section">
+              <div class="setup-list-wrapper">
+                <h3>등록된 선수 목록 (<span id="setup-count">0</span>명)</h3>
+                <ul id="setup-player-list"></ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- 접속자 현황 섹션 추가 -->
+          <div class="connected-bidders-section">
+            <h3>
+              <i class="fa-solid fa-signal"></i> 현재 접속 중인 경매자 (<span
+                id="connected-bidder-count"
+                >0</span
+              >명)
+            </h3>
+            <div id="connected-bidders-list" class="bidder-chips-container">
+              <p class="no-bidders-msg">참가자를 기다리는 중...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Header -->
+      <header class="main-header">
+        <div class="logo">
+          <img
+            src="../contest/asset/logo.png"
+            alt="겜브과 로고"
+            class="h-14 w-auto"
+          />
+          <span>겜브과 x VALORANT AUCTION</span>
+        </div>
+        <div class="header-controls">
+          <div class="status-bar">LIVE AUCTION IN PROGRESS</div>
+        </div>
+      </header>
+
+      <div class="grid-layout" style="display: none">
+        <!-- Left Teams Column -->
+        <div id="left-teams" class="team-column"></div>
+
+        <!-- Center: Auction Main -->
+        <main class="auction-main">
+          <div class="current-player-card">
+            <div class="card-header">현재 경매 대상</div>
+            <div class="player-info">
+              <h2 id="target-player-name">PLAYER_NAME</h2>
+              <p id="target-player-role">1선 / PARTICIPANT</p>
+            </div>
+            <div class="bid-display">
+              <span class="label">CURRENT BID</span>
+              <div class="price">
+                <span id="current-price">0</span>
+                <span class="unit">pt</span>
+              </div>
+              <div class="highest-bidder" id="highest-bidder-info">
+                입찰자 없음
+              </div>
+            </div>
+            <div class="bid-controls">
+              <div class="flex gap-2 w-full" style="grid-column: 1 / -1">
+                <input
+                  type="number"
+                  id="bid-input"
+                  class="bid-input flex-1"
+                  placeholder="입찰 금액 입력"
+                  min="10"
+                  step="10"
+                  onkeydown="
+                    if (event.key === 'Enter')
+                      window.isHost
+                        ? window.updateCurrentPrice()
+                        : window.placeBid();
+                  "
+                />
+                <button
+                  id="update-price-btn"
+                  class="val-btn blue"
+                  onclick="updateCurrentPrice()"
+                  style="
+                    display: none;
+                    width: auto;
+                    padding: 0 20px;
+                    font-size: 1rem;
+                  "
+                >
+                  등록
+                </button>
+              </div>
+              <button
+                id="place-bid-btn"
+                class="bid-btn val-btn blue w-full"
+                onclick="placeBid()"
+                style="grid-column: 1 / -1"
+              >
+                입찰하기
+              </button>
+              <button
+                id="confirm-bid-btn"
+                class="bid-btn val-btn red w-full"
+                onclick="confirmBid()"
+                style="grid-column: 1 / -1"
+              >
+                낙찰 확정
+              </button>
+            </div>
+            <!-- Draggable Player Card (Host Only) -->
+            <div
+              id="current-player-card-draggable"
+              class="current-player-card-draggable"
+              draggable="false"
+              style="display: none"
+            >
+              <span id="draggable-player-name"></span>
+              <span id="draggable-player-role"></span>
+              <button
+                id="cancel-placement-btn"
+                class="val-btn w-full"
+                onclick="cancelPlacement()"
+                style="
+                  display: none;
+                  background-color: #444;
+                  border: none;
+                  margin-top: 20px;
+                  max-width: 200px;
+                "
+              >
+                배치 취소
+              </button>
+            </div>
+          </div>
+        </main>
+
+        <!-- Right Teams Column -->
+        <div id="right-teams" class="team-column"></div>
+      </div>
+
+      <!-- Bottom: Waiting List -->
+      <section
+        id="bottom-waiting-area"
+        class="waiting-list-section"
+        style="display: none"
+      >
+        <div class="section-title-bar">
+          <h3><i class="fa-solid fa-users"></i> 대기 명단</h3>
+          <button class="log-toggle-btn" onclick="toggleLog()">
+            <i class="fa-solid fa-list-ul"></i> LOG
+          </button>
+          <span id="waiting-list-count" class="text-gray-400 text-sm">0명</span>
+        </div>
+        <ul class="waiting-list-horizontal" id="waiting-list">
+          <!-- JS에서 대기 명단 생성 -->
+        </ul>
+      </section>
     </div>
-    <script src="auction.js"></script>
-</body>
+    <script type="module" src="auction.js"></script>
+  </body>
 </html>
