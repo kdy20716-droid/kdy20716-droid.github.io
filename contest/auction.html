@@ -22,6 +22,20 @@
         <div class="log-container" id="bid-logs">
           <div class="log-entry system">경매 시스템이 시작되었습니다.</div>
         </div>
+        <!-- ✨ 낙찰 취소 버튼을 로그 사이드바 하단으로 이동 -->
+        <button
+          id="undo-btn"
+          class="val-btn w-full mt-4"
+          onclick="undoAuction()"
+          style="
+            display: none;
+            background-color: #f39c12;
+            border: none;
+            font-size: 0.9rem;
+          "
+        >
+          <i class="fa-solid fa-rotate-left"></i> 낙찰 취소 (시간 되돌리기)
+        </button>
       </div>
 
       <!-- Bidder Join Room Modal -->
@@ -57,9 +71,6 @@
           <h2 class="font-gaming">AUCTION ROOM</h2>
           <p>방장님이 경매를 준비 중입니다. 잠시만 기다려주세요...</p>
           <div class="loading-spinner"></div>
-          <p class="mt-4 text-sm text-gray-400">
-            방 코드: <span id="waiting-room-code"></span>
-          </p>
         </div>
       </div>
 
@@ -113,7 +124,7 @@
                   />
                 </div>
                 <div class="input-group">
-                  <label>포지션</label>
+                  <label>포지션 1</label>
                   <select id="input-player-role">
                     <option value="1선">1선</option>
                     <option value="2선">2선</option>
@@ -121,6 +132,26 @@
                     <option value="척후대">척후대</option>
                     <option value="감시자">감시자</option>
                   </select>
+                </div>
+                <div class="input-group">
+                  <label>포지션 2 (선택)</label>
+                  <select id="input-player-role2">
+                    <option value="">없음</option>
+                    <option value="1선">1선</option>
+                    <option value="2선">2선</option>
+                    <option value="전략가">전략가</option>
+                    <option value="척후대">척후대</option>
+                    <option value="감시자">감시자</option>
+                  </select>
+                </div>
+                <div class="input-group">
+                  <label>티어</label>
+                  <input
+                    type="text"
+                    id="input-player-tier"
+                    placeholder="예: 다이아몬드 1"
+                    onkeydown="if (event.key === 'Enter') addPlayerToSetup();"
+                  />
                 </div>
                 <button class="val-btn red w-full" onclick="addPlayerToSetup()">
                   품목 추가
@@ -183,10 +214,10 @@
             <div class="card-header">현재 경매 대상</div>
             <div class="player-info">
               <h2 id="target-player-name">PLAYER_NAME</h2>
-              <p id="target-player-role">1선 / PARTICIPANT</p>
+              <p id="target-player-role">포지션 / 티어</p>
             </div>
             <div class="bid-display">
-              <span class="label">CURRENT BID</span>
+              <span class="label">현재 입찰</span>
               <div class="price">
                 <span id="current-price">0</span>
                 <span class="unit">pt</span>
@@ -231,7 +262,7 @@
                 onclick="placeBid()"
                 style="grid-column: 1 / -1"
               >
-                입찰하기
+                입찰희망
               </button>
               <button
                 id="confirm-bid-btn"

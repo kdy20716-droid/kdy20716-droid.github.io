@@ -121,6 +121,39 @@ body {
     0 100%
   );
 }
+/* 대기 화면 내 접속자 섹션 */
+.waiting-card .connected-bidders-section {
+  width: 100%;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.bidder-chips-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+.bidder-chip {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 6px 12px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  background-color: #00f5ff; /* 발로란트 블루 */
+  border-radius: 50%;
+  box-shadow: 0 0 8px #00f5ff;
+}
 
 .team-card.active {
   background: rgba(255, 70, 85, 0.1);
