@@ -656,6 +656,15 @@ function renderSetupList() {
 
 window.startAuction = async function () {
   // async 추가
+  // ✨ 경매 시작 시 선수 명단을 무작위로 섞음 (Fisher-Yates Shuffle)
+  for (let i = auctionPlayers.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [auctionPlayers[i], auctionPlayers[j]] = [
+      auctionPlayers[j],
+      auctionPlayers[i],
+    ];
+  }
+
   auctionStarted = true; // 1. 상태를 먼저 true로 변경
 
   // 2. 화면 전환 실행
