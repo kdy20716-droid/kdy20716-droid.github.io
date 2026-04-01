@@ -153,12 +153,18 @@
                 </div>
                 <div class="input-group">
                   <label>티어</label>
-                  <input
-                    type="text"
-                    id="input-player-tier"
-                    placeholder="예: 다이아몬드 1"
-                    onkeydown="if (event.key === 'Enter') addPlayerToSetup();"
-                  />
+                  <select id="input-player-tier">
+                    <option value="언랭">언랭</option>
+                    <option value="아이언">아이언</option>
+                    <option value="브론즈">브론즈</option>
+                    <option value="실버">실버</option>
+                    <option value="골드">골드</option>
+                    <option value="플레">플레</option>
+                    <option value="다이야">다이야</option>
+                    <option value="초월자">초월자</option>
+                    <option value="불멸">불멸</option>
+                    <option value="레디언트">레디언트</option>
+                  </select>
                 </div>
                 <button class="val-btn red w-full" onclick="addPlayerToSetup()">
                   품목 추가
@@ -175,7 +181,22 @@
             </div>
             <div class="setup-list-section">
               <div class="setup-list-wrapper">
-                <h3>등록된 선수 목록 (<span id="setup-count">0</span>명)</h3>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                  <h3 style="margin-bottom: 0;">등록된 선수 목록 (<span id="setup-count">0</span>명)</h3>
+                  <select id="setup-tier-filter" onchange="filterSetupList(this.value)" style="background: #0f1923; color: white; border: 1px solid rgba(236, 232, 225, 0.1); padding: 5px; font-size: 0.8rem; outline: none; border-radius: 4px; cursor: pointer;">
+                    <option value="전체">전체 티어</option>
+                    <option value="레디언트">레디언트</option>
+                    <option value="불멸">불멸</option>
+                    <option value="초월자">초월자</option>
+                    <option value="다이야">다이야</option>
+                    <option value="플레">플레</option>
+                    <option value="골드">골드</option>
+                    <option value="실버">실버</option>
+                    <option value="브론즈">브론즈</option>
+                    <option value="아이언">아이언</option>
+                    <option value="언랭">언랭</option>
+                  </select>
+                </div>
                 <ul id="setup-player-list"></ul>
               </div>
             </div>
@@ -326,11 +347,28 @@
         style="display: none"
       >
         <div class="section-title-bar">
-          <h3><i class="fa-solid fa-users"></i> 대기 명단</h3>
-          <button class="log-toggle-btn" onclick="toggleLog()">
-            <i class="fa-solid fa-list-ul"></i> LOG
-          </button>
-          <span id="waiting-list-count" class="text-gray-400 text-sm">0명</span>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <h3><i class="fa-solid fa-users"></i> 대기 명단</h3>
+            <select id="tier-filter" onchange="filterWaitingList(this.value)" style="background: #1a2531; color: white; border: 1px solid rgba(255,255,255,0.2); padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; outline: none;">
+              <option value="전체">전체 티어</option>
+              <option value="레디언트">레디언트</option>
+              <option value="불멸">불멸</option>
+              <option value="초월자">초월자</option>
+              <option value="다이야">다이야</option>
+              <option value="플레">플레</option>
+              <option value="골드">골드</option>
+              <option value="실버">실버</option>
+              <option value="브론즈">브론즈</option>
+              <option value="아이언">아이언</option>
+              <option value="언랭">언랭</option>
+            </select>
+          </div>
+          <div>
+            <button class="log-toggle-btn" onclick="toggleLog()">
+              <i class="fa-solid fa-list-ul"></i> LOG
+            </button>
+            <span id="waiting-list-count" class="text-gray-400 text-sm" style="margin-left: 10px;">0명</span>
+          </div>
         </div>
         <ul class="waiting-list-horizontal" id="waiting-list">
           <!-- JS에서 대기 명단 생성 -->

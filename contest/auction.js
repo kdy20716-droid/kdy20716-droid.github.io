@@ -137,6 +137,25 @@ let myNickname = ""; // ✨ 경매자 닉네임 저장
 let currentAuctionPlayer = null; // 현재 경매 대상 선수
 let isPlacingPlayer = false; // 선수를 팀에 배치 중인지 여부
 let suppressNextSyncSound = false; // ✨ 낙찰 확정 시 다른 소리 중복 방지 플래그
+let currentTierFilter = '전체'; // ✨ 메인 화면 대기 명단 티어 필터
+let currentSetupTierFilter = '전체'; // ✨ 설정 화면 선수 목록 티어 필터
+
+// --- Tier Color Helper ---
+function getTierColor(tier) {
+  const tierColors = {
+    '레디언트': '#F8C56E', // Radiant Gold
+    '불멸': '#B53B48',     // Immortal Red
+    '초월자': '#2db369',   // green
+    '다이야': '#63D2F5',   // Diamond Blue
+    '플레': '#4AF5E3',     // Platinum Teal
+    '골드': '#E6B450',     // Gold
+    '실버': '#C0C0C0',     // Silver
+    '브론즈': '#CD7F32',   // Bronze
+    '아이언': '#5E5E5E',   // Iron Grey
+    '언랭': '#888888'      // Unranked Grey
+  };
+  return tierColors[tier] || '#FFFFFF'; // Default to white
+}
 
 // --- Web Audio API (사운드 효과) ---
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -882,27 +901,44 @@ window.addPlayerToSetup = function () {
   const newPlayer = {
     name: nameInput.value.trim(),
     role: displayRole,
-    rank: tierInput.value.trim() || "Unranked",
+    rank: tierInput.value,
   };
 
   auctionPlayers.push(newPlayer);
   nameInput.value = ""; // 초기화
   role2Input.value = ""; // 초기화
-  tierInput.value = ""; // 초기화
+  tierInput.value = "언랭"; // 초기화
 
   renderSetupList(); // 대기 명단 렌더링
   saveState();
 };
 
+// ✨ 설정 화면 필터링 적용 함수
+window.filterSetupList = function (tier) {
+  currentSetupTierFilter = tier;
+  renderSetupList();
+};
+
+// ✨ 메인 화면 대기 명단 필터링 적용 함수
+window.filterWaitingList = function (tier) {
+  currentTierFilter = tier;
+  renderWaitingList();
+};
+
 function renderSetupList() {
   const listEl = document.getElementById("setup-player-list");
-  document.getElementById("setup-count").textContent = auctionPlayers.length;
-  listEl.innerHTML = auctionPlayers
+  
+  const filteredPlayers = currentSetupTierFilter === '전체'
+    ? auctionPlayers
+    : auctionPlayers.filter(p => p.rank === currentSetupTierFilter);
+
+  document.getElementById("setup-count").textContent = filteredPlayers.length;
+  listEl.innerHTML = filteredPlayers
     .map(
       (p) => `
         <li>
           <span>${p.name}</span>
-          <span style="color:var(--val-blue); font-size: 0.8rem;">${p.role} (${p.rank})</span>
+          <span style="color:${getTierColor(p.rank)}; font-size: 0.8rem; font-weight: bold;">${p.role} (${p.rank})</span>
         </li>
     `,
     )
@@ -1000,8 +1036,8 @@ function renderTeams() {
                         ${
                           team.members[i]
                             ? `
-                            <span class="player-name">${team.members[i].name}</span>
-                            <span class="player-role text-xs text-gray-400">${team.members[i].role} / ${team.members[i].rank}</span>
+                            <span class="player-name" style="font-size: 0.7rem;">${team.members[i].name}</span>
+                            <span class="player-role text-xs" style="color: ${getTierColor(team.members[i].rank)}; font-weight: bold;">${team.members[i].role} / ${team.members[i].rank}</span>
                         `
                             : "EMPTY"
                         }
@@ -1022,20 +1058,25 @@ function renderTeams() {
 
 // 대기자 명단 렌더링
 function renderWaitingList() {
-  waitingListCountEl.textContent = `${auctionPlayers.length}명`;
+  const filteredPlayers = currentTierFilter === '전체'
+    ? auctionPlayers
+    : auctionPlayers.filter(p => p.rank === currentTierFilter);
+
+  waitingListCountEl.textContent = `${filteredPlayers.length}명`;
   waitingListEl.innerHTML = ""; // 초기화
-  auctionPlayers.forEach((p, index) => {
+  filteredPlayers.forEach((p) => {
+    const originalIndex = auctionPlayers.findIndex(op => op === p); // 클릭 시 원본 배열 기준의 인덱스가 필요함
     const li = document.createElement("li");
-    li.dataset.playerIndex = index; // 클릭 이벤트를 위해 인덱스 저장
+    li.dataset.playerIndex = originalIndex; // 클릭 이벤트를 위해 인덱스 저장
     li.innerHTML = `
             <div style="font-weight:bold">${p.name}</div>
-            <div style="color:var(--val-blue); font-size:0.7rem">${p.role} / ${p.rank}</div>
+            <div style="color:${getTierColor(p.rank)}; font-size:0.7rem; font-weight: bold;">${p.role} / ${p.rank}</div>
         `;
     waitingListEl.appendChild(li);
 
     // 대기 명단 클릭 시 경매 대상으로 올리기
     if (window.isHost) {
-      li.addEventListener("click", () => selectPlayerForAuction(index));
+      li.addEventListener("click", () => selectPlayerForAuction(originalIndex));
     }
   });
 }
@@ -1241,7 +1282,7 @@ function updateAuctionDisplay() {
 
   if (currentAuctionPlayer) {
     targetPlayerNameEl.textContent = currentAuctionPlayer.name;
-    targetPlayerRoleEl.innerHTML = `${currentAuctionPlayer.role}<br><span style="font-size: 0.8em; opacity: 0.8;">${currentAuctionPlayer.rank}</span>`;
+    targetPlayerRoleEl.innerHTML = `${currentAuctionPlayer.role}<br><span style="font-size: 0.8em; opacity: 0.9; color: ${getTierColor(currentAuctionPlayer.rank)}; font-weight: bold;">${currentAuctionPlayer.rank}</span>`;
     currentPlayerCardContentEl.style.display = "block"; // 대상이 선택되면 카드 표시
     // 방장이 낙찰 확정 버튼을 누르기 전까지는 드래그 카드 숨김
     if (!isPlacingPlayer) draggablePlayerCardEl.style.display = "none";
