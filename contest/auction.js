@@ -74,9 +74,11 @@ let currentPrice = 0; // 현재 입찰 가격
 let highestBidder = null;
 let currentTurnTeamIdx = 0; // 시뮬레이션을 위해 순차적으로 팀을 바꿈
 let auctionStarted = false; // ✨ 경매 시작 여부 플래그 추가
+let isBiddingClosed = false; // ✨ 입찰 마감 상태 플래그 추가
 let unsubscribeRoom = null; // 실시간 동기화를 위한 리스너 해제 함수
 let lastSaleInfo = null; // ✨ 마지막 낙찰 정보를 저장 (모든 데이터 포함)
 let currentBiddingLock = null; // ✨ 입찰 잠금 상태 관리 변수
+let showUndoVideo = false; // ✨ 시간 되돌리기 영상 재생 상태
 
 // 2. DOM 요소 참조
 const entryScreenEl = document.getElementById("entry-screen");
@@ -95,6 +97,7 @@ const currentPriceEl = document.getElementById("current-price");
 const highestBidderInfoEl = document.getElementById("highest-bidder-info");
 const bidInputEl = document.getElementById("bid-input");
 const confirmBidBtn = document.getElementById("confirm-bid-btn");
+const closeBidBtn = document.getElementById("close-bid-btn");
 const undoBtn = document.getElementById("undo-btn");
 const placeBidBtn = document.getElementById("place-bid-btn");
 const cancelPlacementBtn = document.getElementById("cancel-placement-btn");
@@ -114,6 +117,11 @@ const waitingForHostScreenEl = document.getElementById(
 ); // ✨ 대기 화면 DOM 요소
 const waitingRoomCodeEl = document.getElementById("waiting-room-code"); // ✨ 대기 화면 방 코드
 
+// ✨ 새로 추가한 요소 (영상 재생)
+const undoVideoOverlayEl = document.getElementById("undo-video-overlay");
+const undoVideoEl = document.getElementById("undo-video");
+const undoVideoCloseHintEl = document.getElementById("undo-video-close-hint");
+
 // ✨ 새로 추가한 HTML 요소(참가자 현황판)를 JS와 연결합니다.
 const connectedBiddersListEl = document.getElementById(
   "connected-bidders-list",
@@ -128,6 +136,176 @@ let currentRoomCode = null; // 현재 방 코드
 let myNickname = ""; // ✨ 경매자 닉네임 저장
 let currentAuctionPlayer = null; // 현재 경매 대상 선수
 let isPlacingPlayer = false; // 선수를 팀에 배치 중인지 여부
+let suppressNextSyncSound = false; // ✨ 낙찰 확정 시 다른 소리 중복 방지 플래그
+
+// --- Web Audio API (사운드 효과) ---
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playSound(type) {
+  // 브라우저 정책상 사용자 상호작용 후 활성화
+  if (audioCtx.state === "suspended") audioCtx.resume();
+  
+  if (type === 'clap') {
+    const clapAudio = document.getElementById('sfx-clap');
+    if (clapAudio) {
+      clapAudio.currentTime = 0;
+      clapAudio.play().catch(e => console.error("Clap sound play failed:", e));
+      setTimeout(() => {
+        clapAudio.pause();
+      }, 4000); // 4초 후 정지
+    }
+    return; // 다른 소리와 중복되지 않도록 여기서 종료
+  }
+
+  const osc = audioCtx.createOscillator();
+  const gainNode = audioCtx.createGain();
+  osc.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+  
+  const now = audioCtx.currentTime;
+  if (type === 'ding') {
+    // 입찰 마감 (땡~)
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, now); // A5 (높은 라)
+    gainNode.gain.setValueAtTime(0.5, now);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 1.5);
+    osc.start(now);
+    osc.stop(now + 1.5);
+  } else if (type === 'beep') {
+    // 입찰 (삐--)
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(600, now);
+    gainNode.gain.setValueAtTime(0.05, now); // 덜 시끄럽게 볼륨 조절
+    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+    osc.start(now);
+    osc.stop(now + 0.2);
+  }
+}
+
+// --- Custom Modal UI ---
+function showCustomModal({ type = 'alert', title = '알림', message = '', defaultValue = '', onConfirm, onCancel }) {
+  // 배경 오버레이 생성
+  const overlay = document.createElement('div');
+  overlay.style.position = 'fixed';
+  overlay.style.top = '0';
+  overlay.style.left = '0';
+  overlay.style.width = '100vw';
+  overlay.style.height = '100vh';
+  overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+  overlay.style.display = 'flex';
+  overlay.style.alignItems = 'center';
+  overlay.style.justifyContent = 'center';
+  overlay.style.zIndex = '9999';
+  overlay.style.backdropFilter = 'blur(4px)';
+
+  // 모달 컨테이너 생성
+  const modal = document.createElement('div');
+  modal.style.backgroundColor = '#0F1923'; // 다크 테마 배경
+  modal.style.padding = '30px';
+  modal.style.borderRadius = '8px';
+  modal.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)';
+  modal.style.minWidth = '300px';
+  modal.style.maxWidth = '400px';
+  modal.style.textAlign = 'center';
+  modal.style.border = '1px solid #FF4655'; // 발로란트 포인트 색상
+  modal.style.color = '#ece8e1';
+
+  // 타이틀
+  const titleEl = document.createElement('h3');
+  titleEl.textContent = title;
+  titleEl.style.margin = '0 0 15px 0';
+  titleEl.style.color = '#FF4655';
+  titleEl.style.fontSize = '1.2rem';
+
+  // 메시지
+  const messageEl = document.createElement('p');
+  messageEl.innerHTML = message.replace(/\n/g, '<br>');
+  messageEl.style.margin = '0 0 20px 0';
+  messageEl.style.fontSize = '0.95rem';
+  messageEl.style.lineHeight = '1.4';
+
+  modal.appendChild(titleEl);
+  modal.appendChild(messageEl);
+
+  // 입력창 (prompt 모드일 때만)
+  let inputEl;
+  if (type === 'prompt') {
+    inputEl = document.createElement('input');
+    inputEl.type = 'text';
+    inputEl.value = defaultValue;
+    inputEl.style.width = '100%';
+    inputEl.style.padding = '10px';
+    inputEl.style.marginBottom = '20px';
+    inputEl.style.borderRadius = '4px';
+    inputEl.style.border = '1px solid #555';
+    inputEl.style.backgroundColor = '#1f2326';
+    inputEl.style.color = '#fff';
+    inputEl.style.boxSizing = 'border-box';
+    inputEl.style.outline = 'none';
+    modal.appendChild(inputEl);
+
+    setTimeout(() => inputEl.focus(), 10);
+  }
+
+  // 버튼 컨테이너
+  const btnContainer = document.createElement('div');
+  btnContainer.style.display = 'flex';
+  btnContainer.style.justifyContent = 'center';
+  btnContainer.style.gap = '10px';
+
+  // 확인 버튼
+  const confirmBtn = document.createElement('button');
+  confirmBtn.textContent = '확인';
+  confirmBtn.style.padding = '10px 20px';
+  confirmBtn.style.border = 'none';
+  confirmBtn.style.backgroundColor = '#FF4655';
+  confirmBtn.style.color = '#fff';
+  confirmBtn.style.borderRadius = '4px';
+  confirmBtn.style.cursor = 'pointer';
+  confirmBtn.style.fontWeight = 'bold';
+  confirmBtn.style.transition = 'background-color 0.2s';
+  confirmBtn.onmouseover = () => confirmBtn.style.backgroundColor = '#e03e4d';
+  confirmBtn.onmouseout = () => confirmBtn.style.backgroundColor = '#FF4655';
+  confirmBtn.onclick = () => {
+    document.body.removeChild(overlay);
+    if (onConfirm) {
+      if (type === 'prompt') onConfirm(inputEl.value);
+      else onConfirm();
+    }
+  };
+
+  // 취소 버튼 (prompt, confirm 모드일 때만)
+  if (type === 'prompt' || type === 'confirm') {
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = '취소';
+    cancelBtn.style.padding = '10px 20px';
+    cancelBtn.style.border = '1px solid #555';
+    cancelBtn.style.backgroundColor = 'transparent';
+    cancelBtn.style.color = '#ece8e1';
+    cancelBtn.style.borderRadius = '4px';
+    cancelBtn.style.cursor = 'pointer';
+    cancelBtn.style.transition = 'background-color 0.2s';
+    cancelBtn.onmouseover = () => cancelBtn.style.backgroundColor = 'rgba(255,255,255,0.1)';
+    cancelBtn.onmouseout = () => cancelBtn.style.backgroundColor = 'transparent';
+    cancelBtn.onclick = () => {
+      document.body.removeChild(overlay);
+      if (onCancel) onCancel();
+    };
+    btnContainer.appendChild(cancelBtn);
+  }
+
+  btnContainer.appendChild(confirmBtn);
+  modal.appendChild(btnContainer);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  // 엔터 키 입력 시 확인 버튼 동작
+  if (type === 'prompt') {
+    inputEl.addEventListener('keyup', (e) => {
+      if (e.key === 'Enter') confirmBtn.click();
+    });
+  }
+}
 
 // --- State Sync Logic (Firebase Firestore 기반) ---
 
@@ -142,12 +320,14 @@ async function saveState() {
         auctionPlayers,
         bidders: connectedBidders, // ✨ 초기 방 생성 시 빈 접속자 명단 구조를 만들어줍니다.
         auctionStarted: auctionStarted, // ✨ 경매 시작 여부
+        isBiddingClosed: isBiddingClosed, // ✨ 입찰 마감 여부
         currentPrice,
         highestBidder,
         currentAuctionPlayer,
         isPlacingPlayer,
         currentTurnTeamIdx,
         lastSaleInfo, // ✨ 되돌리기 정보 저장
+        showUndoVideo, // ✨ 영상 상태 저장
         logs: bidLogsEl.innerHTML,
         lastUpdated: Date.now(),
       },
@@ -171,7 +351,7 @@ window.claimTeam = async function (teamId) {
 
   // 이미 어떤 팀의 리더인지 확인
   if (currentTeams.some((t) => t.leader === myNickname)) {
-    alert("이미 팀을 선택하셨습니다.");
+    showCustomModal({ message: "이미 팀을 선택하셨습니다." });
     return;
   }
 
@@ -180,7 +360,7 @@ window.claimTeam = async function (teamId) {
 
   // "팀장 X"와 같은 초기 플레이스홀더인 경우에만 선택 가능하도록 제한
   if (!currentTeams[teamIdx].leader.startsWith("팀장 ")) {
-    alert("이미 다른 참가자가 선택한 팀입니다.");
+    showCustomModal({ message: "이미 다른 참가자가 선택한 팀입니다." });
     return;
   }
 
@@ -250,7 +430,10 @@ function startSync(enteredCode) {
       if (state.teams !== undefined) teams = state.teams;
       if (state.auctionPlayers !== undefined)
         auctionPlayers = state.auctionPlayers;
-      if (state.currentPrice !== undefined) currentPrice = state.currentPrice;
+      if (state.currentPrice !== undefined) {
+        if (state.currentPrice > currentPrice && !suppressNextSyncSound) playSound('beep');
+        currentPrice = state.currentPrice;
+      }
       if (state.highestBidder !== undefined)
         highestBidder = state.highestBidder;
       if (state.currentAuctionPlayer !== undefined)
@@ -259,6 +442,22 @@ function startSync(enteredCode) {
         isPlacingPlayer = state.isPlacingPlayer;
       if (state.currentTurnTeamIdx !== undefined)
         currentTurnTeamIdx = state.currentTurnTeamIdx;
+      if (state.isBiddingClosed !== undefined) {
+        if (state.isBiddingClosed && !isBiddingClosed && !suppressNextSyncSound) playSound('ding');
+        isBiddingClosed = state.isBiddingClosed;
+      }
+      if (state.showUndoVideo !== undefined) {
+        if (state.showUndoVideo && !showUndoVideo) {
+          undoVideoOverlayEl.style.display = "flex";
+          undoVideoEl.currentTime = 0;
+          undoVideoEl.play().catch(e => console.log(e));
+          undoVideoCloseHintEl.style.display = window.isHost ? "block" : "none";
+        } else if (!state.showUndoVideo && showUndoVideo) {
+          undoVideoOverlayEl.style.display = "none";
+          undoVideoEl.pause();
+        }
+        showUndoVideo = state.showUndoVideo;
+      }
       lastSaleInfo = state.lastSaleInfo || null; // ✨ 되돌리기 정보 동기화
       if (state.logs) bidLogsEl.innerHTML = state.logs;
 
@@ -283,19 +482,42 @@ function startSync(enteredCode) {
       if (state.teams !== undefined) teams = state.teams;
       if (state.auctionPlayers !== undefined)
         auctionPlayers = state.auctionPlayers;
-      if (state.currentPrice !== undefined) currentPrice = state.currentPrice;
+      if (state.currentPrice !== undefined) {
+        if (state.currentPrice > currentPrice && !suppressNextSyncSound) playSound('beep');
+        currentPrice = state.currentPrice;
+      }
       if (state.highestBidder !== undefined)
         highestBidder = state.highestBidder;
       if (state.currentAuctionPlayer !== undefined)
         currentAuctionPlayer = state.currentAuctionPlayer;
       if (state.currentTurnTeamIdx !== undefined)
         currentTurnTeamIdx = state.currentTurnTeamIdx;
+      if (state.isBiddingClosed !== undefined) {
+        if (state.isBiddingClosed && !isBiddingClosed && !suppressNextSyncSound) playSound('ding');
+        isBiddingClosed = state.isBiddingClosed;
+      }
+      if (state.showUndoVideo !== undefined) {
+        if (state.showUndoVideo && !showUndoVideo) {
+          undoVideoOverlayEl.style.display = "flex";
+          undoVideoEl.currentTime = 0;
+          undoVideoEl.play().catch(e => console.log(e));
+          undoVideoCloseHintEl.style.display = window.isHost ? "block" : "none";
+        } else if (!state.showUndoVideo && showUndoVideo) {
+          undoVideoOverlayEl.style.display = "none";
+          undoVideoEl.pause();
+        }
+        showUndoVideo = state.showUndoVideo;
+      }
       lastSaleInfo = state.lastSaleInfo || null; // ✨ 되돌리기 정보 동기화
       if (state.logs) bidLogsEl.innerHTML = state.logs;
 
       renderTeams();
       updateAuctionDisplay();
     } // [1] else 끝
+
+    if (suppressNextSyncSound) {
+      suppressNextSyncSound = false; // 플래그 사용 후 초기화
+    }
   }); // [2] onSnapshot 리스너 끝
 } // [3] startSync 함수 전체 끝
 
@@ -319,6 +541,7 @@ window.updateCurrentPrice = function () {
   const amount = parseInt(bidInputEl.value);
   if (isNaN(amount)) return;
 
+  if (amount > currentPrice) playSound('beep');
   currentPrice = amount;
   highestBidder = null; // 호스트가 수동 등록 시 입찰자 정보 초기화
 
@@ -333,25 +556,52 @@ window.updateCurrentPrice = function () {
 window.editLeaderName = function (teamId) {
   if (!window.isHost) return;
   const team = teams.find((t) => t.id === teamId);
-  const newName = prompt("새로운 팀장 이름을 입력하세요:", team.leader);
-  if (newName && newName.trim()) {
-    team.leader = newName.trim();
-    renderTeams();
-    updateAuctionDisplay(); // 팀장 이름 변경 시 중앙 입찰 정보도 즉시 갱신
-    saveState();
-  }
+  showCustomModal({
+    type: 'prompt',
+    title: '팀장 이름 변경',
+    message: '새로운 팀장 이름을 입력하세요:',
+    defaultValue: team.leader,
+    onConfirm: (newName) => {
+      if (newName && newName.trim()) {
+        team.leader = newName.trim();
+        renderTeams();
+        updateAuctionDisplay(); // 팀장 이름 변경 시 중앙 입찰 정보도 즉시 갱신
+        saveState();
+      }
+    }
+  });
 };
 
 window.editTeamName = function (teamId) {
   if (!window.isHost) return;
   const team = teams.find((t) => t.id === teamId);
-  const newName = prompt("새로운 팀 이름을 입력하세요:", team.name);
-  if (newName && newName.trim()) {
-    team.name = newName.trim();
-    renderTeams();
-    updateAuctionDisplay(); // 팀 이름 변경 시 중앙 입찰 정보도 즉시 갱신
-    saveState();
-  }
+  showCustomModal({
+    type: 'prompt',
+    title: '팀 이름 변경',
+    message: '새로운 팀 이름을 입력하세요:',
+    defaultValue: team.name,
+    onConfirm: (newName) => {
+      if (newName && newName.trim()) {
+        team.name = newName.trim();
+        renderTeams();
+        updateAuctionDisplay(); // 팀 이름 변경 시 중앙 입찰 정보도 즉시 갱신
+        saveState();
+      }
+    }
+  });
+};
+
+// ✨ 입찰 마감 / 재개 토글 (Host Only)
+window.toggleBiddingClose = async function () {
+  if (!window.isHost || !currentAuctionPlayer) return;
+  isBiddingClosed = !isBiddingClosed;
+  if (isBiddingClosed) playSound('ding');
+  addLog(
+    isBiddingClosed ? `[공지] 입찰이 마감되었습니다. 더 이상 입찰할 수 없습니다.` : `[공지] 입찰이 재개되었습니다.`,
+    "system"
+  );
+  updateAuctionDisplay();
+  saveState();
 };
 
 window.toggleLog = function () {
@@ -364,7 +614,7 @@ window.copyRoomCode = function () {
     navigator.clipboard
       .writeText(currentRoomCode)
       .then(() => {
-        alert(`방 코드 [${currentRoomCode}]가 클립보드에 복사되었습니다.`);
+        showCustomModal({ message: `방 코드 [${currentRoomCode}]가 클립보드에 복사되었습니다.` });
       })
       .catch((err) => {
         console.error("Failed to copy: ", err);
@@ -425,7 +675,7 @@ window.joinRoom = async function () {
   const enteredCode = roomCodeInputEl.value.trim();
 
   if (enteredCode.length !== 4) {
-    alert("4자리 방 코드를 입력해주세요.");
+    showCustomModal({ message: "4자리 방 코드를 입력해주세요." });
     return;
   }
 
@@ -434,43 +684,48 @@ window.joinRoom = async function () {
   const roomSnap = await getDoc(roomRef);
 
   if (!roomSnap.exists()) {
-    alert("존재하지 않는 방 코드입니다. 코드를 다시 확인해주세요.");
+    showCustomModal({ message: "존재하지 않는 방 코드입니다. 코드를 다시 확인해주세요." });
     return;
   }
 
   // ✨ 추가된 로직: 참가자에게 닉네임을 물어보고 DB에 등록합니다.
-  // 닉네임 입력 모달을 띄우는 것이 더 좋지만, 일단 prompt로 대체
-  const bidderName = prompt("경매에 참여할 닉네임을 입력해주세요!");
-  if (!bidderName || !bidderName.trim()) {
-    alert("닉네임을 입력해야 입장할 수 있습니다.");
-    return;
-  }
+  showCustomModal({
+    type: 'prompt',
+    title: '경매 참가',
+    message: '경매에 참여할 닉네임을 입력해주세요!',
+    onConfirm: async (bidderName) => {
+      if (!bidderName || !bidderName.trim()) {
+        showCustomModal({ message: "닉네임을 입력해야 입장할 수 있습니다." });
+        return;
+      }
 
-  // 데이터베이스 방 명부에 내 닉네임을 추가합니다.
-  myNickname = bidderName.trim(); // ✨ 닉네임 저장
-  await updateDoc(roomRef, {
-    bidders: arrayUnion(myNickname), // ✨ 저장된 닉네임 사용
-  });
+      // 데이터베이스 방 명부에 내 닉네임을 추가합니다.
+      myNickname = bidderName.trim(); // ✨ 닉네임 저장
+      await updateDoc(roomRef, {
+        bidders: arrayUnion(myNickname), // ✨ 저장된 닉네임 사용
+      });
 
-  currentRoomCode = enteredCode;
-  joinRoomModalEl.style.display = "none";
-  bottomWaitingAreaEl.style.display = "block"; // ✨ 대기 화면에서도 참가자 현황은 보이도록 수정
-  waitingForHostScreenEl.style.display = "flex"; // ✨ 대기 화면 표시
-  startSync(currentRoomCode);
+      currentRoomCode = enteredCode;
+      joinRoomModalEl.style.display = "none";
+      bottomWaitingAreaEl.style.display = "block"; // ✨ 대기 화면에서도 참가자 현황은 보이도록 수정
+      waitingForHostScreenEl.style.display = "flex"; // ✨ 대기 화면 표시
+      startSync(currentRoomCode);
 
-  init(); // 경매자도 메인 화면 진입
-  addLog(`방 코드 [${currentRoomCode}]에 참여했습니다.`, "system");
+      init(); // 경매자도 메인 화면 진입
+      addLog(`방 코드 [${currentRoomCode}]에 참여했습니다.`, "system");
 
-  // 경매자는 드래그 기능 비활성화
-  draggablePlayerCardEl.draggable = false;
-  draggablePlayerCardEl.style.cursor = "default";
-  draggablePlayerCardEl.style.display = "none"; // 경매자는 드래그 요소 안 보이게
+      // 경매자는 드래그 기능 비활성화
+      draggablePlayerCardEl.draggable = false;
+      draggablePlayerCardEl.style.cursor = "default";
+      draggablePlayerCardEl.style.display = "none"; // 경매자는 드래그 요소 안 보이게
 
-  // 팀 카드 드롭 기능 비활성화
-  document.querySelectorAll(".team-card").forEach((card) => {
-    card.removeEventListener("dragover", handleDragOver);
-    card.removeEventListener("dragleave", handleDragLeave);
-    card.removeEventListener("drop", handleDrop);
+      // 팀 카드 드롭 기능 비활성화
+      document.querySelectorAll(".team-card").forEach((card) => {
+        card.removeEventListener("dragover", handleDragOver);
+        card.removeEventListener("dragleave", handleDragLeave);
+        card.removeEventListener("drop", handleDrop);
+      });
+    }
   });
 };
 
@@ -492,7 +747,7 @@ window.handleSlotClick = function (teamId, slotIndex) {
 
   if (team && team.members[slotIndex] === undefined) {
     if (team.points < currentPrice) {
-      alert("포인트가 부족하여 영입할 수 없는 팀입니다.");
+      showCustomModal({ message: "포인트가 부족하여 영입할 수 없는 팀입니다." });
       return;
     }
 
@@ -558,7 +813,7 @@ function handleDrop(e) {
   if (team && draggedPlayer) {
     // 낙찰 확정 로직
     if (team.members.length >= 5) {
-      alert("팀 슬롯이 가득 찼습니다!");
+      showCustomModal({ message: "팀 슬롯이 가득 찼습니다!" });
       return;
     }
 
@@ -615,7 +870,10 @@ window.addPlayerToSetup = function () {
   const role2Input = document.getElementById("input-player-role2");
   const tierInput = document.getElementById("input-player-tier");
 
-  if (!nameInput.value.trim()) return alert("이름을 입력하세요.");
+  if (!nameInput.value.trim()) {
+    showCustomModal({ message: "이름을 입력하세요." });
+    return;
+  }
 
   const role1 = roleInput.value;
   const role2 = role2Input.value;
@@ -786,13 +1044,14 @@ function renderWaitingList() {
 function selectPlayerForAuction(playerIndex) {
   if (auctionPlayers.length === 0) return;
   if (isPlacingPlayer) {
-    alert("먼저 낙찰된 선수의 팀 배치를 완료해주세요.");
+    showCustomModal({ message: "먼저 낙찰된 선수의 팀 배치를 완료해주세요." });
     return;
   }
 
   // 다른 품목 클릭 시 기존 입찰 상태 초기화 (취소 기능)
   currentPrice = 0;
   highestBidder = null;
+  isBiddingClosed = false; // ✨ 새로운 경매 시 입찰 마감 해제
   if (currentAuctionPlayer) {
     addLog(`[알림] 새로운 경매를 위해 상태가 초기화되었습니다.`, "system");
   }
@@ -818,27 +1077,33 @@ window.placeBid = async function () {
 
   const amount = parseInt(bidInputEl.value);
   if (isNaN(amount) || amount <= currentPrice) {
-    alert(`현재가(${currentPrice}pt)보다 높은 금액을 입력해주세요.`);
+    showCustomModal({ message: `현재가(${currentPrice}pt)보다 높은 금액을 입력해주세요.` });
     return;
   }
   if (!currentAuctionPlayer) {
-    alert("경매 대상 선수를 먼저 선택해주세요.");
+    showCustomModal({ message: "경매 대상 선수를 먼저 선택해주세요." });
+    return;
+  }
+
+  if (isBiddingClosed) {
+    showCustomModal({ message: "현재 입찰이 마감되어 더 이상 입찰할 수 없습니다." });
     return;
   }
 
   // ✨ 내 닉네임으로 현재 팀 찾기
   const myTeam = teams.find((t) => t.leader === myNickname);
   if (!myTeam) {
-    alert("팀장만 입찰할 수 있습니다. 팀 칸을 눌러 팀장이 되어주세요.");
+    showCustomModal({ message: "팀장만 입찰할 수 있습니다. 팀 칸을 눌러 팀장이 되어주세요." });
     return;
   }
 
   if (myTeam.points < amount) {
-    alert("포인트가 부족합니다!");
+    showCustomModal({ message: "포인트가 부족합니다!" });
     addLog(`${myTeam.name} 포인트가 부족합니다!`, "system");
     return;
   }
 
+  playSound('beep'); // 입찰 (삐--) 효과음 로컬 재생
   // ✨ 입찰 상태 업데이트 및 3초 점등 정보 생성 (5초 잠금 제거)
   currentPrice = amount;
   highestBidder = myTeam;
@@ -865,7 +1130,7 @@ window.placeBid = async function () {
 // 낙찰 확정
 window.confirmBid = async function () {
   if (!window.isHost || !currentAuctionPlayer || !highestBidder) {
-    alert("낙찰할 대상이나 입찰자가 없습니다.");
+    showCustomModal({ message: "낙찰할 대상이나 입찰자가 없습니다." });
     return;
   }
 
@@ -873,9 +1138,12 @@ window.confirmBid = async function () {
   if (!team) return;
 
   if (team.members.length >= 4) {
-    alert("해당 팀의 멤버가 가득 찼습니다.");
+    showCustomModal({ message: "해당 팀의 멤버가 가득 찼습니다." });
     return;
   }
+
+  playSound('clap'); // ✨ 박수 소리 재생
+  suppressNextSyncSound = true; // ✨ 다음 동기화 시 다른 소리 재생 방지
 
   // ✨ 마지막 낙찰 정보 기록 (되돌리기용)
   lastSaleInfo = {
@@ -901,6 +1169,7 @@ window.confirmBid = async function () {
   currentAuctionPlayer = null;
   currentPrice = 0;
   highestBidder = null;
+  isBiddingClosed = false; // ✨ 초기화 시 입찰 마감 해제
 
   init();
   saveState();
@@ -910,35 +1179,48 @@ window.confirmBid = async function () {
 window.undoAuction = async function () {
   if (!window.isHost || !lastSaleInfo) return;
 
-  if (!confirm("마지막 낙찰을 취소하고 시간을 되돌리시겠습니까?")) return;
+  showCustomModal({
+    type: 'confirm',
+    title: '되돌리기',
+    message: '마지막 낙찰을 취소하고 시간을 되돌리시겠습니까?',
+    onConfirm: async () => {
+      const team = teams.find((t) => t.id === lastSaleInfo.teamId);
+      if (team) {
+        // 팀에서 선수 제거 및 포인트 복구
+        team.members = team.members.filter(
+          (m) => m.name !== lastSaleInfo.player.name,
+        );
+        team.points += lastSaleInfo.price;
+      }
 
-  const team = teams.find((t) => t.id === lastSaleInfo.teamId);
-  if (team) {
-    // 팀에서 선수 제거 및 포인트 복구
-    team.members = team.members.filter(
-      (m) => m.name !== lastSaleInfo.player.name,
-    );
-    team.points += lastSaleInfo.price;
-  }
+      // 선수 명단 및 상태 완전 복구
+      auctionPlayers = [
+        lastSaleInfo.player,
+        ...auctionPlayers.filter((p) => p.name !== lastSaleInfo.player.name),
+      ];
+      currentAuctionPlayer = lastSaleInfo.player;
+      currentPrice = lastSaleInfo.price;
+      isBiddingClosed = false; // ✨ 되돌리기 시 입찰 마감 해제
+      showUndoVideo = true; // ✨ 영상 재생 켬
 
-  // 선수 명단 및 상태 완전 복구
-  auctionPlayers = [
-    lastSaleInfo.player,
-    ...auctionPlayers.filter((p) => p.name !== lastSaleInfo.player.name),
-  ];
-  currentAuctionPlayer = lastSaleInfo.player;
-  currentPrice = lastSaleInfo.price; // 낙찰 직전 가격이 아닌 낙찰 가격으로 복구 (상황에 따라 0으로 변경 가능)
+      // ✨ 방장 화면에서도 즉시 영상이 보이도록 처리
+      undoVideoOverlayEl.style.display = "flex";
+      undoVideoEl.currentTime = 0;
+      undoVideoEl.play().catch((e) => console.log(e));
+      undoVideoCloseHintEl.style.display = "block";
 
-  addLog(
-    `[되돌리기] ${lastSaleInfo.player.name} 선수의 낙찰이 취소되고 명단으로 복귀되었습니다.`,
-    "system",
-  );
+      addLog(
+        `[되돌리기] ${lastSaleInfo.player.name} 선수의 낙찰이 취소되고 명단으로 복귀되었습니다.`,
+        "system",
+      );
 
-  lastSaleInfo = null; // 정보 초기화
+      lastSaleInfo = null; // 정보 초기화
 
-  // 갱신 및 DB 저장 (이때 모든 참가자의 onSnapshot이 트리거됨)
-  init();
-  await saveState();
+      // 갱신 및 DB 저장 (이때 모든 참가자의 onSnapshot이 트리거됨)
+      init();
+      await saveState();
+    }
+  });
 };
 
 // 로그 추가 함수
@@ -979,8 +1261,32 @@ function updateAuctionDisplay() {
     if (lastSaleInfo) {
       undoBtn.title = `취소 시 '${lastSaleInfo.player.name}' 선수가 명단으로 복구되며, ${lastSaleInfo.price}pt가 해당 팀에 반환됩니다.`;
     }
+      
+      // 입찰 마감 버튼 제어
+      closeBidBtn.style.display = currentAuctionPlayer ? "block" : "none";
+      if (isBiddingClosed) {
+        closeBidBtn.textContent = "입찰 재개";
+        closeBidBtn.style.backgroundColor = "#2ecc71"; // 재개 시 초록색
+      } else {
+        closeBidBtn.textContent = "입찰 마감";
+        closeBidBtn.style.backgroundColor = "#f39c12"; // 마감 시 주황색
+      }
   } else {
     bidInputEl.parentElement.style.display = "flex"; // ✅ 경매자 화면에서는 다시 보임
+      closeBidBtn.style.display = "none";
+
+      // 입찰 마감 시 경매자 입력/버튼 제어
+      if (isBiddingClosed) {
+        bidInputEl.disabled = true;
+        placeBidBtn.disabled = true;
+        placeBidBtn.textContent = "입찰 마감됨";
+        placeBidBtn.style.backgroundColor = "#555";
+      } else {
+        bidInputEl.disabled = false;
+        placeBidBtn.disabled = false;
+        placeBidBtn.textContent = "입찰희망";
+        placeBidBtn.style.backgroundColor = ""; // 원래 스타일 적용
+      }
   }
 
   // 입찰 금액 최소값 설정 (현재가보다 높아야 함)
@@ -1007,3 +1313,22 @@ window.renderConnectedBidders = function () {
   if (connectedBidderCountEl) connectedBidderCountEl.textContent = count;
   if (connectedBiddersListEl) connectedBiddersListEl.innerHTML = listHtml;
 };
+
+// --- Video Overlay Click Event (Host Only) ---
+if (undoVideoOverlayEl) {
+  undoVideoOverlayEl.addEventListener("click", () => {
+    if (window.isHost && showUndoVideo) {
+      showUndoVideo = false;
+      undoVideoOverlayEl.style.display = "none";
+      undoVideoEl.pause();
+      saveState(); // 모두의 영상을 끄도록 동기화
+    }
+  });
+
+  // ✨ 영상 재생이 끝나면 자동으로 닫히도록 설정 (방장 기준)
+  undoVideoEl.addEventListener("ended", () => {
+    if (window.isHost && showUndoVideo) {
+      undoVideoOverlayEl.click();
+    }
+  });
+}

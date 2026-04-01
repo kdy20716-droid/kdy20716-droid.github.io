@@ -74,6 +74,13 @@
         </div>
       </div>
 
+      <!-- ✨ 낙찰 취소 영상 오버레이 -->
+      <div id="undo-video-overlay" class="video-overlay" style="display: none">
+        <video id="undo-video" src="../contest/asset/get-back.mp4" playsinline></video>
+        <div class="video-subtitle">낙찰을 취소합니다</div>
+        <div id="undo-video-close-hint" class="close-hint" style="display: none">화면을 클릭하여 영상 닫기</div>
+      </div>
+
       <!-- Host Room Code Display -->
       <div
         id="host-room-code-display"
@@ -264,6 +271,14 @@
               >
                 입찰희망
               </button>
+            <button
+              id="close-bid-btn"
+              class="bid-btn val-btn w-full"
+              onclick="toggleBiddingClose()"
+              style="grid-column: 1 / -1; display: none; background-color: #f39c12; border: none; color: black;"
+            >
+              입찰 마감
+            </button>
               <button
                 id="confirm-bid-btn"
                 class="bid-btn val-btn red w-full"
@@ -321,6 +336,9 @@
           <!-- JS에서 대기 명단 생성 -->
         </ul>
       </section>
+    </div>
+    <div style="display: none">
+      <audio id="sfx-clap" src="asset/clap.mp3"></audio>
     </div>
     <script type="module" src="auction.js"></script>
   </body>
