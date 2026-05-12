@@ -142,11 +142,13 @@
           class="flex flex-col sm:flex-row justify-center gap-4 uppercase font-bold"
         >
           <button
+            onclick="document.getElementById('bracket').scrollIntoView({ behavior: 'smooth' })"
             class="bg-[#FF4655] hover:bg-[#ff5e6a] text-white px-10 py-4 val-btn-clip transition-all transform hover:scale-105"
           >
             대진표 확인하기
           </button>
           <button
+            onclick="alert('준비중입니다')"
             class="border border-white/30 hover:bg-white/10 text-white px-10 py-4 val-btn-clip transition-all"
           >
             승부 예측하기
@@ -201,12 +203,12 @@
                       >
                         A
                       </div>
-                      <span class="font-bold">팀 도연</span>
+                      <span class="font-bold">팀 송영주</span>
                     </div>
                     <span class="text-gray-500 font-black">?</span>
                   </div>
                   <div class="flex flex-wrap gap-x-2 text-[10px] text-gray-400 pl-11">
-                    <span class="text-blue-400">도연(L)</span>
+                    <span class="text-blue-400">송영주(L)</span>
                     <span>???</span>
                     <span>???</span>
                     <span>???</span>
@@ -219,16 +221,16 @@
                   <div class="flex justify-between items-center mb-1">
                     <div class="flex items-center space-x-3">
                       <div
-                        class="w-8 h-8 bg-gray-600 rounded-sm flex items-center justify-center font-bold"
+                        class="w-8 h-8 bg-[#FF4655] rounded-sm flex items-center justify-center font-bold"
                       >
                         B
                       </div>
-                      <span class="font-bold">팀 지민</span>
+                      <span class="font-bold">팀 원준영</span>
                     </div>
                     <span class="text-gray-500 font-black">?</span>
                   </div>
                   <div class="flex flex-wrap gap-x-2 text-[10px] text-gray-400 pl-11">
-                    <span class="text-gray-300">지민(L)</span>
+                    <span class="text-[#FF4655]">원준영(L)</span>
                     <span>???</span>
                     <span>???</span>
                     <span>???</span>
@@ -257,12 +259,12 @@
                       >
                         C
                       </div>
-                      <span class="font-bold">팀 민수</span>
+                      <span class="font-bold">팀 한재진</span>
                     </div>
                     <span class="text-gray-500 font-black">?</span>
                   </div>
                   <div class="flex flex-wrap gap-x-2 text-[10px] text-gray-400 pl-11">
-                    <span class="text-gray-300">민수(L)</span>
+                    <span class="text-green-400">한재진(L)</span>
                     <span>???</span>
                     <span>???</span>
                     <span>???</span>
@@ -279,12 +281,12 @@
                       >
                         D
                       </div>
-                      <span class="font-bold">팀 서연</span>
+                      <span class="font-bold">팀 김도연</span>
                     </div>
                     <span class="text-gray-500 font-black">?</span>
                   </div>
                   <div class="flex flex-wrap gap-x-2 text-[10px] text-gray-400 pl-11">
-                    <span class="text-orange-400">서연(L)</span>
+                    <span class="text-orange-400">김도연(L)</span>
                     <span>???</span>
                     <span>???</span>
                     <span>???</span>
@@ -425,10 +427,10 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
             <!-- Team 1 -->
             <div class="space-y-4">
-              <h3 class="text-[#00F5FF] font-bold border-b border-[#00F5FF]/30 pb-2">팀 도연 (Team A)</h3>
+              <h3 class="text-[#00F5FF] font-bold border-b border-[#00F5FF]/30 pb-2">팀 송영주 (Team A)</h3>
               <div class="space-y-2 text-sm">
                 <div class="flex justify-between p-2 bg-white/5">
-                  <span class="font-bold text-blue-400">도연 (팀장)</span>
+                  <span class="font-bold text-blue-400">송영주 (팀장)</span>
                   <span class="text-xs text-gray-400 italic">Position / Tier</span>
                 </div>
                 <div class="flex justify-between p-2 border-b border-white/5">
@@ -452,10 +454,10 @@
 
             <!-- Team 2 -->
             <div class="space-y-4">
-              <h3 class="text-[#FF4655] font-bold border-b border-[#FF4655]/30 pb-2">팀 지민 (Team B)</h3>
+              <h3 class="text-[#FF4655] font-bold border-b border-[#FF4655]/30 pb-2">팀 원준영 (Team B)</h3>
               <div class="space-y-2 text-sm">
                 <div class="flex justify-between p-2 bg-white/5">
-                  <span class="font-bold text-[#FF4655]">지민 (팀장)</span>
+                  <span class="font-bold text-[#FF4655]">원준영 (팀장)</span>
                   <span class="text-xs text-gray-400 italic">Position / Tier</span>
                 </div>
                 <div class="flex justify-between p-2 border-b border-white/5">
@@ -479,10 +481,10 @@
 
             <!-- Team 3 -->
             <div class="space-y-4">
-              <h3 class="text-green-500 font-bold border-b border-green-500/30 pb-2">팀 민수 (Team C)</h3>
+              <h3 class="text-green-500 font-bold border-b border-green-500/30 pb-2">팀 한재진 (Team C)</h3>
               <div class="space-y-2 text-sm">
                 <div class="flex justify-between p-2 bg-white/5">
-                  <span class="font-bold text-green-400">민수 (팀장)</span>
+                  <span class="font-bold text-green-400">한재진 (팀장)</span>
                   <span class="text-xs text-gray-400 italic">Position / Tier</span>
                 </div>
                 <div class="flex justify-between p-2 border-b border-white/5">
@@ -506,10 +508,10 @@
 
             <!-- Team 4 -->
             <div class="space-y-4">
-              <h3 class="text-orange-500 font-bold border-b border-orange-500/30 pb-2">팀 서연 (Team D)</h3>
+              <h3 class="text-orange-500 font-bold border-b border-orange-500/30 pb-2">팀 김도연 (Team D)</h3>
               <div class="space-y-2 text-sm">
                 <div class="flex justify-between p-2 bg-white/5">
-                  <span class="font-bold text-orange-400">서연 (팀장)</span>
+                  <span class="font-bold text-orange-400">김도연 (팀장)</span>
                   <span class="text-xs text-gray-400 italic">Position / Tier</span>
                 </div>
                 <div class="flex justify-between p-2 border-b border-white/5">
