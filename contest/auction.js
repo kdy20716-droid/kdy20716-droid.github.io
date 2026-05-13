@@ -622,6 +622,8 @@ window.editPoints = function (teamId) {
       const points = parseInt(newPoints);
       if (!isNaN(points)) {
         team.points = points;
+        // 새로운 포인트가 현재 최대 포인트보다 크면 최대 포인트도 갱신하여 바가 꽉 차게 보이게 함
+        if (team.points > team.maxPoints) team.maxPoints = team.points;
         renderTeams();
         saveState();
       }
