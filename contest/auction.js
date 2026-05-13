@@ -610,6 +610,25 @@ window.editTeamName = function (teamId) {
   });
 };
 
+window.editPoints = function (teamId) {
+  if (!window.isHost) return;
+  const team = teams.find((t) => t.id === teamId);
+  showCustomModal({
+    type: 'prompt',
+    title: '포인트 수정',
+    message: '새로운 포인트를 입력하세요:',
+    defaultValue: team.points.toString(),
+    onConfirm: (newPoints) => {
+      const points = parseInt(newPoints);
+      if (!isNaN(points)) {
+        team.points = points;
+        renderTeams();
+        saveState();
+      }
+    }
+  });
+};
+
 // ✨ 입찰 마감 / 재개 토글 (Host Only)
 window.toggleBiddingClose = async function () {
   if (!window.isHost || !currentAuctionPlayer) return;
@@ -1023,7 +1042,10 @@ function renderTeams() {
                         Leader: ${team.leader} ${window.isHost ? `<i class="fa-solid fa-user-pen edit-name-btn" onclick="editLeaderName(${team.id})"></i>` : ""}
                     </div>
                 </div>
-                <span class="team-points">${team.points} PT</span>
+                <span class="team-points">
+                    ${window.isHost ? `<i class="fa-solid fa-pen-to-square edit-name-btn" onclick="editPoints(${team.id})" style="margin-right: 5px;"></i>` : ""}
+                    ${team.points} PT
+                </span>
             </div>
             <div class="points-bar">
                 <div class="points-fill" style="width: ${percentage}%"></div>
