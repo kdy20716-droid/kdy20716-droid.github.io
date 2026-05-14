@@ -214,6 +214,19 @@
               <p class="no-bidders-msg">참가자를 기다리는 중...</p>
             </div>
           </div>
+
+          <!-- ✨ 팀 관리 섹션 추가 (Setup Screen) -->
+          <div class="setup-teams-management" style="margin-top: 30px; padding-top: 20px; border-top: 2px dashed var(--val-border);">
+            <h3><i class="fa-solid fa-people-group"></i> 팀 구성 관리 (현재 <span id="setup-team-count">6</span>팀)</h3>
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+              <button class="val-btn blue" onclick="addTeam()" style="flex: 1; margin-top: 0; clip-path: polygon(5% 0, 100% 0, 95% 100%, 0 100%);">
+                <i class="fa-solid fa-plus"></i> 팀 추가
+              </button>
+              <button class="val-btn red" onclick="removeLastTeam()" style="flex: 1; margin-top: 0; clip-path: polygon(5% 0, 100% 0, 95% 100%, 0 100%);">
+                <i class="fa-solid fa-minus"></i> 마지막 팀 삭제
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -237,7 +250,15 @@
         <div id="left-teams" class="team-column"></div>
 
         <!-- Center: Auction Main -->
-        <main class="auction-main">
+        <main class="auction-main" style="position: relative;">
+          <!-- ✨ 랜덤 뽑기 중앙 대형 버튼 오버레이 -->
+          <div id="random-pick-overlay" class="random-pick-overlay" style="display: none;">
+            <button class="big-click-btn" onclick="pickRandomPlayer()">
+              <div class="click-text">CLICK</div>
+              <div class="sub-text">RANDOM SELECTION</div>
+            </button>
+          </div>
+
           <div class="current-player-card">
             <div class="card-header">현재 경매 대상</div>
             <div class="player-info">
@@ -349,6 +370,9 @@
         <div class="section-title-bar">
           <div style="display: flex; align-items: center; gap: 10px;">
             <h3><i class="fa-solid fa-users"></i> 대기 명단</h3>
+            <button id="random-pick-btn" class="val-btn red" onclick="pickRandomPlayer()" style="display: none; padding: 2px 10px; font-size: 0.7rem; clip-path: none; margin-left: 10px; height: 24px; line-height: 1;">
+              <i class="fa-solid fa-dice"></i> 랜덤 뽑기
+            </button>
             <select id="tier-filter" onchange="filterWaitingList(this.value)" style="background: #1a2531; color: white; border: 1px solid rgba(255,255,255,0.2); padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; outline: none;">
               <option value="전체">전체 티어</option>
               <option value="레디언트">레디언트</option>
@@ -364,6 +388,9 @@
             </select>
           </div>
           <div>
+            <button id="re-pick-btn" class="val-btn red" onclick="rePickRandomPlayer()" style="display: none; padding: 5px 15px; font-size: 0.8rem; clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%); margin-right: 10px;">
+              <i class="fa-solid fa-rotate"></i> 재추첨
+            </button>
             <button class="log-toggle-btn" onclick="toggleLog()">
               <i class="fa-solid fa-list-ul"></i> LOG
             </button>
