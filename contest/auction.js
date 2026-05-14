@@ -135,6 +135,7 @@ let isHost = false; // 변수 선언 추가
 window.isHost = isHost; // 인라인 HTML 접근을 위해 window 객체에 할당
 let currentRoomCode = null; // 현재 방 코드
 let myNickname = ""; // ✨ 경매자 닉네임 저장
+let myTeamId = null; // ✨ 내가 담당한 팀 ID 저장
 let currentAuctionPlayer = null; // 현재 경매 대상 선수
 let isPlacingPlayer = false; // 선수를 팀에 배치 중인지 여부
 let isRandomPicking = false; // ✨ 랜덤 뽑기 진행 여부
@@ -513,7 +514,23 @@ function startSync(enteredCode) {
       }
 
       // 항상 핵심 데이터는 업데이트
-      if (state.teams !== undefined) teams = state.teams;
+      if (state.teams !== undefined) {
+        // ✨ 방장이 내 닉네임을 변경했을 경우 처리 (팀에서 빠지지 않도록)
+        if (myNickname) {
+          // 1. 현재 내가 담당하고 있는 팀 찾기 (기존 닉네임 기준)
+          const myTeam = teams.find(t => t.leader === myNickname);
+          if (myTeam) {
+            // 2. DB에서 해당 팀의 최신 정보 가져오기
+            const updatedTeam = state.teams.find(t => t.id === myTeam.id);
+            // 3. 리더 이름이 바뀌었다면 내 로컬 닉네임도 동기화
+            if (updatedTeam && updatedTeam.leader !== myNickname) {
+              console.log(`[시스템] 닉네임이 '${myNickname}'에서 '${updatedTeam.leader}'(으)로 변경되었습니다.`);
+              myNickname = updatedTeam.leader;
+            }
+          }
+        }
+        teams = state.teams;
+      }
       if (state.auctionPlayers !== undefined)
         auctionPlayers = state.auctionPlayers;
       if (state.currentPrice !== undefined) {
@@ -658,7 +675,19 @@ window.editLeaderName = function (teamId) {
     } : null,
     onConfirm: (newName) => {
       if (newName && newName.trim()) {
-        team.leader = newName.trim();
+        const oldLeader = team.leader;
+        const newLeader = newName.trim();
+
+        // 실제 유저인 경우 접속자 명단(connectedBidders)에서도 이름 변경
+        if (isRealUser && connectedBidders.includes(oldLeader)) {
+          connectedBidders = connectedBidders.map(name => name === oldLeader ? newLeader : name);
+          // 만약 방장 본인이 팀장인 경우 (테스트 환경 등) 본인의 닉네임도 변경
+          if (myNickname === oldLeader) {
+            myNickname = newLeader;
+          }
+        }
+
+        team.leader = newLeader;
         renderTeams();
         updateAuctionDisplay(); // 팀장 이름 변경 시 중앙 입찰 정보도 즉시 갱신
         saveState();
@@ -1636,3 +1665,4 @@ if (waitingListEl) {
     }
   });
 }
+
