@@ -124,9 +124,17 @@
               >팀 명단</a
             >
           </div>
-          <div class="md:hidden text-2xl">
+          <div class="md:hidden text-2xl cursor-pointer" id="mobileMenuBtn">
             <i class="fa-solid fa-bars"></i>
           </div>
+        </div>
+      </div>
+
+      <!-- Mobile Menu -->
+      <div id="mobileMenu" class="hidden md:hidden bg-[#0F1923]/95 border-b border-white/10">
+        <div class="px-4 pt-2 pb-6 space-y-4 font-bold text-sm tracking-widest uppercase">
+          <a href="#bracket" class="block py-2 hover:text-[#FF4655] transition-colors" onclick="toggleMobileMenu()">대진표</a>
+          <a href="javascript:void(0)" onclick="openTeamModal(); toggleMobileMenu()" class="block py-2 hover:text-[#FF4655] transition-colors">팀 명단</a>
         </div>
       </div>
     </nav>
@@ -771,21 +779,6 @@
     </style>
 
     <script>
-      function openTeamModal() {
-        document.getElementById('teamModal').classList.remove('hidden');
-        document.body.style.overflow = 'hidden';
-      }
-
-      function closeTeamModal() {
-        document.getElementById('teamModal').classList.add('hidden');
-        document.body.style.overflow = 'auto';
-      }
-
-      // ESC key to close modal
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') closeTeamModal();
-      });
-
       // 간단한 스크롤 애니메이션 효과
       document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
         anchor.addEventListener("click", function (e) {

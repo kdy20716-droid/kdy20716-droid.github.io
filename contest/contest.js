@@ -4,6 +4,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     // 1. 네비게이션 바 상단 고정 및 배경 변경
     const nav = document.querySelector('nav');
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
     
     window.addEventListener('scroll', () => {
         if (window.scrollY > 50) {
@@ -14,6 +15,10 @@ document.addEventListener('DOMContentLoaded', () => {
             nav.classList.add('bg-[#0F1923]/90');
         }
     });
+
+    if (mobileMenuBtn) {
+        mobileMenuBtn.addEventListener('click', toggleMobileMenu);
+    }
 
     // 2. 대진표 매치 클릭 이벤트 (매치 프리뷰 애니메이션)
     const matchCards = document.querySelectorAll('#bracket .group.cursor-pointer');
@@ -139,4 +144,14 @@ function openTeamModal() {
 function closeTeamModal() {
     document.getElementById('teamModal').classList.add('hidden');
     document.body.style.overflow = 'auto';
+}
+
+/**
+ * 모바일 메뉴 토글
+ */
+function toggleMobileMenu() {
+    const mobileMenu = document.getElementById('mobileMenu');
+    if (mobileMenu) {
+        mobileMenu.classList.toggle('hidden');
+    }
 }
