@@ -59,10 +59,18 @@ document.addEventListener('DOMContentLoaded', () => {
  */
 function openMatchModal(teamA, teamB, date) {
     const modal = document.getElementById('matchModal');
+    const teamLeft = document.getElementById('teamLeft');
+    const teamRight = document.getElementById('teamRight');
     const teamLeftName = document.getElementById('teamLeftName');
     const teamRightName = document.getElementById('teamRightName');
     const matchDateDisplay = document.getElementById('matchDateDisplay');
+    const winLabelLeft = document.getElementById('winLabelLeft');
+    const winLabelRight = document.getElementById('winLabelRight');
+    const vsCircle = document.getElementById('vsCircle');
     
+    // 초기화 함수 실행
+    resetMatchModalState();
+
     // 데이터 설정
     teamLeftName.textContent = teamA;
     teamRightName.textContent = teamB;
@@ -81,8 +89,61 @@ function openMatchModal(teamA, teamB, date) {
     setTimeout(() => {
         modal.classList.add('match-modal-impact');
         createSparks(); // 충돌 스파크 생성
-        // 사운드 효과가 있다면 여기서 재생 가능
+        
+        // 3단계: C팀 vs D팀일 경우 승패 연출 추가
+        if (teamA.includes('원준영') && teamB.includes('한재진')) {
+            setTimeout(() => {
+                // VS 제거 연출 (C, D 팀 매치 전용)
+                if (vsCircle) {
+                    vsCircle.style.setProperty('transition', 'all 0.8s ease', 'important');
+                    vsCircle.style.setProperty('opacity', '0', 'important');
+                    vsCircle.style.setProperty('transform', 'translate(-50%, -50%) scale(0.3)', 'important');
+                    vsCircle.style.setProperty('visibility', 'hidden', 'important');
+                }
+                
+                // C팀 승리, D팀 패배 연출
+                teamLeft.classList.add('team-victory');
+                teamRight.classList.add('team-defeat');
+                
+                winLabelLeft.classList.remove('hidden');
+                setTimeout(() => winLabelLeft.classList.add('win-label-show'), 10);
+            }, 800);
+        }
     }, 600);
+}
+
+/**
+ * 매치 모달 상태 완전 초기화
+ */
+function resetMatchModalState() {
+    const teamLeft = document.getElementById('teamLeft');
+    const teamRight = document.getElementById('teamRight');
+    const winLabelLeft = document.getElementById('winLabelLeft');
+    const winLabelRight = document.getElementById('winLabelRight');
+    const vsCircle = document.getElementById('vsCircle');
+    const modal = document.getElementById('matchModal');
+
+    modal.classList.remove('match-modal-active', 'match-modal-impact');
+    
+    // 클래스 제거
+    teamLeft.classList.remove('team-victory', 'team-defeat');
+    teamRight.classList.remove('team-victory', 'team-defeat');
+    
+    // 라벨 초기화
+    winLabelLeft.classList.add('hidden');
+    winLabelLeft.classList.remove('win-label-show');
+    winLabelLeft.style.left = '';
+    winLabelLeft.style.transform = '';
+    winLabelRight.classList.add('hidden');
+    winLabelRight.classList.remove('win-label-show');
+    
+    // 인라인 스타일 완전 제거
+    if (vsCircle) {
+        vsCircle.style.removeProperty('opacity');
+        vsCircle.style.removeProperty('transform');
+        vsCircle.style.removeProperty('transition');
+        vsCircle.style.removeProperty('visibility');
+    }
 }
 
 /**
@@ -130,6 +191,7 @@ function closeMatchModal() {
     setTimeout(() => {
         modal.classList.add('hidden');
         document.body.style.overflow = 'auto';
+        resetMatchModalState();
     }, 300);
 }
 
