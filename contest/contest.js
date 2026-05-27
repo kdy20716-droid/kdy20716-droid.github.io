@@ -25,12 +25,18 @@ document.addEventListener('DOMContentLoaded', () => {
     
     matchCards.forEach(card => {
         card.addEventListener('click', () => {
-            // 더 정확한 선택자를 사용하여 팀 이름을 가져옵니다.
-            const teamNames = card.querySelectorAll('span.font-bold');
+            // 팀 이름을 가져옵니다 (font-bold는 세미파이널, font-black은 그랜드 파이널)
+            let teamNames = Array.from(card.querySelectorAll('span.font-bold, span.font-black'));
+            // '팀 '으로 시작하는 텍스트만 필터링 (e.g. CHAMPIONSHIP MATCH 제외)
+            teamNames = teamNames.filter(el => el.textContent.trim().startsWith('팀'));
+            
             if (teamNames.length >= 2) {
                 const teamAName = teamNames[0].textContent.trim();
                 const teamBName = teamNames[1].textContent.trim();
-                const matchDate = card.querySelector('p.text-\\[10px\\]').textContent.trim();
+                
+                // 날짜 요소 찾기
+                const dateElement = card.querySelector('p.text-\\[10px\\], p.text-xs');
+                const matchDate = dateElement ? dateElement.textContent.trim() : "2026.00.00 00:00 KST";
                 
                 openMatchModal(teamAName, teamBName, matchDate);
             }
@@ -107,6 +113,25 @@ function openMatchModal(teamA, teamB, date) {
                 
                 winLabelLeft.classList.remove('hidden');
                 setTimeout(() => winLabelLeft.classList.add('win-label-show'), 10);
+            }, 800);
+        }
+
+        // A팀 vs B팀일 경우 승패 연출 추가 (B팀 승리)
+        if (teamA.includes('송영주') && teamB.includes('김도연')) {
+            setTimeout(() => {
+                if (vsCircle) {
+                    vsCircle.style.setProperty('transition', 'all 0.8s ease', 'important');
+                    vsCircle.style.setProperty('opacity', '0', 'important');
+                    vsCircle.style.setProperty('transform', 'translate(-50%, -50%) scale(0.3)', 'important');
+                    vsCircle.style.setProperty('visibility', 'hidden', 'important');
+                }
+                
+                // B팀(오른쪽) 승리, A팀(왼쪽) 패배 연출
+                teamLeft.classList.add('team-defeat');
+                teamRight.classList.add('team-victory');
+                
+                winLabelRight.classList.remove('hidden');
+                setTimeout(() => winLabelRight.classList.add('win-label-show'), 10);
             }, 800);
         }
     }, 600);
