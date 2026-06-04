@@ -134,6 +134,25 @@ function openMatchModal(teamA, teamB, date) {
                 setTimeout(() => winLabelRight.classList.add('win-label-show'), 10);
             }, 800);
         }
+
+        // Grand Final: 김도연 vs 원준영 (김도연 승리)
+        if (teamA.includes('김도연') && teamB.includes('원준영')) {
+            setTimeout(() => {
+                if (vsCircle) {
+                    vsCircle.style.setProperty('transition', 'all 0.8s ease', 'important');
+                    vsCircle.style.setProperty('opacity', '0', 'important');
+                    vsCircle.style.setProperty('transform', 'translate(-50%, -50%) scale(0.3)', 'important');
+                    vsCircle.style.setProperty('visibility', 'hidden', 'important');
+                }
+                
+                // 김도연(왼쪽) 승리, 원준영(오른쪽) 패배 연출
+                teamLeft.classList.add('team-victory');
+                teamRight.classList.add('team-defeat');
+                
+                winLabelLeft.classList.remove('hidden');
+                setTimeout(() => winLabelLeft.classList.add('win-label-show'), 10);
+            }, 800);
+        }
     }, 600);
 }
 
