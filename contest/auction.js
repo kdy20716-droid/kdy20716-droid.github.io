@@ -97,7 +97,11 @@ const currentPriceEl = document.getElementById("current-price");
 const highestBidderInfoEl = document.getElementById("highest-bidder-info");
 const bidInputEl = document.getElementById("bid-input");
 const confirmBidBtn = document.getElementById("confirm-bid-btn");
+<<<<<<< Updated upstream
 const closeBidBtn = document.getElementById("close-bid-btn");
+=======
+const shuffleBtn = document.getElementById("shuffle-btn");
+>>>>>>> Stashed changes
 const undoBtn = document.getElementById("undo-btn");
 const placeBidBtn = document.getElementById("place-bid-btn");
 const cancelPlacementBtn = document.getElementById("cancel-placement-btn");
@@ -1505,7 +1509,12 @@ function updateAuctionDisplay() {
   // ✨ 방장 전용 UI 제어
   if (window.isHost) {
     bidInputEl.parentElement.style.display = "none"; // ✅ 방장은 입력창 아예 숨김
+<<<<<<< Updated upstream
     confirmBidBtn.disabled = !highestBidder || isRandomPicking; // 입찰자가 있을 때만 낙찰 가능
+=======
+    confirmBidBtn.disabled = !highestBidder; // 입찰자가 있을 때만 낙찰 가능
+    if (shuffleBtn) shuffleBtn.style.display = "inline-block"; // ✅ 방장에게만 셔플 버튼 표시
+>>>>>>> Stashed changes
     undoBtn.style.display = lastSaleInfo ? "block" : "none"; // 되돌릴 정보가 있을 때만 버튼 표시
     
     // ✨ 낙찰 취소 버튼에 복구될 선수 정보를 툴팁으로 추가
