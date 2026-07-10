@@ -25,12 +25,18 @@ document.addEventListener('DOMContentLoaded', () => {
     
     matchCards.forEach(card => {
         card.addEventListener('click', () => {
-            // 더 정확한 선택자를 사용하여 팀 이름을 가져옵니다.
-            const teamNames = card.querySelectorAll('span.font-bold');
+            // 팀 이름을 가져옵니다 (font-bold는 세미파이널, font-black은 그랜드 파이널)
+            let teamNames = Array.from(card.querySelectorAll('span.font-bold, span.font-black'));
+            // '팀 '으로 시작하는 텍스트만 필터링 (e.g. CHAMPIONSHIP MATCH 제외)
+            teamNames = teamNames.filter(el => el.textContent.trim().startsWith('팀'));
+            
             if (teamNames.length >= 2) {
                 const teamAName = teamNames[0].textContent.trim();
                 const teamBName = teamNames[1].textContent.trim();
-                const matchDate = card.querySelector('p.text-\\[10px\\]').textContent.trim();
+                
+                // 날짜 요소 찾기
+                const dateElement = card.querySelector('p.text-\\[10px\\], p.text-xs');
+                const matchDate = dateElement ? dateElement.textContent.trim() : "2026.00.00 00:00 KST";
                 
                 openMatchModal(teamAName, teamBName, matchDate);
             }
@@ -59,10 +65,18 @@ document.addEventListener('DOMContentLoaded', () => {
  */
 function openMatchModal(teamA, teamB, date) {
     const modal = document.getElementById('matchModal');
+    const teamLeft = document.getElementById('teamLeft');
+    const teamRight = document.getElementById('teamRight');
     const teamLeftName = document.getElementById('teamLeftName');
     const teamRightName = document.getElementById('teamRightName');
     const matchDateDisplay = document.getElementById('matchDateDisplay');
+    const winLabelLeft = document.getElementById('winLabelLeft');
+    const winLabelRight = document.getElementById('winLabelRight');
+    const vsCircle = document.getElementById('vsCircle');
     
+    // 초기화 함수 실행
+    resetMatchModalState();
+
     // 데이터 설정
     teamLeftName.textContent = teamA;
     teamRightName.textContent = teamB;
@@ -81,8 +95,99 @@ function openMatchModal(teamA, teamB, date) {
     setTimeout(() => {
         modal.classList.add('match-modal-impact');
         createSparks(); // 충돌 스파크 생성
-        // 사운드 효과가 있다면 여기서 재생 가능
+        
+        // 3단계: C팀 vs D팀일 경우 승패 연출 추가
+        if (teamA.includes('원준영') && teamB.includes('한재진')) {
+            setTimeout(() => {
+                // VS 제거 연출 (C, D 팀 매치 전용)
+                if (vsCircle) {
+                    vsCircle.style.setProperty('transition', 'all 0.8s ease', 'important');
+                    vsCircle.style.setProperty('opacity', '0', 'important');
+                    vsCircle.style.setProperty('transform', 'translate(-50%, -50%) scale(0.3)', 'important');
+                    vsCircle.style.setProperty('visibility', 'hidden', 'important');
+                }
+                
+                // C팀 승리, D팀 패배 연출
+                teamLeft.classList.add('team-victory');
+                teamRight.classList.add('team-defeat');
+                
+                winLabelLeft.classList.remove('hidden');
+                setTimeout(() => winLabelLeft.classList.add('win-label-show'), 10);
+            }, 800);
+        }
+
+        // A팀 vs B팀일 경우 승패 연출 추가 (B팀 승리)
+        if (teamA.includes('송영주') && teamB.includes('김도연')) {
+            setTimeout(() => {
+                if (vsCircle) {
+                    vsCircle.style.setProperty('transition', 'all 0.8s ease', 'important');
+                    vsCircle.style.setProperty('opacity', '0', 'important');
+                    vsCircle.style.setProperty('transform', 'translate(-50%, -50%) scale(0.3)', 'important');
+                    vsCircle.style.setProperty('visibility', 'hidden', 'important');
+                }
+                
+                // B팀(오른쪽) 승리, A팀(왼쪽) 패배 연출
+                teamLeft.classList.add('team-defeat');
+                teamRight.classList.add('team-victory');
+                
+                winLabelRight.classList.remove('hidden');
+                setTimeout(() => winLabelRight.classList.add('win-label-show'), 10);
+            }, 800);
+        }
+
+        // Grand Final: 김도연 vs 원준영 (김도연 승리)
+        if (teamA.includes('김도연') && teamB.includes('원준영')) {
+            setTimeout(() => {
+                if (vsCircle) {
+                    vsCircle.style.setProperty('transition', 'all 0.8s ease', 'important');
+                    vsCircle.style.setProperty('opacity', '0', 'important');
+                    vsCircle.style.setProperty('transform', 'translate(-50%, -50%) scale(0.3)', 'important');
+                    vsCircle.style.setProperty('visibility', 'hidden', 'important');
+                }
+                
+                // 김도연(왼쪽) 승리, 원준영(오른쪽) 패배 연출
+                teamLeft.classList.add('team-victory');
+                teamRight.classList.add('team-defeat');
+                
+                winLabelLeft.classList.remove('hidden');
+                setTimeout(() => winLabelLeft.classList.add('win-label-show'), 10);
+            }, 800);
+        }
     }, 600);
+}
+
+/**
+ * 매치 모달 상태 완전 초기화
+ */
+function resetMatchModalState() {
+    const teamLeft = document.getElementById('teamLeft');
+    const teamRight = document.getElementById('teamRight');
+    const winLabelLeft = document.getElementById('winLabelLeft');
+    const winLabelRight = document.getElementById('winLabelRight');
+    const vsCircle = document.getElementById('vsCircle');
+    const modal = document.getElementById('matchModal');
+
+    modal.classList.remove('match-modal-active', 'match-modal-impact');
+    
+    // 클래스 제거
+    teamLeft.classList.remove('team-victory', 'team-defeat');
+    teamRight.classList.remove('team-victory', 'team-defeat');
+    
+    // 라벨 초기화
+    winLabelLeft.classList.add('hidden');
+    winLabelLeft.classList.remove('win-label-show');
+    winLabelLeft.style.left = '';
+    winLabelLeft.style.transform = '';
+    winLabelRight.classList.add('hidden');
+    winLabelRight.classList.remove('win-label-show');
+    
+    // 인라인 스타일 완전 제거
+    if (vsCircle) {
+        vsCircle.style.removeProperty('opacity');
+        vsCircle.style.removeProperty('transform');
+        vsCircle.style.removeProperty('transition');
+        vsCircle.style.removeProperty('visibility');
+    }
 }
 
 /**
@@ -130,6 +235,7 @@ function closeMatchModal() {
     setTimeout(() => {
         modal.classList.add('hidden');
         document.body.style.overflow = 'auto';
+        resetMatchModalState();
     }, 300);
 }
 
