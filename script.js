@@ -58,6 +58,18 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // --- Background Video Focus Toggle ---
+  const homeSection = document.getElementById("home");
+  if (homeSection) {
+    homeSection.addEventListener("click", (e) => {
+      // Don't toggle if clicking a button or a link
+      if (e.target.closest(".btn-main") || e.target.closest(".nav-links") || e.target.closest("a")) {
+        return;
+      }
+      homeSection.classList.toggle("video-focus");
+    });
+  }
+
   // --- Theme Switcher ---
   const themeSwitch = document.querySelector(".theme-switch");
   const themeIcon = themeSwitch ? themeSwitch.querySelector("i") : null;
