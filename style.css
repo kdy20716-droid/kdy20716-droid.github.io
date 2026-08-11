@@ -457,6 +457,26 @@ body.dark-mode #scroll-progress {
   gap: 20px;
 }
 
+.portfolio-category {
+  margin-top: 40px;
+}
+
+.portfolio-category-title {
+  margin-bottom: 20px;
+  text-align: center;
+  font-size: 1.6rem;
+}
+
+.web-grid {
+  display: flex;
+  justify-content: center;
+}
+
+.web-grid .portfolio-item {
+  width: 100%;
+  max-width: 360px;
+}
+
 .portfolio-item {
   background: #fff;
   border-radius: 5px;
