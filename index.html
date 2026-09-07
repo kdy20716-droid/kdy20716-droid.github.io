@@ -3,13 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Portfolio</title>
+    <title>김도연 포트폴리오 | Game & Web Developer</title>
     
     <!-- Open Graph / Social Media Preview -->
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="2026 겜브과 x VALORANT 대회" />
-    <meta property="og:description" content="게임/VR 콘텐츠 디자인 전공 최강의 자리를 가리는 진검승부." />
-    <meta property="og:image" content="https://kdy20716-droid.github.io/contest/asset/logo.png" />
+    <meta property="og:title" content="김도연 포트폴리오 | Game & Web Developer" />
+    <meta property="og:description" content="게임 & VR 콘텐츠 디자인 전공 | 인터랙티브 웹 게임 및 웹 개발자 김도연의 포트폴리오입니다." />
+    <meta property="og:image" content="https://kdy20716-droid.github.io/asset/profile.jpg" />
     <meta property="og:url" content="https://kdy20716-droid.github.io/" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
@@ -110,39 +110,7 @@
       <div class="container">
         <h2 class="section-title">Portfolio</h2>
         <div class="portfolio-grid">
-          <!-- Project Item 1 -->
-          <div
-            class="portfolio-item"
-            data-title="Game Portfolio"
-            data-desc="웹 기술을 활용하여 제작한 게임 포트폴리오입니다. AI와 웹 개발 기술을 접목하여 만들었습니다."
-            data-url="game/game-list.html"
-          >
-            <div class="portfolio-img" style="height: 250px; overflow: hidden">
-              <!-- [이미지 넣는 곳 1] 아래 src="파일경로" 부분을 수정하세요 -->
-              <iframe
-                src="game/game-list.html"
-                style="
-                  width: 200%;
-                  height: 500px;
-                  border: none;
-                  pointer-events: none;
-                  overflow: hidden;
-                  transform: scale(0.5);
-                  transform-origin: 0 0;
-                "
-                scrolling="no"
-                tabindex="-1"
-              ></iframe>
-              <img
-             
-                alt="Game Portfolio"
-                style="display: none"
-              />
-            </div>
-            <div class="portfolio-info">
-              <h3>Game Portfolio</h3>
-            </div>
-          </div>
+
           <!-- Project Item 2 -->
           <div
             class="portfolio-item"
@@ -255,7 +223,7 @@
               <h3>VALORANT Auction Dashboard</h3>
             </div>
           </div>
-          <!-- Project Item 11: Snowfall -->
+          <!-- Project Item: Snowfall -->
           <div
             class="portfolio-item"
             data-title="Snowfall"
@@ -267,6 +235,20 @@
             </div>
             <div class="portfolio-info">
               <h3>Snowfall</h3>
+            </div>
+          </div>
+          <!-- Project Item: CatFishing -->
+          <div
+            class="portfolio-item"
+            data-title="CatFishing"
+            data-desc="웹 기술을 활용하여 제작한 힐링 낚시 게임 'CatFishing'입니다. 물고기를 낚고 상점에서 대화하며 바다를 탐험해보세요!"
+            data-url="https://kdy20716-droid.github.io/CatFishing/"
+          >
+            <div class="portfolio-img" style="overflow: hidden">
+              <img src="asset/catfishing.png" alt="CatFishing" />
+            </div>
+            <div class="portfolio-info">
+              <h3>CatFishing</h3>
             </div>
           </div>
         </div>
@@ -637,49 +619,6 @@
       </div>
     </div>
 
-    <script>
-      // Skills Toggle Logic
-      document
-        .getElementById("skills-toggle")
-        .addEventListener("click", function () {
-          const extraSkills = document.getElementById("extra-skills");
-          extraSkills.classList.toggle("visible");
 
-          if (extraSkills.classList.contains("visible")) {
-            this.innerHTML = 'View Less Skills <i class="fas fa-chevron-up"></i>';
-          } else {
-            this.innerHTML =
-              'View More Skills <i class="fas fa-chevron-down"></i>';
-          }
-        });
-
-      // Email Popup Logic
-      const emailBtn = document.getElementById("email-btn");
-      const emailPopup = document.getElementById("email-popup");
-
-      if (emailBtn && emailPopup) {
-        emailBtn.addEventListener("click", function (e) {
-          e.preventDefault();
-          e.stopPropagation();
-          emailPopup.classList.toggle("show");
-        });
-
-        emailPopup.addEventListener("click", function (e) {
-          e.stopPropagation();
-          const emailText = this.innerText === "Copied!" ? "kdy20716@gmail.com" : this.innerText;
-          navigator.clipboard.writeText(emailText).then(() => {
-            this.innerText = "Copied!";
-            setTimeout(() => {
-              this.innerText = "kdy20716@gmail.com";
-              emailPopup.classList.remove("show");
-            }, 1500);
-          });
-        });
-
-        document.addEventListener("click", function () {
-          emailPopup.classList.remove("show");
-        });
-      }
-    </script>
   </body>
 </html>

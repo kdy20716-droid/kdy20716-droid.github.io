@@ -176,20 +176,20 @@
         border-color: #a18cd1;
       }
 
-      /* 3D 슈팅 게임 스타일 */
-      .shooting {
-        background: linear-gradient(45deg, #2c3e50, #4ca1af);
+      /* 스노우 폴 스타일 */
+      .snowfall {
+        background: linear-gradient(45deg, #1e3c72, #2a5298);
       }
-      .shooting:hover {
-        border-color: #7f8c8d;
+      .snowfall:hover {
+        border-color: #4fc3f7;
       }
 
-      /* 오피스 서바이버 스타일 */
-      .vampire {
-        background: linear-gradient(45deg, #f1c40f, #e67e22);
+      /* 캣 피싱 스타일 */
+      .catfishing {
+        background: linear-gradient(45deg, #e65c00, #f9d423);
       }
-      .vampire:hover {
-        border-color: #f39c12;
+      .catfishing:hover {
+        border-color: #ffd54f;
       }
 
       /* 테트리스 스타일 */
@@ -249,35 +249,18 @@
             <span class="desc">주사위를 굴려 최고 점수를 달성하세요!</span>
           </div>
         </a>
-      </div>
-
-      <h2
-        style="
-          margin-top: 50px;
-          font-size: 1.5rem;
-          color: #ff5252;
-          text-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
-        "
-      >
-        🔒 비밀번호를 입력해서 플레이하시오
-      </h2>
-      <div class="game-list">
-        <a href="./shooting/shooting.html" class="game-card shooting protected">
-          <span class="icon">🧟</span>
+        <a href="https://kdy20716-droid.github.io/ski-3d-game/" class="game-card snowfall">
+          <span class="icon">⛷️</span>
           <div class="info">
-            <span class="title">3D Shooting Game</span>
-            <span class="desc"
-              >(클로즈베타)다가오는 적들을 처치하고 생존하세요!</span
-            >
+            <span class="title">Snowfall</span>
+            <span class="desc">설원을 질주하는 3D 스키 액션 게임!</span>
           </div>
         </a>
-        <a href="./vampire/survival.html" class="game-card vampire protected">
-          <span class="icon">💼</span>
+        <a href="https://kdy20716-droid.github.io/CatFishing/" class="game-card catfishing">
+          <span class="icon">🎣</span>
           <div class="info">
-            <span class="title">Office Survivor</span>
-            <span class="desc"
-              >(클로즈베타)쏟아지는 업무를 쳐내며 칼퇴하세요!</span
-            >
+            <span class="title">CatFishing</span>
+            <span class="desc">물고기를 낚고 상점을 이용하는 힐링 낚시 게임!</span>
           </div>
         </a>
       </div>
@@ -320,7 +303,7 @@
 
       const cards = document.querySelectorAll(".game-card");
 
-      // 마우스 오버 및 클릭 시 사운드 재생 효과만 유지
+      // 마우스 오버 및 클릭 시 사운드 재생 후 페이지 이동
       cards.forEach((card) => {
         card.addEventListener("mouseenter", () => {
           playHoverSound();
@@ -329,20 +312,10 @@
           e.preventDefault();
           playClickSound();
 
-          if (card.classList.contains("protected")) {
-            const pw = prompt("비밀번호를 입력하세요:");
-            if (pw === "goddoyeon") {
-              setTimeout(() => {
-                window.location.href = card.getAttribute("href");
-              }, 200);
-            } else if (pw !== null) {
-              alert("비밀번호가 틀렸습니다.");
-            }
-          } else {
-            setTimeout(() => {
-              window.location.href = card.getAttribute("href");
-            }, 200);
-          }
+          const href = card.getAttribute("href");
+          setTimeout(() => {
+            window.location.href = href;
+          }, 200);
         });
       });
     </script>

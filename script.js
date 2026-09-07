@@ -329,4 +329,50 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   });
+
+  // --- Skills Toggle Logic ---
+  const skillsToggleBtn = document.getElementById("skills-toggle");
+  const extraSkills = document.getElementById("extra-skills");
+
+  if (skillsToggleBtn && extraSkills) {
+    skillsToggleBtn.addEventListener("click", function () {
+      extraSkills.classList.toggle("visible");
+
+      if (extraSkills.classList.contains("visible")) {
+        this.innerHTML = 'View Less Skills <i class="fas fa-chevron-up"></i>';
+      } else {
+        this.innerHTML = 'View More Skills <i class="fas fa-chevron-down"></i>';
+      }
+    });
+  }
+
+  // --- Email Popup Logic ---
+  const emailBtn = document.getElementById("email-btn");
+  const emailPopup = document.getElementById("email-popup");
+
+  if (emailBtn && emailPopup) {
+    emailBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      emailPopup.classList.toggle("show");
+    });
+
+    emailPopup.addEventListener("click", function (e) {
+      e.stopPropagation();
+      const emailText =
+        this.innerText === "Copied!" ? "kdy20716@gmail.com" : this.innerText;
+      navigator.clipboard.writeText(emailText).then(() => {
+        this.innerText = "Copied!";
+        setTimeout(() => {
+          this.innerText = "kdy20716@gmail.com";
+          emailPopup.classList.remove("show");
+        }, 1500);
+      });
+    });
+
+    document.addEventListener("click", function () {
+      emailPopup.classList.remove("show");
+    });
+  }
 });
+

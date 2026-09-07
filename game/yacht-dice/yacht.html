@@ -26,12 +26,20 @@
     <!-- 멀티플레이 메뉴 화면 -->
     <div id="multi-menu-screen" class="screen hidden">
         <h2 class="sub-title">멀티플레이 대기실</h2>
-        <div class="menu-buttons">
+        <div class="menu-buttons" id="multi-main-buttons">
             <button id="btn-create-room" class="btn">방 만들기</button>
             <input type="text" id="room-code-input" class="input-field" placeholder="방 코드 입력 (4자리)" maxlength="4">
             <button id="btn-join-room" class="btn">방 참가</button>
-            <p id="multi-status" class="status-text"></p>
+            <p id="multi-status" class="status-text" style="text-align: center; color: #f39c12; min-height: 1.5em; margin: 5px 0;"></p>
             <button id="btn-back-multi" class="btn back-btn">돌아가기</button>
+        </div>
+        <!-- 방 생성 대기 영역 -->
+        <div class="menu-buttons hidden" id="multi-waiting-area">
+            <div id="room-code-display" style="font-size: 1.4rem; font-weight: bold; color: #f1c40f; text-align: center; background: rgba(0,0,0,0.5); padding: 15px; border-radius: 8px; border: 2px dashed #f1c40f;">
+                방 코드: <span id="waiting-code-text" style="letter-spacing: 4px; font-size: 1.8rem; color: #fff;">----</span>
+            </div>
+            <p style="text-align: center; color: #3498db; margin: 10px 0; font-size: 1rem;">상대방이 참가하기를 기다리는 중...</p>
+            <button id="btn-cancel-waiting" class="btn back-btn">방 취소</button>
         </div>
     </div>
 
